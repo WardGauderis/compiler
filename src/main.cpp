@@ -1,38 +1,71 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include "antlr4-runtime.h"
 #include "gen/JSONLexer.h"
 #include "gen/JSONParser.h"
 #include <gen/JSONVisitor.h>
 
-struct Visitor : public JSONVisitor
+struct DotVisitor : public JSONVisitor
 {
+    explicit DotVisitor(std::filesystem::path input) : path(std::move(input))
+    {
+        file = std::ofstream(path.replace_extension("dot"));
+        if(not file.is_open())
+            throw std::runtime_error("could not open file with path: " + path.string());
+
+        file << "digraph G{\n";
+    }
+    ~DotVisitor() final
+    {
+        const auto dot = path.replace_extension("dot");
+        const auto png = path.replace_extension("png");
+
+        file << "}" << std::flush;
+        std::cerr << system(("dot -Tpng " + dot.string() + " -o " + png.string()).c_str()) << '\n';
+    }
+
     antlrcpp::Any visitJson(JSONParser::JsonContext* context) override
     {
-        std::cout << "json element\n";
+        writeToFile("json: ", context);
         return visitChildren(context);
     }
     antlrcpp::Any visitObject(JSONParser::ObjectContext* context) override
     {
-        std::cout << "object element\n";
+        writeToFile("object: ",context);
         return visitChildren(context);
     }
     antlrcpp::Any visitPair(JSONParser::PairContext* context) override
     {
-        std::cout << "pair element\n";
+        writeToFile("pair: ",context);
         return visitChildren(context);
     }
     antlrcpp::Any visitArray(JSONParser::ArrayContext* context) override
     {
-        std::cout << "array element\n";
+        writeToFile("array: ",context);
         return visitChildren(context);
     }
     antlrcpp::Any visitValue(JSONParser::ValueContext* context) override
     {
-        std::cout << "value element\n";
+        writeToFile("value: ", context);
         return visitChildren(context);
     }
+
+    void writeToFile(const std::string& name, antlr4::ParserRuleContext* context)
+    {
+        if(context->parent != nullptr)
+        {
+            file << '"' << context->parent << "\" -> \"" << context << "\";\n";
+        }
+
+        auto str = context->getText();
+        std::replace( str.begin(), str.end(), '"', '\'');
+        file << '"' << context << '"' << "[label=\"" + name + str + "\"];\n";
+    }
+
+    std::ofstream file;
+    std::filesystem::path path;
 };
 
 int main(int argc, const char* argv[])
@@ -46,7 +79,8 @@ int main(int argc, const char* argv[])
 
     auto* tree = parser.value();
 
-    Visitor visitor;
+    std::filesystem::create_directory("output");
+    DotVisitor visitor("output/test");
     auto scene = visitor.visitValue(tree);
 
     return 0;
