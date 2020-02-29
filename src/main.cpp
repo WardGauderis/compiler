@@ -1,11 +1,10 @@
 #include <iostream>
-#include <fstream>
 #include <filesystem>
+#include <antlr4-runtime.h>
 
-#include "antlr4-runtime.h"
-#include "gen/JSONLexer.h"
-#include "gen/JSONParser.h"
-#include <gen/JSONVisitor.h>
+#include "JSONLexer.h"
+#include "JSONParser.h"
+#include "JSONVisitor.h"
 
 struct DotVisitor : public JSONVisitor
 {
