@@ -1,17 +1,9 @@
-#include <iostream>
-#include <filesystem>
-#include <antlr4-runtime.h>
+#include "dotVisitor.h"
 
 #include "CLexer.h"
 #include "CParser.h"
-#include "dotVisitor.h"
 
-void runForExample(const std::filesystem::path& path) {
-	std::ifstream stream(path);
-	antlr4::ANTLRInputStream input(stream);
-	CLexer lexer(&input);
-	antlr4::CommonTokenStream tokens(&lexer);
-	CParser parser(&tokens);
+std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName) {
 	const auto string = path.string();
 	const auto begin = string.find_first_of('/');
 	const auto end = string.find_last_of('.');
@@ -19,21 +11,30 @@ void runForExample(const std::filesystem::path& path) {
 	if (begin == std::string::npos or end == std::string::npos)
 		throw std::runtime_error("malformed path: " + string);
 
-	const std::filesystem::path output = "output";
-	std::filesystem::create_directory(output);
-
-	DotVisitor visitor(output / string.substr(begin + 1, end - begin - 1), &parser.getRuleNames());
-
-	visitor.visit(parser.file());
-	std::cout << std::endl;
+	return std::filesystem::path("output") / string.substr(begin + 1, end - begin - 1);
 }
 
-void runForAllExamples(const std::filesystem::path& path = "examples") {
+void runTest(const std::filesystem::path& path, bool redoExisting) {
+	const auto output = swapTopFolder(path, "output");
+	if (redoExisting or not std::filesystem::exists(output.string() + ".png")) {
+		std::ifstream stream(path);
+		antlr4::ANTLRInputStream input(stream);
+		CLexer lexer(&input);
+		antlr4::CommonTokenStream tokens(&lexer);
+		CParser parser(&tokens);
+
+		std::filesystem::create_directory("output");
+		DotVisitor visitor(output, &parser.getRuleNames());
+		visitor.visit(parser.file());
+	}
+}
+
+void runTests(const std::filesystem::path& path, bool redoExisting) {
 	for (const auto& entry : std::filesystem::directory_iterator(path)) {
 		if (entry.is_directory()) {
-			runForAllExamples(entry.path());
+			runTests(entry.path(), redoExisting);
 		} else if (entry.is_regular_file()) {
-			runForExample(entry.path());
+			runTest(entry.path(), redoExisting);
 		} else {
 			std::cerr << "unknown file type in examples: " + entry.path().string() << '\n';
 		}
@@ -42,6 +43,6 @@ void runForAllExamples(const std::filesystem::path& path = "examples") {
 
 
 int main(int argc, const char** argv) {
-	runForAllExamples();
+	runTests("tests", false);
 	return 0;
 }
