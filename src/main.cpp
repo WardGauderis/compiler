@@ -2,6 +2,7 @@
 
 #include "CLexer.h"
 #include "CParser.h"
+#include "ast.h"
 
 std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName) {
 	const auto string = path.string();

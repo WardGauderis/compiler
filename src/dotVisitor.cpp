@@ -23,12 +23,12 @@ DotVisitor::~DotVisitor() {
 	const auto png = path.string() + ".png";
 
 	system(("dot -Tpng " + dot + " -o " + png).c_str());
-	std::filesystem::remove(dot);
+//	std::filesystem::remove(dot);
 }
 
 void DotVisitor::linkWithParent(antlr4::tree::ParseTree* context, const std::string& name) {
 	stream << '"' << context->parent << "\" -> \"" << context << "\";\n";
-	stream << '"' << context << "\"[label=\"" + name + "\"]";
+	stream << '"' << context << "\"[label=\"" + name + "\"];\n";
 }
 
 antlrcpp::Any DotVisitor::visitChildren(antlr4::tree::ParseTree* node) {

@@ -9,7 +9,7 @@ file(GLOB_RECURSE SRCS ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE GEN_HDRS ${PROJECT_SOURCE_DIR}/gen/*.cpp)
 file(GLOB_RECURSE GEN_SRCS ${PROJECT_SOURCE_DIR}/gen/*.h)
 
-add_executable(compiler ${HDRS} ${SRCS} ${GEN_HDRS} ${GEN_SRCS} src/dotVisitor.cpp src/dotVisitor.h)
+add_executable(compiler ${HDRS} ${SRCS} ${GEN_HDRS} ${GEN_SRCS})
 
 target_link_libraries(compiler antlr4-runtime)
 
