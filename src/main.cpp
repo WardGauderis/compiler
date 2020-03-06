@@ -43,6 +43,6 @@ void runTests(const std::filesystem::path& path, bool redoExisting) {
 
 
 int main(int argc, const char** argv) {
-	runTests("tests", false);
+	runTests("tests", true);
 	return 0;
 }
