@@ -3,6 +3,7 @@
 #include "CLexer.h"
 #include "CParser.h"
 #include "ast.h"
+#include "converterVisitor.h"
 
 std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName) {
 	const auto string = path.string();
@@ -25,8 +26,9 @@ void runTest(const std::filesystem::path& path, bool redoExisting) {
 		CParser parser(&tokens);
 
 		std::filesystem::create_directory("output");
-		DotVisitor visitor(output, &parser.getRuleNames());
-		visitor.visit(parser.file());
+		DotVisitor dotVisitor(output, &parser.getRuleNames());
+		dotVisitor.visit(parser.file());
+		ConverterVisitor converterVisitor;
 	}
 }
 
