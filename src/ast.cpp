@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <utility>
 #include "ast.h"
 
 void printNode(std::ostream& os, const AstNode* node) {
@@ -43,7 +42,7 @@ void BinaryExpr::serialize(std::ostream& os) const {
 }
 
 std::string BinaryExpr::getSymbol() const {
-	switch (Type) {
+	switch (type) {
 		case MUL:
 			return "*";
 		case DIV:
@@ -79,7 +78,7 @@ void UnaryExpr::serialize(std::ostream& os) const {
 }
 
 std::string UnaryExpr::getSymbol() const {
-	switch (Type) {
+	switch (type) {
 		case PLU:
 			return "+";
 		case MIN:

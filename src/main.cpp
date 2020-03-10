@@ -3,7 +3,6 @@
 #include "CLexer.h"
 #include "CParser.h"
 #include "ast.h"
-#include "converterVisitor.h"
 
 std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName) {
 	const auto string = path.string();
@@ -28,7 +27,6 @@ void runTest(const std::filesystem::path& path, bool redoExisting) {
 		std::filesystem::create_directory("output");
 		DotVisitor dotVisitor(output, &parser.getRuleNames());
 		dotVisitor.visit(parser.file());
-		ConverterVisitor converterVisitor;
 	}
 }
 
@@ -46,6 +44,16 @@ void runTests(const std::filesystem::path& path, bool redoExisting) {
 
 
 int main(int argc, const char** argv) {
-	runTests("tests", true);
+//	runTests("tests", true);
+
+	std::stringstream stream("1+1+1;");
+	antlr4::ANTLRInputStream input(stream);
+	CLexer lexer(&input);
+	antlr4::CommonTokenStream tokens(&lexer);
+	CParser parser(&tokens);
+
+	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
+	dotVisitor.visit(parser.file());
+	parser.file()->expression();
 	return 0;
 }
