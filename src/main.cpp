@@ -54,10 +54,12 @@ int main(int argc, const char** argv) {
 	antlr4::CommonTokenStream tokens(&lexer);
 	CParser parser(&tokens);
 
-//	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
-//	dotVisitor.visit(parser.file());
+	antlr4::tree::ParseTree* node = parser.file();
 
-	const auto root = visitFile(parser.file());
+	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
+	dotVisitor.visit(node);
+
+	const auto root = visitFile(node);
 	std::ofstream file("text.dot");
     file << "digraph G\n";
     file << "{\n";

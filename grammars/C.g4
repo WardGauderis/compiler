@@ -4,52 +4,52 @@ INT:[0-9]+;
 
 WS:[ \t\n\r]+->skip;
 
-basicExpression:
-    '(' orExpression ')'|
+basicExpr:
+    '(' orExpr ')'|
     INT;
 
-unaryExpression:
-    basicExpression|
-    '+' unaryExpression|
-    '-' unaryExpression|
-    '!' unaryExpression;
+unaryExpr:
+    basicExpr|
+    '+' unaryExpr|
+    '-' unaryExpr|
+    '!' unaryExpr;
 
-multiplicativeExpression:
-    unaryExpression|
-    multiplicativeExpression '*' unaryExpression|
-    multiplicativeExpression '/' unaryExpression|
-    multiplicativeExpression '%' unaryExpression;
+multiplicativeExpr:
+    unaryExpr|
+    multiplicativeExpr '*' unaryExpr|
+    multiplicativeExpr '/' unaryExpr|
+    multiplicativeExpr '%' unaryExpr;
 
-additiveExpression:
-    multiplicativeExpression|
-    additiveExpression '+' multiplicativeExpression|
-    additiveExpression '-' multiplicativeExpression;
+additiveExpr:
+    multiplicativeExpr|
+    additiveExpr '+' multiplicativeExpr|
+    additiveExpr '-' multiplicativeExpr;
 
-relationalExpression:
-    additiveExpression|
-    relationalExpression '<' additiveExpression|
-    relationalExpression '<=' additiveExpression|
-    relationalExpression '>' additiveExpression|
-    relationalExpression '>=' additiveExpression;
+relationalExpr:
+    additiveExpr|
+    relationalExpr '<' additiveExpr|
+    relationalExpr '<=' additiveExpr|
+    relationalExpr '>' additiveExpr|
+    relationalExpr '>=' additiveExpr;
 
-equalityExpression:
-    relationalExpression|
-    equalityExpression '==' relationalExpression|
-    equalityExpression '!=' relationalExpression;
+equalityExpr:
+    relationalExpr|
+    equalityExpr '==' relationalExpr|
+    equalityExpr '!=' relationalExpr;
 
-andExpression:
-    equalityExpression|
-    andExpression '&&' equalityExpression;
+andExpr:
+    equalityExpr|
+    andExpr '&&' equalityExpr;
 
-orExpression:
-    andExpression|
-    orExpression '||' andExpression;
+orExpr:
+    andExpr|
+    orExpr '||' andExpr;
 
-expression:
-    orExpression ';';
+expr:
+    orExpr ';';
 
 file:
-    expression* EOF;
+    expr* EOF;
 
 
 
