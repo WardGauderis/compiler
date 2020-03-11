@@ -1,6 +1,25 @@
 grammar C;
 
-INT:[0-9]+;
+SPECIFIER:
+    'char'|
+    'int'|
+    'float';
+
+QUALIFIER:
+    'const';
+
+CHAR:
+    '\'' (~['\\] | '\\' .)+ '\'';
+
+INT:
+    [0-9]+;
+
+FLOAT:
+    ([0-9]* '.' [0-9]+ | [0-9]+ '.') ([eE] [+-]? [0-9]+)? [fF]?|
+    [0-9]+ ([eE] [+-]? [0-9]+) [fF]?;
+
+IDENTIFIER:
+    [a-zA-Z_] [a-zA-Z_0-9]*;
 
 WS:[ \t\n\r]+->skip;
 
@@ -45,11 +64,30 @@ orExpr:
     andExpr|
     orExpr '||' andExpr;
 
+//TODO: enkel =? bv. *=
+assignExpr:
+    orExpr|
+    IDENTIFIER '=' assignExpr;
+
 expr:
-    orExpr ';';
+    assignExpr;
+
+//TODO: opsplitsen? int weglaten?
+typename:
+    QUALIFIER* SPECIFIER (QUALIFIER | '*')*|
+    QUALIFIER (QUALIFIER | '*')*;
+
+//TODO: comma separated? int x, y = 5
+//TODO: enkel = initialization? x = {5}
+initizalizer:
+    expr
+    ;
+
+declaration:
+    typename IDENTIFIER ('=' initizalizer)? ';';
 
 file:
-    expr* EOF;
+    declaration EOF;
 
 
 
