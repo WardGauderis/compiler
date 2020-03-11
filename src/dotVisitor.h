@@ -8,25 +8,25 @@
 #include <antlr4-runtime.h>
 #include <filesystem>
 
-
-class DotVisitor : antlr4::tree::AbstractParseTreeVisitor {
+class DotVisitor : antlr4::tree::AbstractParseTreeVisitor
+{
 public:
-	DotVisitor(std::filesystem::path path, const std::vector<std::string>* names);
+    DotVisitor(std::filesystem::path path, const std::vector<std::string>* names);
 
-	~DotVisitor() final;
+    ~DotVisitor() final;
 
-	using antlr4::tree::AbstractParseTreeVisitor::visit;
+    using antlr4::tree::AbstractParseTreeVisitor::visit;
+
 private:
-	antlrcpp::Any visitChildren(antlr4::tree::ParseTree* node) override;
+    antlrcpp::Any visitChildren(antlr4::tree::ParseTree* node) override;
 
-	antlrcpp::Any visitTerminal(antlr4::tree::TerminalNode* node) override;
+    antlrcpp::Any visitTerminal(antlr4::tree::TerminalNode* node) override;
 
-	void linkWithParent(antlr4::tree::ParseTree* context, const std::string& name);
+    void linkWithParent(antlr4::tree::ParseTree* context, const std::string& name);
 
-	std::ofstream stream;
-	std::filesystem::path path;
-	const std::vector<std::string>* names;
+    std::ofstream stream;
+    std::filesystem::path path;
+    const std::vector<std::string>* names;
 };
 
-
-#endif //COMPILER_DOTVISITOR_H
+#endif // COMPILER_DOTVISITOR_H

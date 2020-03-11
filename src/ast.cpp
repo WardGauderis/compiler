@@ -2,94 +2,77 @@
 // Created by ward on 3/6/20.
 //
 
-#include <iostream>
 #include "ast.h"
+#include <iostream>
+#include <functional>
+#include <fstream>
 
-void printNode(std::ostream& os, const AstNode* node) {
-	os << '"' << node << '"' << " [label=\"" << node->getSymbol() << "\"];\n";
+
+std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<AstNode>& root)
+{
+    std::function<void(AstNode*)> recursion = [&](AstNode* node)
+    {
+        stream << '"' << node << "\"[label=\"" << node->name() << "\\n" << node->value() << "\"];\n";
+        for(const auto child : node->children())
+        {
+            stream << '"' << node << "\" -> \"" << child << "\";\n";
+            recursion(child);
+        }
+    };
+    recursion(root.get());
+    return stream;
 }
 
-void print(std::ostream& os, const AstNode* node, const AstNode* parent) {
-	printNode(os, node);
-	os << '"' << parent << '"' << " -> " << '"' << node << '"' << ";\n";
+std::string File::name() const
+{
+    return "file";
+}
+std::string File::value() const
+{
+    return "";
+}
+std::vector<AstNode*> File::children() const
+{
+    std::vector<AstNode*> result(expressions.size());
+    std::copy(expressions.begin(), expressions.end(), result.begin());
+    return result;
 }
 
-std::ostream& operator<<(std::ostream& os, AstNode& node) {
-	os << "digraph G {\n";
-	os << "0 [style = invis];\n";
-	print(os, &node, nullptr);
-	node.serialize(os);
-	os << "}\n" << std::flush;
-	return os;
+std::string BinaryExpr::name() const
+{
+    return "binary expression";
+}
+std::string BinaryExpr::value() const
+{
+    return operation;
+}
+std::vector<AstNode*> BinaryExpr::children() const
+{
+    return {lhs, rhs};
 }
 
-std::string File::getSymbol() const {
-	return "file";
+std::string UnaryExpr::name() const
+{
+    return "unary expression";
+}
+std::string UnaryExpr::value() const
+{
+    return operation;
+}
+std::vector<AstNode*> UnaryExpr::children() const
+{
+    return {operand};
 }
 
-void File::serialize(std::ostream& os) const {
-	for (const auto& expr : exprs) {
-		print(os, expr, this);
-		expr->serialize(os);
-	}
+std::string Int::name() const
+{
+    return "literal";
 }
-
-void BinaryExpr::serialize(std::ostream& os) const {
-	for (const auto& operand: operands) {
-		print(os, operand, this);
-		operand->serialize(os);
-	}
+std::string Int::value() const
+{
+    return std::to_string(val);
 }
-
-std::string BinaryExpr::getSymbol() const {
-	switch (type) {
-		case MUL:
-			return "*";
-		case DIV:
-			return "/";
-		case MOD:
-			return "%";
-		case PLU:
-			return "+";
-		case MIN:
-			return "-";
-		case LES:
-			return "<";
-		case LOE:
-			return "<=";
-		case MOR:
-			return ">";
-		case MOE:
-			return ">=";
-		case EQU:
-			return "==";
-		case NEQ:
-			return "!=";
-		case AND:
-			return "&&";
-		case OR:
-			return "||";
-	}
-}
-
-void UnaryExpr::serialize(std::ostream& os) const {
-	print(os, operand, this);
-	operand->serialize(os);
-}
-
-std::string UnaryExpr::getSymbol() const {
-	switch (type) {
-		case PLU:
-			return "+";
-		case MIN:
-			return "-";
-		case NOT:
-			return "!";
-	}
-}
-
-void Int::serialize(std::ostream& os) const {}
-
-std::string Int::getSymbol() const {
-	return std::to_string(value);
+std::vector<AstNode*> Int::children() const
+{
+    return {};
 }

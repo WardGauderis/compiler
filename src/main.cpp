@@ -1,8 +1,9 @@
 #include "dotVisitor.h"
-
+#include "visitor.h"
+#include "folding.h"
 #include "CLexer.h"
 #include "CParser.h"
-#include "ast.h"
+
 
 std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName) {
 	const auto string = path.string();
@@ -46,14 +47,22 @@ void runTests(const std::filesystem::path& path, bool redoExisting) {
 int main(int argc, const char** argv) {
 //	runTests("tests", true);
 
-	std::stringstream stream("1+1+1;");
+//	std::stringstream stream("1+1+1;");
+	std::ifstream stream("tests/expressions/addmul.c");
 	antlr4::ANTLRInputStream input(stream);
 	CLexer lexer(&input);
 	antlr4::CommonTokenStream tokens(&lexer);
 	CParser parser(&tokens);
 
-	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
-	dotVisitor.visit(parser.file());
-	parser.file()->expression();
+//	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
+//	dotVisitor.visit(parser.file());
+
+	const auto root = visitFile(parser.file());
+	std::ofstream file("text.dot");
+    file << "digraph G\n";
+    file << "{\n";
+	file << root;
+    file << "}\n" << std::flush;
+    system(("dot -Tpng " + std::string("text.dot") + " -o " + std::string("text.png")).c_str());
 	return 0;
 }
