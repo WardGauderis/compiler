@@ -14,6 +14,7 @@
 
 #include "CParser.h"
 #include "ast.h"
+#include "folding.h"
 
 namespace
 {
@@ -115,7 +116,10 @@ std::unique_ptr<AstNode> visitFile(antlr4::tree::ParseTree* context)
             expressions[i] = visitExpr(context->children[i]);
         }
 
-        return std::make_unique<File>(expressions);
+        auto result = std::make_unique<File>(expressions);
+        foldFile(result);
+
+        return result;
     }
     else throw std::logic_error("context does not have file");
 }

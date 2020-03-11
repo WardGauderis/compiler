@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
 //	runTests("tests", true);
 
 //	std::stringstream stream("1+1+1;");
-	std::ifstream stream("tests/expressions/addmul.c");
+	std::ifstream stream("tests/expressions/weird.c");
 	antlr4::ANTLRInputStream input(stream);
 	CLexer lexer(&input);
 	antlr4::CommonTokenStream tokens(&lexer);
@@ -57,12 +57,13 @@ int main(int argc, const char** argv) {
 //	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
 //	dotVisitor.visit(parser.file());
 
-	const auto root = visitFile(parser.file());
+	auto root = visitFile(parser.file());
+
 	std::ofstream file("text.dot");
     file << "digraph G\n";
     file << "{\n";
 	file << root;
-    file << "}\n" << std::flush;
+    file << "\n}\n" << std::flush;
     system(("dot -Tpng " + std::string("text.dot") + " -o " + std::string("text.png")).c_str());
 	return 0;
 }
