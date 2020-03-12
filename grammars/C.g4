@@ -85,18 +85,19 @@ expr:
     assignExpr;
 
 typeName:
-    QUALIFIER* SPECIFIER (QUALIFIER | '*')*|
-    QUALIFIER (QUALIFIER | '*')*;
+    QUALIFIER* SPECIFIER QUALIFIER* pointerType?;
+
+pointerType:
+    '*' QUALIFIER* pointerType?;
 
 initizalizer:
-    expr
-    ;
+    expr;
 
 declaration:
     typeName IDENTIFIER ('=' initizalizer)? ';';
 
 file:
-    INT EOF;
+    (declaration | assignExpr ';')* EOF;
 
 
 
