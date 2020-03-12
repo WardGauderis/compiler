@@ -12,7 +12,10 @@ CHAR:
     '\'' (~['\\] | '\\' .)+ '\'';
 
 INT:
-    [0-9]+;
+    [1-9] [0-9]*|
+    '0' [0-7]*|             // 0 -> octaal
+    '0' [xX] [0-9a-fA-F]+|
+    '0' [bB] [01]+;
 
 FLOAT:
     ([0-9]* '.' [0-9]+ | [0-9]+ '.') ([eE] [+-]? [0-9]+)? [fF]?|
@@ -27,17 +30,26 @@ basicExpr:
     '(' orExpr ')'|
     INT;
 
-unaryExpr:
+postfixExpr:
     basicExpr|
-    '+' unaryExpr|
-    '-' unaryExpr|
-    '!' unaryExpr;
+    postfixExpr '++'|
+    postfixExpr '--';
+
+prefixExpr:
+    basicExpr|
+    '++' prefixExpr|
+    '--' prefixExpr|
+    '+' prefixExpr|
+    '+' prefixExpr|
+    '-' prefixExpr|
+    '!' prefixExpr|
+    '(' typeName ')' prefixExpr;
 
 multiplicativeExpr:
-    unaryExpr|
-    multiplicativeExpr '*' unaryExpr|
-    multiplicativeExpr '/' unaryExpr|
-    multiplicativeExpr '%' unaryExpr;
+    prefixExpr|
+    multiplicativeExpr '*' prefixExpr|
+    multiplicativeExpr '/' prefixExpr|
+    multiplicativeExpr '%' prefixExpr;
 
 additiveExpr:
     multiplicativeExpr|
@@ -72,13 +84,10 @@ assignExpr:
 expr:
     assignExpr;
 
-//TODO: opsplitsen? int weglaten?
 typeName:
     QUALIFIER* SPECIFIER (QUALIFIER | '*')*|
     QUALIFIER (QUALIFIER | '*')*;
 
-//TODO: comma separated? int x, y = 5
-//TODO: enkel = initialization? x = {5}
 initizalizer:
     expr
     ;
@@ -87,7 +96,7 @@ declaration:
     typeName IDENTIFIER ('=' initizalizer)? ';';
 
 file:
-    declaration EOF;
+    INT EOF;
 
 
 
