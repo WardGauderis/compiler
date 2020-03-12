@@ -73,7 +73,7 @@ expr:
     assignExpr;
 
 //TODO: opsplitsen? int weglaten?
-typename:
+typeName:
     QUALIFIER* SPECIFIER (QUALIFIER | '*')*|
     QUALIFIER (QUALIFIER | '*')*;
 
@@ -84,7 +84,7 @@ initizalizer:
     ;
 
 declaration:
-    typename IDENTIFIER ('=' initizalizer)? ';';
+    typeName IDENTIFIER ('=' initizalizer)? ';';
 
 file:
     declaration EOF;
