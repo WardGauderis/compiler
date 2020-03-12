@@ -124,9 +124,7 @@ void downcast_call(Ast::Node* node, const Func& func)
     if     (auto* res = dynamic_cast<Ast::File*      >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::BinaryExpr*>(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::UnaryExpr* >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Int*       >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Float*     >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Char*      >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Literal*   >(node)) func(res);
 }
 
 

@@ -14,6 +14,7 @@
 
 #include "CParser.h"
 #include "ast.h"
+#include "folding.h"
 
 namespace
 {
@@ -54,7 +55,7 @@ namespace
     }
 }
 
-Expr* visitExpr(antlr4::tree::ParseTree* context)
+Ast::Expr* visitExpr(antlr4::tree::ParseTree* context)
 {
     if(is_expr(context))
     {
@@ -71,7 +72,7 @@ Expr* visitExpr(antlr4::tree::ParseTree* context)
             const auto lhs = visitExpr(context->children[0]);
             const auto rhs = visitExpr(context->children[2]);
 
-            return new BinaryExpr(std::move(context->children[1]->getText()), lhs, rhs);
+            return new Ast::BinaryExpr(std::move(context->children[1]->getText()), lhs, rhs);
         }
         else throw std::logic_error("binary expr must have 1 or 3 children");
     }
@@ -84,7 +85,7 @@ Expr* visitExpr(antlr4::tree::ParseTree* context)
         else if(context->children.size() == 2)
         {
             const auto operand = visitExpr(context->children[1]);
-            return new UnaryExpr(std::move(context->children[0]->getText()), operand);
+            return new Ast::UnaryExpr(std::move(context->children[0]->getText()), operand);
         }
         else throw std::logic_error("unary expr must have 1 or 2 children");
     }
@@ -92,7 +93,8 @@ Expr* visitExpr(antlr4::tree::ParseTree* context)
     {
         if(context->children.size() == 1)
         {
-            return new Int(context->children[0]->getText());
+            const auto num = std::stoi(context->children[0]->getText());
+            return new Ast::Int(num);
         }
         else if(context->children.size() == 3)
         {
@@ -103,19 +105,20 @@ Expr* visitExpr(antlr4::tree::ParseTree* context)
     else throw std::logic_error(std::string("unknown type: ") + typeid(*context).name());
 }
 
-std::unique_ptr<AstNode> visitFile(antlr4::tree::ParseTree* context)
+std::unique_ptr<Ast::Node> visitFile(antlr4::tree::ParseTree* context)
 {
     if(is_file(context))
     {
         const auto size = context->children.size() - 1;
-        std::vector<Expr*> exprs(size);
+        std::vector<Ast::Expr*> exprs(size);
 
         for(size_t i = 0; i < size; i++)
         {
             exprs[i] = visitExpr(context->children[i]);
         }
-
-        return std::make_unique<File>(exprs);
+        auto result = std::make_unique<Ast::File>(exprs);
+        foldFile(result);
+        return result;
     }
     else throw std::logic_error("context does not have file");
 }

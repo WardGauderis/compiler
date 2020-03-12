@@ -11,70 +11,81 @@
 
 #include "ast.h"
 
-Expr* foldExpr(Expr* expr)
+Ast::Expr* foldExpr(Ast::Expr* expr)
 {
-    Expr* result = nullptr;
+    Ast::Expr* result = nullptr;
     downcast_call(expr, overloaded
     (
-        [&](BinaryExpr* binexpr)
+        [&](Ast::BinaryExpr* binexpr)
         {
-            if(binexpr->lhs->get_id() != Int::ID)
+            auto* lhs = dynamic_cast<Ast::Literal*>(binexpr->lhs);
+            auto* rhs = dynamic_cast<Ast::Literal*>(binexpr->rhs);
+
+            bool foldLhs = true;
+            if(lhs == nullptr)
             {
-                binexpr->lhs = foldExpr(binexpr->lhs);
+                auto* res = foldExpr(lhs);
+                if(res != nullptr) binexpr->lhs = res;
+                else foldLhs = false;
             }
-            if(binexpr->rhs->get_id() != Int::ID)
+
+            bool foldRhs = true;
+            if(rhs == nullptr)
             {
-                binexpr->rhs = foldExpr(binexpr->rhs);
+                auto* res = foldExpr(rhs);
+                if(res != nullptr) binexpr->rhs = res;
+                else foldRhs = false;
             }
+            if(not (foldLhs and foldRhs)) return;
 
-            if(binexpr->lhs->get_id() != Int::ID
-            or binexpr->rhs->get_id() != Int::ID) return;
+            const auto val0 = static_cast<Ast::Literal*>(binexpr->lhs)->literal;
+            const auto val1 = static_cast<Ast::Literal*>(binexpr->rhs)->literal;
 
-            const auto lhs = static_cast<Int*>(binexpr->lhs)->val;
-            const auto rhs = static_cast<Int*>(binexpr->rhs)->val;
+            std::visit([&](const auto& lhs, const auto& rhs)
+            {
+                if((binexpr->operation == "/" or binexpr->operation == "%") and rhs == 0) return;
 
-            if((binexpr->operation == "/"
-            or binexpr->operation == "%")
-            and rhs == 0) return;
-
-            if      (binexpr->operation == "+" ) result = new Int(lhs + rhs);
-            else if (binexpr->operation == "-" ) result = new Int(lhs - rhs);
-            else if (binexpr->operation == "*" ) result = new Int(lhs * rhs);
-            else if (binexpr->operation == "/" ) result = new Int(lhs / rhs);
-            else if (binexpr->operation == "%" ) result = new Int(lhs % rhs);
-            else if (binexpr->operation == "<" ) result = new Int(lhs < rhs);
-            else if (binexpr->operation == ">" ) result = new Int(lhs > rhs);
-            else if (binexpr->operation == "<=") result = new Int(lhs <= rhs);
-            else if (binexpr->operation == ">=") result = new Int(lhs >= rhs);
-            else if (binexpr->operation == "==") result = new Int(lhs == rhs);
-            else if (binexpr->operation == "!=") result = new Int(lhs != rhs);
-            else if (binexpr->operation == "&&") result = new Int(lhs && rhs);
-            else if (binexpr->operation == "||") result = new Int(lhs || rhs);
-            else throw std::logic_error("unknown binary operation");
+                if      (binexpr->operation == "+" ) result = new Ast::Literal(lhs +  rhs);
+                else if (binexpr->operation == "-" ) result = new Ast::Literal(lhs -  rhs);
+                else if (binexpr->operation == "*" ) result = new Ast::Literal(lhs *  rhs);
+                else if (binexpr->operation == "/" ) result = new Ast::Literal(lhs /  rhs);
+//                else if (binexpr->operation == "%" ) result = new Ast::Literal(lhs %  rhs);
+                else if (binexpr->operation == "<" ) result = new Ast::Literal(lhs <  rhs);
+                else if (binexpr->operation == ">" ) result = new Ast::Literal(lhs >  rhs);
+                else if (binexpr->operation == "<=") result = new Ast::Literal(lhs <= rhs);
+                else if (binexpr->operation == ">=") result = new Ast::Literal(lhs >= rhs);
+                else if (binexpr->operation == "==") result = new Ast::Literal(lhs == rhs);
+                else if (binexpr->operation == "!=") result = new Ast::Literal(lhs != rhs);
+                else if (binexpr->operation == "&&") result = new Ast::Literal(lhs && rhs);
+                else if (binexpr->operation == "||") result = new Ast::Literal(lhs || rhs);
+                else throw std::logic_error("unknown binary operation");
+            }, val0, val1);
         },
-        [&](UnaryExpr* unexpr)
+        [&](Ast::UnaryExpr* unexpr)
         {
-            if(unexpr->operand->get_id() != Int::ID)
+            auto* operand = dynamic_cast<Ast::Literal*>(unexpr->operand);
+            if(operand == nullptr)
             {
-                unexpr->operand = foldExpr(unexpr->operand);
+                auto* res = foldExpr(operand);
+                if(res == nullptr) return nullptr;
+                else unexpr->operand = res;
             }
+          const auto val0 = static_cast<Ast::Literal*>(unexpr->operand)->literal;
 
-            if(unexpr->operand->get_id() != Int::ID) return;
-            const auto val = static_cast<Int*>(unexpr->operand)->val;
-
-            if      (unexpr->operation == "+") result = new Int(val);
-            else if (unexpr->operation == "-") result = new Int(-val);
-            else if (unexpr->operation == "!") result = new Int(!val);
-            else throw std::logic_error("unknown unary operation");
+            std::visit([&](const auto& val)
+            {
+                if      (unexpr->operation == "+") result = new Ast::Literal(val);
+                else if (unexpr->operation == "-") result = new Ast::Literal(-val);
+                else if (unexpr->operation == "!") result = new Ast::Literal(!val);
+                else throw std::logic_error("unknown unary operation");
+            }, val0);
         },
         [&](auto) {}
         ));
-
-    if(result == nullptr) return expr;
-    else return result;
+    return result;
 }
 
-void foldFile(std::unique_ptr<File>& root)
+void foldFile(std::unique_ptr<Ast::File>& root)
 {
     for(auto& child : root->expressions)
     {
