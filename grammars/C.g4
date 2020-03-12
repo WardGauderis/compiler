@@ -32,13 +32,13 @@ basicExpr:
 
 postfixExpr:
     basicExpr|
-    postfixExpr '++'|
-    postfixExpr '--';
+    IDENTIFIER '++'|
+    IDENTIFIER '--';
 
 prefixExpr:
-    basicExpr|
-    '++' prefixExpr|
-    '--' prefixExpr|
+    postfixExpr|
+    '++' IDENTIFIER|
+    '--' IDENTIFIER|
     '+' prefixExpr|
     '+' prefixExpr|
     '-' prefixExpr|
