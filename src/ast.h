@@ -7,6 +7,7 @@
 #include <array>
 #include <memory>
 #include <vector>
+#include <variant>
 
 namespace Ast
 {
@@ -69,38 +70,15 @@ struct UnaryExpr final : public Expr
 
 struct Literal : public Expr
 {
-    Literal() = default;
-};
-
-template<typename Type>
-struct ArithmeticType : public Literal
-{
-    explicit ArithmeticType(Type val) : val(val) {}
+    template<typename Type>
+    explicit Literal(Type val) : literal(val) {}
 
     [[nodiscard]] std::string name() const final { return "literal"; }
     [[nodiscard]] std::string value() const final { return ""; }
     [[nodiscard]] std::vector<Node*> children() const final { return {}; }
 
-    ArithmeticType* operator+ (ArithmeticType* rhs) { return ArithmeticType(val +  rhs->val); }
-    ArithmeticType* operator- (ArithmeticType* rhs) { return ArithmeticType(val -  rhs->val); }
-    ArithmeticType* operator* (ArithmeticType* rhs) { return ArithmeticType(val *  rhs->val); }
-    ArithmeticType* operator/ (ArithmeticType* rhs) { return ArithmeticType(val /  rhs->val); }
-    ArithmeticType* operator% (ArithmeticType* rhs) { return ArithmeticType(val %  rhs->val); }
-    ArithmeticType* operator< (ArithmeticType* rhs) { return ArithmeticType(val <  rhs->val); }
-    ArithmeticType* operator> (ArithmeticType* rhs) { return ArithmeticType(val >  rhs->val); }
-    ArithmeticType* operator<=(ArithmeticType* rhs) { return ArithmeticType(val <= rhs->val); }
-    ArithmeticType* operator>=(ArithmeticType* rhs) { return ArithmeticType(val >= rhs->val); }
-    ArithmeticType* operator==(ArithmeticType* rhs) { return ArithmeticType(val == rhs->val); }
-    ArithmeticType* operator!=(ArithmeticType* rhs) { return ArithmeticType(val != rhs->val); }
-    ArithmeticType* operator&&(ArithmeticType* rhs) { return ArithmeticType(val && rhs->val); }
-    ArithmeticType* operator||(ArithmeticType* rhs) { return ArithmeticType(val || rhs->val); }
-
-    Type val;
+    std::variant<char, short, int, long, float, double> literal;
 };
-
-using Int = ArithmeticType<int>;
-using Float = ArithmeticType<float>;
-using Char = ArithmeticType<char>;
 
 struct Variable : public Expr
 {
