@@ -55,9 +55,9 @@ struct BinaryExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const override;
 };
 
-struct UnaryExpr final : public Expr
+struct PrefixExpr final : public Expr
 {
-    explicit UnaryExpr(std::string operation, Expr* operand)
+    explicit PrefixExpr(std::string operation, Expr* operand)
     : operation(std::move(operation)), operand(operand) {}
 
 	std::string operation;
@@ -123,7 +123,7 @@ void downcast_call(Ast::Node* node, const Func& func)
 {
     if     (auto* res = dynamic_cast<Ast::File*      >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::BinaryExpr*>(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::UnaryExpr* >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::PrefixExpr* >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::Literal*   >(node)) func(res);
 }
 

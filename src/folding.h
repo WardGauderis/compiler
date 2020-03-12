@@ -61,7 +61,7 @@ Ast::Expr* foldExpr(Ast::Expr* expr)
                 else throw std::logic_error("unknown binary operation");
             }, val0, val1);
         },
-        [&](Ast::UnaryExpr* unexpr)
+        [&](Ast::PrefixExpr* unexpr)
         {
             auto* operand = dynamic_cast<Ast::Literal*>(unexpr->operand);
             if(operand == nullptr)

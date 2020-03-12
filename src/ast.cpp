@@ -52,15 +52,15 @@ std::vector<Node*> BinaryExpr::children() const
     return {lhs, rhs};
 }
 
-std::string UnaryExpr::name() const
+std::string PrefixExpr::name() const
 {
     return "unary expression";
 }
-std::string UnaryExpr::value() const
+std::string PrefixExpr::value() const
 {
     return operation;
 }
-std::vector<Node*> UnaryExpr::children() const
+std::vector<Node*> PrefixExpr::children() const
 {
     return {operand};
 }

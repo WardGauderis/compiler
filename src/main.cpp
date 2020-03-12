@@ -57,7 +57,7 @@ int main(int argc, const char** argv)
 //	runTests("tests", true);
 
 //	std::stringstream stream("1+1+1;");
-	std::ifstream stream("tests/expressions/addmul.c");
+	std::ifstream stream("tests/assignments/basic.c");
 	antlr4::ANTLRInputStream input(stream);
 	CLexer lexer(&input);
 	antlr4::CommonTokenStream tokens(&lexer);
@@ -65,15 +65,15 @@ int main(int argc, const char** argv)
 
 	antlr4::tree::ParseTree* node = parser.file();
 
-	DotVisitor dotVisitor("output/TEST", &parser.getRuleNames());
+	DotVisitor dotVisitor("output/cst", &parser.getRuleNames());
 	dotVisitor.visit(node);
 
 	const auto root = visitFile(node);
-	std::ofstream file("text.dot");
+	std::ofstream file("output/ast.dot");
 	file << "digraph G\n";
 	file << "{\n";
 	file << root;
 	file << "}\n" << std::flush;
-	system(("dot -Tpng "+std::string("text.dot")+" -o "+std::string("text.png")).c_str());
+	system(("dot -Tpng "+std::string("output/ast.dot")+" -o "+std::string("output/ast.png")).c_str());
 	return 0;
 }

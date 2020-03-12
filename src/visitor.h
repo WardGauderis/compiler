@@ -36,7 +36,7 @@ namespace
 
     bool is_unary_expr(antlr4::tree::ParseTree* context)
     {
-        return is_type<CParser::UnaryExprContext>(context);
+        return is_type<CParser::PrefixExprContext>(context);
     }
 
     bool is_expr(antlr4::tree::ParseTree* context)
@@ -85,7 +85,7 @@ Ast::Expr* visitExpr(antlr4::tree::ParseTree* context)
         else if(context->children.size() == 2)
         {
             const auto operand = visitExpr(context->children[1]);
-            return new Ast::UnaryExpr(std::move(context->children[0]->getText()), operand);
+            return new Ast::PrefixExpr(std::move(context->children[0]->getText()), operand);
         }
         else throw std::logic_error("unary expr must have 1 or 2 children");
     }
@@ -94,7 +94,7 @@ Ast::Expr* visitExpr(antlr4::tree::ParseTree* context)
         if(context->children.size() == 1)
         {
             const auto num = std::stoi(context->children[0]->getText());
-            return new Ast::Int(num);
+            return new Ast::Literal(num);
         }
         else if(context->children.size() == 3)
         {
