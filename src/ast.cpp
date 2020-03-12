@@ -7,13 +7,14 @@
 #include <functional>
 #include <fstream>
 
-
-std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<AstNode>& root)
+namespace Ast
 {
-    std::function<void(AstNode*)> recursion = [&](AstNode* node)
-    {
-        stream << '"' << node << "\"[label=\"" << node->name() << "\\n" << node->value() << "\"];\n";
-        for(const auto child : node->children())
+std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root)
+{
+    std::function<void(Node*)> recursion = [&](Node* node) {
+        stream << '"' << node << "\"[label=\"" << node->name() << "\\n"
+               << node->value() << "\"];\n";
+        for (const auto child : node->children())
         {
             stream << '"' << node << "\" -> \"" << child << "\";\n";
             recursion(child);
@@ -31,9 +32,9 @@ std::string File::value() const
 {
     return "";
 }
-std::vector<AstNode*> File::children() const
+std::vector<Node*> File::children() const
 {
-    std::vector<AstNode*> result(expressions.size());
+    std::vector<Node*> result(expressions.size());
     std::copy(expressions.begin(), expressions.end(), result.begin());
     return result;
 }
@@ -46,7 +47,7 @@ std::string BinaryExpr::value() const
 {
     return operation;
 }
-std::vector<AstNode*> BinaryExpr::children() const
+std::vector<Node*> BinaryExpr::children() const
 {
     return {lhs, rhs};
 }
@@ -59,20 +60,9 @@ std::string UnaryExpr::value() const
 {
     return operation;
 }
-std::vector<AstNode*> UnaryExpr::children() const
+std::vector<Node*> UnaryExpr::children() const
 {
     return {operand};
 }
 
-std::string Int::name() const
-{
-    return "literal";
-}
-std::string Int::value() const
-{
-    return std::to_string(val);
-}
-std::vector<AstNode*> Int::children() const
-{
-    return {};
 }

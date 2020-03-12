@@ -8,25 +8,26 @@
 #include <memory>
 #include <vector>
 
-struct AstNode
+namespace Ast
 {
-    explicit AstNode() = default;
 
-    friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<AstNode>& root);
+struct Node
+{
+    explicit Node() = default;
+
+    friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root);
 
     [[nodiscard]] virtual std::string name() const = 0;
     [[nodiscard]] virtual std::string value() const = 0;
-    [[nodiscard]] virtual std::vector<AstNode*> children() const = 0;
-
-    [[nodiscard]] virtual std::int32_t get_id() const noexcept = 0;
+    [[nodiscard]] virtual std::vector<Node*> children() const = 0;
 };
 
-struct Expr : public AstNode
+struct Expr : public Node
 {
     explicit Expr() = default;
 };
 
-struct File final : public AstNode
+struct File final : public Node
 {
     explicit File(std::vector<Expr*> expressions)
     : expressions(std::move(expressions)) {}
@@ -35,10 +36,7 @@ struct File final : public AstNode
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<AstNode*> children() const final;
-
-    static const std::int32_t ID = 0;
-    [[nodiscard]] std::int32_t get_id() const noexcept final { return ID; }
+    [[nodiscard]] std::vector<Node*> children() const final;
 };
 
 struct BinaryExpr final : public Expr
@@ -53,10 +51,7 @@ struct BinaryExpr final : public Expr
 
     [[nodiscard]] std::string name() const override;
     [[nodiscard]] std::string value() const override;
-    [[nodiscard]] std::vector<AstNode*> children() const override;
-
-    static const std::int32_t ID = 1;
-    [[nodiscard]] std::int32_t get_id() const noexcept final { return ID; }
+    [[nodiscard]] std::vector<Node*> children() const override;
 };
 
 struct UnaryExpr final : public Expr
@@ -69,10 +64,7 @@ struct UnaryExpr final : public Expr
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<AstNode*> children() const final;
-
-    static const std::int32_t ID = 2;
-    [[nodiscard]] std::int32_t get_id() const noexcept final { return ID; }
+    [[nodiscard]] std::vector<Node*> children() const final;
 };
 
 struct Literal : public Expr
@@ -80,23 +72,44 @@ struct Literal : public Expr
     Literal() = default;
 };
 
-struct Int final : public Literal
+template<typename Type>
+struct ArithmeticType : public Literal
 {
-    explicit Int(const std::string& str)
-    : val(std::stoll(str)) {}
+    explicit ArithmeticType(Type val) : val(val) {}
 
-    explicit Int(int64_t val)
-    : val(val) {}
+    [[nodiscard]] std::string name() const final { return "literal"; }
+    [[nodiscard]] std::string value() const final { return ""; }
+    [[nodiscard]] std::vector<Node*> children() const final { return {}; }
 
-	int64_t val;
+    ArithmeticType* operator+ (ArithmeticType* rhs) { return ArithmeticType(val +  rhs->val); }
+    ArithmeticType* operator- (ArithmeticType* rhs) { return ArithmeticType(val -  rhs->val); }
+    ArithmeticType* operator* (ArithmeticType* rhs) { return ArithmeticType(val *  rhs->val); }
+    ArithmeticType* operator/ (ArithmeticType* rhs) { return ArithmeticType(val /  rhs->val); }
+    ArithmeticType* operator% (ArithmeticType* rhs) { return ArithmeticType(val %  rhs->val); }
+    ArithmeticType* operator< (ArithmeticType* rhs) { return ArithmeticType(val <  rhs->val); }
+    ArithmeticType* operator> (ArithmeticType* rhs) { return ArithmeticType(val >  rhs->val); }
+    ArithmeticType* operator<=(ArithmeticType* rhs) { return ArithmeticType(val <= rhs->val); }
+    ArithmeticType* operator>=(ArithmeticType* rhs) { return ArithmeticType(val >= rhs->val); }
+    ArithmeticType* operator==(ArithmeticType* rhs) { return ArithmeticType(val == rhs->val); }
+    ArithmeticType* operator!=(ArithmeticType* rhs) { return ArithmeticType(val != rhs->val); }
+    ArithmeticType* operator&&(ArithmeticType* rhs) { return ArithmeticType(val && rhs->val); }
+    ArithmeticType* operator||(ArithmeticType* rhs) { return ArithmeticType(val || rhs->val); }
 
-    [[nodiscard]] std::string name() const final;
-    [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<AstNode*> children() const final;
-
-    static const std::int32_t ID = 3;
-    [[nodiscard]] std::int32_t get_id() const noexcept final { return ID; }
+    Type val;
 };
+
+using Int = ArithmeticType<int>;
+using Float = ArithmeticType<float>;
+using Char = ArithmeticType<char>;
+
+struct Variable : public Expr
+{
+    Variable(std::string name) : name(std::move(name)) {}
+
+    std::string name;
+};
+
+}
 
 ////////////////////////
 
@@ -128,25 +141,14 @@ auto overloaded(F... f)
 }
 
 template<typename Func>
-auto downcast_call(AstNode* node, const Func& func)
+void downcast_call(Ast::Node* node, const Func& func)
 {
-    switch(node->get_id())
-    {
-        case File::ID:
-            func(static_cast<File*>(node));
-            return true;
-        case BinaryExpr::ID:
-            func(static_cast<BinaryExpr*>(node));
-            return true;
-        case UnaryExpr::ID:
-            func(static_cast<UnaryExpr*>(node));
-            return true;
-        case Int::ID:
-            func(static_cast<Int*>(node));
-            return true;
-        default:
-            return false;
-    }
+    if     (auto* res = dynamic_cast<Ast::File*      >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::BinaryExpr*>(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::UnaryExpr* >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Int*       >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Float*     >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Char*      >(node)) func(res);
 }
 
 
