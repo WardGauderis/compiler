@@ -143,15 +143,24 @@ struct Declaration final : public Statement
     Expr* expr;  // can be nullptr
 };
 
-struct UnusedExpr final : public Statement
+struct ExprStatement final : public Statement
 {
-    explicit UnusedExpr(Expr* expr) : expr(expr) {}
+    explicit ExprStatement(Expr* expr) : expr(expr) {}
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
 
     Expr* expr;
+};
+
+struct PrintfStatement final : public Statement
+{
+    explicit PrintfStatement() = default;
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
 };
 
 

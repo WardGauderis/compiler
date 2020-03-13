@@ -13,8 +13,10 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
 {
     std::function<void(Node*)> recursion = [&](Node* node)
         {
-        stream << '"' << node << "\"[label=\"" << node->name() << "\\n"
+        stream << '"' << node << "\"[label=\""
+               << node->name() << "\\n"
                << node->value() << "\"];\n";
+
         for (const auto child : node->children())
         {
             stream << '"' << node << "\" -> \"" << child << "\";\n";
@@ -147,17 +149,30 @@ std::vector<Node*> Declaration::children() const
     else return {};
 }
 
-std::string UnusedExpr::name() const
+std::string ExprStatement::name() const
 {
     return "unused expression";
 }
-std::string UnusedExpr::value() const
+std::string ExprStatement::value() const
 {
     return "";
 }
-std::vector<Node*> UnusedExpr::children() const
+std::vector<Node*> ExprStatement::children() const
 {
     return {expr};
+}
+
+std::string PrintfStatement::name() const
+{
+    return "printf";
+}
+std::string PrintfStatement::value() const
+{
+    return "";
+}
+std::vector<Node*> PrintfStatement::children() const
+{
+    return {};
 }
 
 

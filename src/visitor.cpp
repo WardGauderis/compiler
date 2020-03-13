@@ -26,7 +26,7 @@ struct VisitorHelper
     template <typename Func>
     void operator()(size_t size, const Func& func)
     {
-        if (not res and size == context->children.size())
+        if (size == context->children.size())
         {
             res = func(context);
         }
@@ -34,11 +34,11 @@ struct VisitorHelper
 
     Ret* result()
     {
-        if (not res) throw std::logic_error("could not find visitor for: " + name);
+        if (res == nullptr) throw std::logic_error("could not find visitor for " + name);
         else return res;
     }
 
-    Ret* res;
+    Ret* res = nullptr;
     antlr4::tree::ParseTree* context;
     std::string name;
 };
@@ -46,7 +46,7 @@ struct VisitorHelper
 
 ///////////////////////
 
-Ast::Expr* visitConstant(antlr4::tree::ParseTree* context)
+Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context)
 {
     return new Ast::Literal(std::stoi(context->children[0]->getText()));
 }
@@ -56,9 +56,9 @@ Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context)
     VisitorHelper<Ast::Expr> visitor(context, "basic expression");
     visitor(1, [](auto* context)
     {
-        if(typeid(*context) == typeid(CParser::ConstantContext))
+        if(typeid(*context) == typeid(CParser::LiteralContext))
         {
-            return visitConstant(context->children[0]);
+            return visitLiteral(context->children[0]);
         }
         else
         {
@@ -70,6 +70,7 @@ Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context)
     {
         return visitExpr(context->children[1]);
     });
+    return visitor.result();
 }
 
 Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context)
@@ -79,10 +80,10 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context)
     {
         return visitBasicExpr(context->children[0]);
     });
-    visitor(3, [](auto* context)
+    visitor(2, [](auto* context)
     {
-        const auto lhs = new Ast::Variable(context->children[1]->getText());
-        return new Ast::UnaryExpr(context->children[0]->getText(), lhs);
+        const auto lhs = new Ast::Variable(context->children[0]->getText());
+        return new Ast::UnaryExpr(context->children[1]->getText(), lhs);
     });
     return visitor.result();
 }
@@ -263,13 +264,13 @@ Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context)
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context)
 {
     VisitorHelper<Ast::Statement> visitor(context, "statement");
-    visitor(3, [](auto* context)
+    visitor(2, [](auto* context)
     {
       return new Ast::Declaration(context->children[0]->getText(),
                                   context->children[1]->getText(),
                                   nullptr);
     });
-    visitor(5, [](auto* context)
+    visitor(4, [](auto* context)
     {
       return new Ast::Declaration(context->children[0]->getText(),
                                   context->children[1]->getText(),
@@ -278,19 +279,27 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context)
     return visitor.result();
 }
 
+Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context)
+{
+    return new Ast::PrintfStatement();
+}
+
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
 {
-    std::cout << context->children.size() << '\n';
     const auto child = context->children[0];
     const auto hash = typeid(*child).hash_code();
 
     if(hash == typeid(CParser::AssignExprContext).hash_code())
     {
-        return new Ast::UnusedExpr(visitExpr(child));
+        return new Ast::ExprStatement(visitExpr(child));
     }
     else if(hash == typeid(CParser::DeclarationContext).hash_code())
     {
         return visitDeclaration(child);
+    }
+    else if(hash == typeid(CParser::PrintfContext()).hash_code())
+    {
+        return visitPrintf(child);
     }
     else throw std::logic_error(std::string("unknown statement type: ") + typeid(*context).name());
 }

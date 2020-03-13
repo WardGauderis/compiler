@@ -18,7 +18,7 @@
 
 
 
-Ast::Expr* visitConstant(antlr4::tree::ParseTree* context);
+Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context);
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context);
 
@@ -51,6 +51,8 @@ std::string visitPointerType(antlr4::tree::ParseTree* context);
 Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context);
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context);
+
+Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context);
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context);
 

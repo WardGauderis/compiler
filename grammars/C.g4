@@ -117,11 +117,11 @@ declaration:
 printf:
     'printf' '(' (IDENTIFIER | literal) ')';
 
-line:
+statement:
     (declaration | expr | printf) ';';
 
 block:
-    (line | comment)* EOF;
+    (statement | comment)* EOF;
 
 
 
