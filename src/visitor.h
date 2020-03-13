@@ -15,6 +15,7 @@
 #include "CParser.h"
 #include "ast.h"
 #include "folding.h"
+#include "errors.h"
 
 namespace
 {
@@ -132,7 +133,7 @@ Ast::Expr* visitExpr(antlr4::tree::ParseTree* context)
         }
         else throw std::logic_error("basic expr must have 1 or 3 children");
     }
-    else throw std::logic_error(std::string("unknown type: ") + typeid(*context).name());
+    else throw WhoopsiePoopsieError(std::string("unknown type: ") + typeid(*context).name());
 }
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
