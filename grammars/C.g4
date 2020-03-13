@@ -59,7 +59,6 @@ prefixExpr:
 unaryExpr:
     prefixExpr|
     '+' unaryExpr|
-    '+' unaryExpr|
     '-' unaryExpr|
     '!' unaryExpr|
     '(' typeName ')' unaryExpr;
@@ -121,7 +120,7 @@ printf:
 line:
     (declaration | expr | printf) ';';
 
-file:
+block:
     (line | comment)* EOF;
 
 
