@@ -49,7 +49,6 @@ prefixExpr:
 unaryExpr:
     prefixExpr|
     '+' unaryExpr|
-    '+' unaryExpr|
     '-' unaryExpr|
     '!' unaryExpr|
     '(' typeName ')' unaryExpr;
@@ -105,8 +104,12 @@ initizalizer:
 declaration:
     typeName IDENTIFIER ('=' initizalizer)? ';';
 
-file:
-    (declaration | assignExpr ';')* EOF;
+statement:
+    declaration|
+    assignExpr;
+
+block:
+    (statement ';')* EOF;
 
 
 

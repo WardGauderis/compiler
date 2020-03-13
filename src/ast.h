@@ -78,6 +78,19 @@ struct UnaryExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
 };
 
+struct CastExpr final : public Expr
+{
+    explicit CastExpr(std::string type, Expr* operand)
+        : type(std::move(type)), operand(operand) {}
+
+    std::string type;
+    Expr* operand;
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+};
+
 struct Literal final : public Expr
 {
     template<typename Type>
@@ -90,32 +103,19 @@ struct Literal final : public Expr
     std::variant<char, short, int, long, float, double> literal;
 };
 
-struct Variable : public Expr
+struct Variable final : public Expr
 {
-    explicit Variable(std::string name, bool isConst)
-    : identifier(std::move(name)), isConst(isConst) {}
-
-    [[nodiscard]] std::string name() const override;
-    [[nodiscard]] std::string value() const override;
-    [[nodiscard]] std::vector<Node*> children() const override;
-
-    std::string identifier;
-    bool isConst;
-};
-
-struct Pointer final : public Variable
-{
-    explicit Pointer(std::string name, bool isConst, Variable* pointee)
-    : Variable(std::move(name), isConst), pointee(pointee) {}
+    explicit Variable(std::string identifier)
+        : identifier(std::move(identifier)) {}
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
 
-    Variable* pointee;
+    std::string identifier;
 };
 
-struct Assignment final : public Statement
+struct Assignment final : public Expr
 {
     explicit Assignment(std::string variable, Expr* expr)
     : variable(std::move(variable)), expr(expr) {}
@@ -130,15 +130,28 @@ struct Assignment final : public Statement
 
 struct Declaration final : public Statement
 {
-    explicit Declaration(Variable* assignee, Expr* expr)
-    : assignee(assignee), expr(expr) {}
+    explicit Declaration(std::string type, std::string identifier, Expr* expr)
+    : type(std::move(type)), identifier(std::move(identifier)), expr(expr) {}
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
 
-    Variable* assignee;
+    std::string type;
+    std::string identifier;
+
     Expr* expr;  // can be nullptr
+};
+
+struct UnusedExpr final : public Statement
+{
+    explicit UnusedExpr(Expr* expr) : expr(expr) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+
+    Expr* expr;
 };
 
 
@@ -150,17 +163,34 @@ template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 template<typename Func>
-void downcast_call(Ast::Node* node, const Func& func)
+void downcast_expr(Ast::Expr* node, const Func& func)
 {
-    if     (auto* res = dynamic_cast<Ast::Block*     >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::BinaryExpr*>(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::UnaryExpr* >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Literal*   >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Assignment*>(node)) func(res);
-    // we need to swap the order of pointer and variable, because dynamic cast
-    else if(auto* res = dynamic_cast<Ast::Pointer*   >(node)) func(res);
-    else if(auto* res = dynamic_cast<Ast::Variable*  >(node)) func(res);
+    if     (auto* res = dynamic_cast<Ast::BinaryExpr*   >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::UnaryExpr*    >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Literal*      >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Variable*     >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Assignment*   >(node)) func(res);
+    else throw std::logic_error("unknown expression type");
 }
+
+template<typename Func>
+void downcast_statement(Ast::Statement* node, const Func& func)
+{
+
+    if(auto* res = dynamic_cast<Ast::Declaration*  >(node)) func(res);
+    else throw std::logic_error("unknown statement type");
+}
+
+template<typename Func>
+void downcast_node(Ast::Node* node, const Func& func)
+{
+    if     (auto* res = dynamic_cast<Ast::Block*        >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Expr*         >(node)) downcast_expr(res, func);
+    else if(auto* res = dynamic_cast<Ast::Statement*    >(node)) downcast_statement(res, func);
+    else throw std::logic_error("unknown node type");
+}
+
+
 
 
 

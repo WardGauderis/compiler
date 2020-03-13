@@ -80,6 +80,19 @@ std::vector<Node*> UnaryExpr::children() const
     return {operand};
 }
 
+std::string CastExpr::name() const
+{
+    return "cast expression";
+}
+std::string CastExpr::value() const
+{
+    return '(' + type + ')';
+}
+std::vector<Node*> CastExpr::children() const
+{
+    return {operand};
+}
+
 std::string Literal::name() const
 {
     return "literal";
@@ -106,18 +119,6 @@ std::vector<Node*> Variable::children() const
     return {};
 }
 
-std::string Pointer::name() const
-{
-    return "pointer";
-}
-std::string Pointer::value() const
-{
-    return "";
-}
-std::vector<Node*> Pointer::children() const
-{
-    return {};
-}
 
 std::string Assignment::name() const
 {
@@ -138,12 +139,25 @@ std::string Declaration::name() const
 }
 std::string Declaration::value() const
 {
-    return "";
+    return type + ": " + identifier;
 }
 std::vector<Node*> Declaration::children() const
 {
-    if(expr) return {assignee, expr};
-    else return {assignee};
+    if(expr) return {expr};
+    else return {};
+}
+
+std::string UnusedExpr::name() const
+{
+    return "unused expression";
+}
+std::string UnusedExpr::value() const
+{
+    return "";
+}
+std::vector<Node*> UnusedExpr::children() const
+{
+    return {expr};
 }
 
 
