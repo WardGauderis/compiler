@@ -24,9 +24,19 @@ FLOAT:
 IDENTIFIER:
     [a-zA-Z_] [a-zA-Z_0-9]*;
 
-WS:[ \t\n\r]+->skip;
+LINECOMMENT:
+    '//' ~[\n\r]*;
 
-constant:
+MULTILINECOMMENT:
+    '/*' .*? '*/';
+
+WS:
+    [ \t\n\r]+ -> skip;
+
+comment:
+    LINECOMMENT | MULTILINECOMMENT;
+
+literal:
     CHAR|
     INT|
     FLOAT;
@@ -34,7 +44,7 @@ constant:
 basicExpr:
     '(' expr ')'|
     IDENTIFIER|
-    constant;
+    literal;
 
 postfixExpr:
     basicExpr|
@@ -103,10 +113,16 @@ initizalizer:
     expr;
 
 declaration:
-    typeName IDENTIFIER ('=' initizalizer)? ';';
+    typeName IDENTIFIER ('=' initizalizer)?;
+
+printf:
+    'printf' '(' (IDENTIFIER | literal) ')';
+
+line:
+    (declaration | expr | printf) ';';
 
 file:
-    (declaration | assignExpr ';')* EOF;
+    (line | comment)* EOF;
 
 
 
