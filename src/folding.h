@@ -75,7 +75,7 @@ Ast::Expr* foldExpr(Ast::Expr* expr)
                 else if (binexpr->operation == "||")
                     result = new Ast::Literal(lhs || rhs);
                 else
-                    throw std::logic_error("unknown binary operation");
+                    throw SyntaxError("unknown binary operation");
             },
             val0, val1);
     },
@@ -102,7 +102,7 @@ Ast::Expr* foldExpr(Ast::Expr* expr)
                 else if (unexpr->operation == "!")
                     result = new Ast::Literal(!val);
                 else
-                    throw std::logic_error("unknown unary operation");
+                    throw SyntaxError("unknown unary operation");
             }, val0);
     },
     [&](Ast::Literal* literal)

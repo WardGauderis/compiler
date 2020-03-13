@@ -9,6 +9,7 @@
 #include <optional>
 #include <variant>
 #include <vector>
+#include "errors.h"
 
 namespace Ast
 {
@@ -179,7 +180,7 @@ void downcast_expr(Ast::Expr* node, const Func& func)
     else if(auto* res = dynamic_cast<Ast::Literal*      >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::Variable*     >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::Assignment*   >(node)) func(res);
-    else throw std::logic_error("unknown expression type");
+    else throw SyntaxError("unknown expression type");
 }
 
 template<typename Func>
@@ -187,7 +188,7 @@ void downcast_statement(Ast::Statement* node, const Func& func)
 {
 
     if(auto* res = dynamic_cast<Ast::Declaration*  >(node)) func(res);
-    else throw std::logic_error("unknown statement type");
+    else throw SyntaxError("unknown statement type");
 }
 
 template<typename Func>
@@ -196,7 +197,7 @@ void downcast_node(Ast::Node* node, const Func& func)
     if     (auto* res = dynamic_cast<Ast::Block*        >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::Expr*         >(node)) downcast_expr(res, func);
     else if(auto* res = dynamic_cast<Ast::Statement*    >(node)) downcast_statement(res, func);
-    else throw std::logic_error("unknown node type");
+    else throw SemanticError("unknown node type");
 }
 
 

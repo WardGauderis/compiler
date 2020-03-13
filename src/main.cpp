@@ -54,12 +54,14 @@ void runTests(const std::filesystem::path& path, bool redoExisting)
 
 int main(int argc, const char** argv)
 {
-//	try
-//	{
+	try
+	{
 //		runTests("tests", true);
 
-		std::stringstream stream("int x = 5;");
-//	std::ifstream stream("tests/assignments/basic.c");
+//		std::stringstream stream("int x = 5; //test");
+		std::ifstream stream("tests/assignment/basic.c");
+		if(!stream.good()) throw CompilationError("File not found");
+
 		antlr4::ANTLRInputStream input(stream);
 		CLexer lexer(&input);
 		antlr4::CommonTokenStream tokens(&lexer);
@@ -67,8 +69,8 @@ int main(int argc, const char** argv)
 
 		antlr4::tree::ParseTree* node = parser.block();
 
-//		DotVisitor dotVisitor("output/cst", &parser.getRuleNames());
-//		dotVisitor.visit(node);
+		DotVisitor dotVisitor("output/cst", &parser.getRuleNames());
+		dotVisitor.visit(node);
 
 		const auto root = visitBlock(node);
 		std::ofstream file("output/ast.dot");
@@ -76,23 +78,27 @@ int main(int argc, const char** argv)
 		file << "{\n";
 		file << root;
 		file << "}\n" << std::flush;
-		system(("dot -Tpng " + std::string("output/ast.dot")+" -o "+std::string("output/ast.png")).c_str());
-//	}
-//	catch (const SyntaxError& ex)
-//	{
-//		std::cerr << "Syntax Error: " << ex.what() << std::endl;
-//	}
-//	catch (const SemanticError& ex)
-//	{
-//		std::cerr << "Semantic Error: " << ex.what() << std::endl;
-//	}
-//	catch (const WhoopsiePoopsieError& ex)
-//	{
-//		std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
-//	}
-//	catch (const std::exception& ex)
-//	{
-//		std::cerr << "Unknown Error: " << ex.what() << std::endl;
-//	}
+		system(("dot -Tpng "+std::string("output/ast.dot")+" -o "+std::string("output/ast.png")).c_str());
+	}
+	catch (const SyntaxError& ex)
+	{
+		std::cerr << "Syntax Error: " << ex.what() << std::endl;
+	}
+	catch (const SemanticError& ex)
+	{
+		std::cerr << "Semantic Error: " << ex.what() << std::endl;
+	}
+	catch (const WhoopsiePoopsieError& ex)
+	{
+		std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
+	}
+	catch (const CompilationError& ex)
+	{
+		std::cerr << "Compilation Error: " << ex.what() << std::endl;
+	}
+	catch (const std::exception& ex)
+	{
+		std::cerr << "Unknown Error: " << ex.what() << std::endl;
+	}
 	return 0;
 }

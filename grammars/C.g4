@@ -94,7 +94,6 @@ orExpr:
     andExpr|
     orExpr '||' andExpr;
 
-//TODO: enkel =? bv. *=
 assignExpr:
     orExpr|
     IDENTIFIER '=' assignExpr;
@@ -102,11 +101,14 @@ assignExpr:
 expr:
     assignExpr;
 
+qualifier:
+    QUALIFIER+;
+
 typeName:
-    QUALIFIER* SPECIFIER QUALIFIER* pointerType?;
+    qualifier? SPECIFIER qualifier? pointerType?;
 
 pointerType:
-    '*' QUALIFIER* pointerType?;
+    '*' qualifier? pointerType?;
 
 initizalizer:
     expr;

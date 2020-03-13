@@ -34,7 +34,7 @@ struct VisitorHelper
 
     Ret* result()
     {
-        if (res == nullptr) throw std::logic_error("could not find visitor for " + name);
+        if (res == nullptr) throw SemanticError("could not find visitor for " + name);
         else return res;
     }
 
@@ -301,7 +301,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
     {
         return visitPrintf(child);
     }
-    else throw std::logic_error(std::string("unknown statement type: ") + typeid(*context).name());
+    else throw WhoopsiePoopsieError(std::string("unknown statement type: ") + typeid(*context).name());
 }
 
 std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)

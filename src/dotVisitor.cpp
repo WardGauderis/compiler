@@ -3,12 +3,13 @@
 //
 
 #include "dotVisitor.h"
+#include "errors.h"
 
 DotVisitor::DotVisitor(std::filesystem::path path, const std::vector<std::string>* names) : path(std::move(path)),
                                                                                             names(names) {
 	std::filesystem::create_directory(this->path.parent_path());
 	stream = std::ofstream(this->path.string() + ".dot");
-	if (not stream.is_open()) throw std::runtime_error("could not open file: " + this->path.string() + ".dot");
+	if (not stream.is_open()) throw CompilationError("could not open file: " + this->path.string() + ".dot");
 
 	stream << "digraph G\n";
 	stream << "{\n";
@@ -35,7 +36,7 @@ antlrcpp::Any DotVisitor::visitChildren(antlr4::tree::ParseTree* node) {
 	if (auto n = dynamic_cast<antlr4::RuleContext*>(node)) {
 		linkWithParent(node, (*names)[n->getRuleIndex()]);
 	} else {
-		throw std::runtime_error("Geen RuleContext");
+		throw WhoopsiePoopsieError("Geen RuleContext");
 	}
 	return antlr4::tree::AbstractParseTreeVisitor::visitChildren(node);
 }
