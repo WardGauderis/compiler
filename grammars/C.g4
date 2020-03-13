@@ -26,9 +26,15 @@ IDENTIFIER:
 
 WS:[ \t\n\r]+->skip;
 
+constant:
+    CHAR|
+    INT|
+    FLOAT;
+
 basicExpr:
-    '(' orExpr ')'|
-    INT;
+    '(' expr ')'|
+    IDENTIFIER|
+    constant;
 
 postfixExpr:
     basicExpr|
@@ -38,18 +44,21 @@ postfixExpr:
 prefixExpr:
     postfixExpr|
     '++' IDENTIFIER|
-    '--' IDENTIFIER|
-    '+' prefixExpr|
-    '+' prefixExpr|
-    '-' prefixExpr|
-    '!' prefixExpr|
-    '(' typeName ')' prefixExpr;
+    '--' IDENTIFIER;
+
+unaryExpr:
+    prefixExpr|
+    '+' unaryExpr|
+    '+' unaryExpr|
+    '-' unaryExpr|
+    '!' unaryExpr|
+    '(' typeName ')' unaryExpr;
 
 multiplicativeExpr:
-    prefixExpr|
-    multiplicativeExpr '*' prefixExpr|
-    multiplicativeExpr '/' prefixExpr|
-    multiplicativeExpr '%' prefixExpr;
+    unaryExpr|
+    multiplicativeExpr '*' unaryExpr|
+    multiplicativeExpr '/' unaryExpr|
+    multiplicativeExpr '%' unaryExpr;
 
 additiveExpr:
     multiplicativeExpr|
