@@ -79,29 +79,29 @@ void output_all_tests(bool redo_existing)
 
 int main(int argc, const char** argv)
 {
-//	try
-//	{
+	try
+	{
 		output_all_tests(true);
-//	}
-//	catch (const SyntaxError& ex)
-//	{
-//		std::cerr << "Syntax Error: " << ex.what() << std::endl;
-//	}
-//	catch (const SemanticError& ex)
-//	{
-//		std::cerr << "Semantic Error: " << ex.what() << std::endl;
-//	}
-//	catch (const WhoopsiePoopsieError& ex)
-//	{
-//		std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
-//	}
-//	catch (const CompilationError& ex)
-//	{
-//		std::cerr << "Compilation Error: " << ex.what() << std::endl;
-//	}
-//	catch (const std::exception& ex)
-//	{
-//		std::cerr << "Unknown Error: " << ex.what() << std::endl;
-//	}
+	}
+	catch (const SyntaxError& ex)
+	{
+		std::cerr << "Syntax Error: " << ex.what() << std::endl;
+	}
+	catch (const SemanticError& ex)
+	{
+		std::cerr << "Semantic Error: " << ex.what() << std::endl;
+	}
+	catch (const WhoopsiePoopsieError& ex)
+	{
+		std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
+	}
+	catch (const CompilationError& ex)
+	{
+		std::cerr << "Compilation Error: " << ex.what() << std::endl;
+	}
+	catch (const std::exception& ex)
+	{
+		std::cerr << "Unknown Error: " << ex.what() << std::endl;
+	}
 	return 0;
 }
