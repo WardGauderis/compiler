@@ -15,7 +15,8 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
         {
         stream << '"' << node << "\"[label=\""
                << node->name() << "\\n"
-               << node->value() << "\"];\n";
+               << node->value() << "\", shape=box, style=filled, color=\""
+               << node->color() << "\"];\n";
 
         for (const auto child : node->children())
         {
@@ -29,12 +30,29 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
 
 std::string Expr::color() const
 {
-    return "#98fb98";
+    return "#ced6eb"; // light blue
 }
 
 std::string Statement::color() const
 {
-    return " #5dade2";
+    return " #ebcee5"; // light orange/pink
+}
+
+std::string Comment::name() const
+{
+    return "comment";
+}
+std::string Comment::value() const
+{
+    return "...";
+}
+std::vector<Node*> Comment::children() const
+{
+    return {};
+}
+std::string Comment::color() const
+{
+    return "#d5ceeb"; // light purple
 }
 
 std::string Block::name() const
@@ -47,52 +65,11 @@ std::string Block::value() const
 }
 std::vector<Node*> Block::children() const
 {
-    std::vector<Node*> result(expressions.size());
-    std::copy(expressions.begin(), expressions.end(), result.begin());
-    return result;
+    return nodes;
 }
 std::string Block::color() const
 {
-    return "#f08080";
-}
-
-std::string BinaryExpr::name() const
-{
-    return "binary expression";
-}
-std::string BinaryExpr::value() const
-{
-    return operation;
-}
-std::vector<Node*> BinaryExpr::children() const
-{
-    return {lhs, rhs};
-}
-
-std::string UnaryExpr::name() const
-{
-    return "unary expression";
-}
-std::string UnaryExpr::value() const
-{
-    return operation;
-}
-std::vector<Node*> UnaryExpr::children() const
-{
-    return {operand};
-}
-
-std::string CastExpr::name() const
-{
-    return "cast expression";
-}
-std::string CastExpr::value() const
-{
-    return '(' + type + ')';
-}
-std::vector<Node*> CastExpr::children() const
-{
-    return {operand};
+    return "#ceebe3"; // light green
 }
 
 std::string Literal::name() const
@@ -121,6 +98,70 @@ std::vector<Node*> Variable::children() const
     return {};
 }
 
+std::string BinaryExpr::name() const
+{
+    return "binary expression";
+}
+std::string BinaryExpr::value() const
+{
+    return operation;
+}
+std::vector<Node*> BinaryExpr::children() const
+{
+    return {lhs, rhs};
+}
+
+std::string PostfixExpr::name() const
+{
+    return "postfix expression";
+}
+std::string PostfixExpr::value() const
+{
+    return operation;
+}
+std::vector<Node*> PostfixExpr::children() const
+{
+    return {variable};
+}
+
+std::string PrefixExpr::name() const
+{
+    return "prefix expression";
+}
+std::string PrefixExpr::value() const
+{
+    return operation;
+}
+std::vector<Node*> PrefixExpr::children() const
+{
+    return {variable};
+}
+
+std::string UnaryExpr::name() const
+{
+    return "unary expression";
+}
+std::string UnaryExpr::value() const
+{
+    return operation;
+}
+std::vector<Node*> UnaryExpr::children() const
+{
+    return {operand};
+}
+
+std::string CastExpr::name() const
+{
+    return "cast expression";
+}
+std::string CastExpr::value() const
+{
+    return '(' + type + ')';
+}
+std::vector<Node*> CastExpr::children() const
+{
+    return {operand};
+}
 
 std::string Assignment::name() const
 {

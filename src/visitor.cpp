@@ -13,6 +13,7 @@
 #include "CParser.h"
 #include "ast.h"
 #include "errors.h"
+#include "folding.h"
 #include "visitor.h"
 
 namespace
@@ -46,9 +47,27 @@ struct VisitorHelper
 
 ///////////////////////
 
+Ast::Comment* visitComment(antlr4::tree::ParseTree* context)
+{
+    return new Ast::Comment(context->getText());
+}
+
 Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context)
 {
-    return new Ast::Literal(std::stoi(context->children[0]->getText()));
+    auto* terminal = dynamic_cast<antlr4::tree::TerminalNode*>(context->children[0]);
+    if(terminal == nullptr) throw WhoopsiePoopsieError("literal node is not a terminal in the cst");
+
+    switch(terminal->getSymbol()->getType())
+    {
+        case CParser::FLOAT:
+            return new Ast::Literal(std::stof(terminal->getText()));
+        case CParser::INT:
+            return new Ast::Literal(std::stoi(terminal->getText()));
+        case CParser::CHAR:
+            return new Ast::Literal(terminal->getText()[0]);
+        default:
+            throw WhoopsiePoopsieError("unknown literal type, probably not yet implemented");
+    }
 }
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context)
@@ -56,15 +75,16 @@ Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context)
     VisitorHelper<Ast::Expr> visitor(context, "basic expression");
     visitor(1, [](auto* context)
     {
-        if(typeid(*context) == typeid(CParser::LiteralContext))
+        const auto child = context->children[0];
+        if(typeid(*child) == typeid(CParser::LiteralContext))
         {
-            return visitLiteral(context->children[0]);
+            return visitLiteral(child);
         }
-        else
+        else if(typeid(*child) == typeid(antlr4::tree::TerminalNodeImpl))
         {
-            Ast::Expr* res = new Ast::Variable(context->children[0]->getText());
-            return res;
+            return static_cast<Ast::Expr*>(new Ast::Variable(child->getText()));
         }
+        else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ") + typeid(*child).name());
     });
     visitor(3, [](auto* context)
     {
@@ -83,7 +103,7 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context)
     visitor(2, [](auto* context)
     {
         const auto lhs = new Ast::Variable(context->children[0]->getText());
-        return new Ast::UnaryExpr(context->children[1]->getText(), lhs);
+        return new Ast::PostfixExpr(context->children[1]->getText(), lhs);
     });
     return visitor.result();
 }
@@ -98,7 +118,7 @@ Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context)
     visitor(2, [](auto* context)
     {
       const auto rhs = new Ast::Variable(context->children[1]->getText());
-      return new Ast::UnaryExpr(context->children[0]->getText(), rhs);
+      return new Ast::PrefixExpr(context->children[0]->getText(), rhs);
     });
     return visitor.result();
 }
@@ -197,9 +217,9 @@ Ast::Expr* visitAndExpr(antlr4::tree::ParseTree* context)
     });
     visitor(3, [](auto* context)
     {
-      const auto lhs = visitAndExpr(context->children[0]);
-      const auto rhs = visitEqualityExpr(context->children[2]);
-      return new Ast::BinaryExpr("&&", lhs, rhs);
+        const auto lhs = visitAndExpr(context->children[0]);
+        const auto rhs = visitEqualityExpr(context->children[2]);
+        return new Ast::BinaryExpr("&&", lhs, rhs);
     });
     return visitor.result();
 }
@@ -209,13 +229,13 @@ Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context)
     VisitorHelper<Ast::Expr> visitor(context, "or expression");
     visitor(1, [](auto* context)
     {
-      return visitAndExpr(context->children[0]);
+        return visitAndExpr(context->children[0]);
     });
     visitor(3, [](auto* context)
     {
-      const auto lhs = visitOrExpr(context->children[0]);
-      const auto rhs = visitAndExpr(context->children[2]);
-      return new Ast::BinaryExpr("||", lhs, rhs);
+        const auto lhs = visitOrExpr(context->children[0]);
+        const auto rhs = visitAndExpr(context->children[2]);
+        return new Ast::BinaryExpr("||", lhs, rhs);
     });
     return visitor.result();
 }
@@ -306,13 +326,19 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
 
 std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
 {
-    const auto size = context->children.size() - 1;
-    std::vector<Ast::Statement*> exprs(size);
-
-    for(size_t i = 0; i < size; i++)
+    std::vector<Ast::Node*> nodes;
+    for(size_t i = 0; i < context->children.size() - 1; i++)
     {
-        exprs[i] = visitStatement(context->children[i]);
+        const auto& child = context->children[i];
+        if(typeid(*child) == typeid(CParser::CommentContext))
+        {
+            nodes.emplace_back(visitComment(child));
+        }
+        else if(typeid(*child) == typeid(CParser::StatementContext))
+        {
+            nodes.emplace_back(visitStatement(child));
+        }
+        else throw WhoopsiePoopsieError(std::string("unknown node type: ") + typeid(*child).name());
     }
-    auto result = std::make_unique<Ast::Block>(exprs);
-    return result;
+    return foldNodes(nodes);
 }
