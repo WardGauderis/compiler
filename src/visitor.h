@@ -43,9 +43,11 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context);
 
 Ast::Expr* visitExpr(antlr4::tree::ParseTree* context);
 
-std::string visitTypeName(antlr4::tree::ParseTree* context);
+Ast::Type* visitTypeName(antlr4::tree::ParseTree* context);
 
-std::string visitPointerType(antlr4::tree::ParseTree* context);
+Ast::BasicType* visitBasicType(antlr4::tree::ParseTree* context);
+
+Ast::PointerType* visitPointerType(antlr4::tree::ParseTree* context, Ast::Type* baseType);
 
 Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context);
 

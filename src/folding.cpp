@@ -121,9 +121,9 @@ std::unique_ptr<Ast::Block> foldNodes(const std::vector<Ast::Node*>& nodes)
                 {
                   declaration->expr = foldExpr(declaration->expr);
                 },
-                [&](Ast::ExprStatement* statement)
+                [&](Ast::Expr* expr)
                 {
-                  statement->expr = foldExpr(statement->expr);
+                  expr = foldExpr(expr);
                 },
                 [&](Ast::Comment* comment)
                 {

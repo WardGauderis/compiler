@@ -1,10 +1,5 @@
 grammar C;
 
-SPECIFIER:
-    'char'|
-    'int'|
-    'float';
-
 QUALIFIER:
     'const';
 
@@ -101,11 +96,19 @@ assignExpr:
 expr:
     assignExpr;
 
+specifier:
+    'char'|
+    'int'|
+    'float';
+
 qualifier:
     QUALIFIER+;
 
 typeName:
-    qualifier? SPECIFIER qualifier? pointerType?;
+     basicType pointerType?;
+
+basicType:
+    qualifier? specifier qualifier?;
 
 pointerType:
     '*' qualifier? pointerType?;
