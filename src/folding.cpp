@@ -12,11 +12,11 @@
 namespace
 {
 template <typename Type0, typename Type1>
-Ast::Literal* foldModulo(Type0 rhs, Type1 lhs)
+Ast::Literal* foldModulo(Type0 lhs, Type1 rhs)
 {
     if constexpr (std::is_integral_v<Type0> and std::is_integral_v<Type1>)
     {
-        return new Ast::Literal(rhs % lhs);
+        return new Ast::Literal(lhs % rhs);
     }
     else
     {
@@ -26,7 +26,7 @@ Ast::Literal* foldModulo(Type0 rhs, Type1 lhs)
 }
 
 template <typename Type0, typename Type1>
-Ast::Literal* foldBinary(Type0 rhs, Type1 lhs, const std::string& operation)
+Ast::Literal* foldBinary(Type0 lhs, Type1 rhs, const std::string& operation)
 {
     if ((operation == "/" or operation == "%") and rhs == 0) return nullptr;
 
