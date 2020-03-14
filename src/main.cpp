@@ -55,11 +55,6 @@ void output_all_tests(bool redo_existing)
         const auto cst_path = base / (name + "-cst.png");
         const auto ast_path = base / (name + "-ast.png");
 
-        std::cout << input << '\n';
-        std::cout << cst_path << '\n';
-        std::cout << ast_path << '\n';
-        std::cout << '\n';
-
         if(not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path))
         {
             std::filesystem::create_directories(base);
