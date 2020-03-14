@@ -289,7 +289,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
     const auto child = context->children[0];
     const auto hash = typeid(*child).hash_code();
 
-    if(hash == typeid(CParser::AssignExprContext).hash_code())
+    if(hash == typeid(CParser::ExprContext).hash_code())
     {
         return new Ast::ExprStatement(visitExpr(child));
     }
@@ -301,7 +301,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
     {
         return visitPrintf(child);
     }
-    else throw WhoopsiePoopsieError(std::string("unknown statement type: ") + typeid(*context).name());
+    else throw WhoopsiePoopsieError(std::string("unknown statement type: ") + typeid(*context).name() + ":\n\t" + context->getText());
 }
 
 std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
