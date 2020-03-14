@@ -1,7 +1,8 @@
 /*
 * My program
 */
-//int x = 5*(3/10 + 9/10);
+int x = 2 + 2;
 //float y = x*2/( 2+1 * 2/3 +x) +8 * (8/4);
 //float result = x + y; //calculate the result
-const const int const const * const ** const x;
+int y = x + 5;
+float z = 5.1f * 8;

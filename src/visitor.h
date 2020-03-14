@@ -16,7 +16,7 @@
 #include "ast.h"
 #include "errors.h"
 
-
+Ast::Comment* visitComment(antlr4::tree::ParseTree* context);
 
 Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context);
 

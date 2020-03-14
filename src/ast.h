@@ -38,58 +38,30 @@ struct Statement : public Node
     [[nodiscard]] std::string color() const final;
 };
 
-struct Block final : public Node
+struct Comment final : public Node
 {
-    explicit Block(std::vector<Statement*> expressions)
-    : expressions(std::move(expressions)) {}
-
-	std::vector<Statement*> expressions;
+    explicit Comment(std::string comment)
+        : comment(std::move(comment)) {}
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
+
+    std::string comment;
 };
 
-struct BinaryExpr final : public Expr
+struct Block final : public Node
 {
-    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs)
-    : operation(std::move(operation)), lhs(lhs), rhs(rhs) {}
+    explicit Block(std::vector<Node*> nodes)
+    : nodes(std::move(nodes)) {}
 
-	std::string operation;
-
-	Expr* lhs;
-    Expr* rhs;
-
-    [[nodiscard]] std::string name() const override;
-    [[nodiscard]] std::string value() const override;
-    [[nodiscard]] std::vector<Node*> children() const override;
-};
-
-struct UnaryExpr final : public Expr
-{
-    explicit UnaryExpr(std::string operation, Expr* operand)
-    : operation(std::move(operation)), operand(operand) {}
-
-	std::string operation;
-	Expr* operand;
+	std::vector<Node*> nodes;
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
-};
-
-struct CastExpr final : public Expr
-{
-    explicit CastExpr(std::string type, Expr* operand)
-        : type(std::move(type)), operand(operand) {}
-
-    std::string type;
-    Expr* operand;
-
-    [[nodiscard]] std::string name() const final;
-    [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] std::string color() const final;
 };
 
 struct Literal final : public Expr
@@ -114,6 +86,73 @@ struct Variable final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
 
     std::string identifier;
+};
+
+struct BinaryExpr final : public Expr
+{
+    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs)
+    : operation(std::move(operation)), lhs(lhs), rhs(rhs) {}
+
+    [[nodiscard]] std::string name() const override;
+    [[nodiscard]] std::string value() const override;
+    [[nodiscard]] std::vector<Node*> children() const override;
+
+    std::string operation;
+
+    Expr* lhs;
+    Expr* rhs;
+};
+
+struct PostfixExpr final : public Expr
+{
+    explicit PostfixExpr(std::string operation, Variable* variable)
+    : operation(std::move(operation)), variable(variable) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+
+    std::string operation;
+    Variable* variable;
+};
+
+struct PrefixExpr final : public Expr
+{
+    explicit PrefixExpr(std::string operation, Variable* variable)
+        : operation(std::move(operation)), variable(variable) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+
+    std::string operation;
+    Variable* variable;
+};
+
+struct UnaryExpr final : public Expr
+{
+    explicit UnaryExpr(std::string operation, Expr* operand)
+    : operation(std::move(operation)), operand(operand) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+
+    std::string operation;
+    Expr* operand;
+};
+
+struct CastExpr final : public Expr
+{
+    explicit CastExpr(std::string type, Expr* operand)
+        : type(std::move(type)), operand(operand) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+
+    std::string type;
+    Expr* operand;
 };
 
 struct Assignment final : public Expr
@@ -194,7 +233,8 @@ void downcast_statement(Ast::Statement* node, const Func& func)
 template<typename Func>
 void downcast_node(Ast::Node* node, const Func& func)
 {
-    if     (auto* res = dynamic_cast<Ast::Block*        >(node)) func(res);
+    if     (auto* res = dynamic_cast<Ast::Comment*      >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::Block*        >(node)) func(res);
     else if(auto* res = dynamic_cast<Ast::Expr*         >(node)) downcast_expr(res, func);
     else if(auto* res = dynamic_cast<Ast::Statement*    >(node)) downcast_statement(res, func);
     else throw SemanticError("unknown node type");
