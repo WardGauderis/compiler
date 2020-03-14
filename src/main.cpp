@@ -1,3 +1,9 @@
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
+
 #include "dotVisitor.h"
 #include "visitor.h"
 #include "folding.h"
@@ -10,7 +16,7 @@ std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std
 	const auto begin = string.find_first_of('/');
 	const auto end = string.find_last_of('.');
 
-	if (begin==std::string::npos or end==std::string::npos)
+	if (begin == std::string::npos or end == std::string::npos)
 		throw std::runtime_error("malformed path: "+string);
 
 	return std::filesystem::path("output")/string.substr(begin+1, end-begin-1);

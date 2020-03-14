@@ -1,6 +1,8 @@
-//
-// Created by ward on 3/6/20.
-//
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
 
 #include "ast.h"
 #include <iostream>
@@ -213,7 +215,7 @@ std::string PrintfStatement::value() const
 }
 std::vector<Node*> PrintfStatement::children() const
 {
-    return {};
+    return {expr};
 }
 
 

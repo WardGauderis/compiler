@@ -1,10 +1,7 @@
 //============================================================================
-// @name        : detail.h
-// @author      : Thomas Dooms
+// @author      : Thomas Dooms & Ward Gauderis
 // @date        : 3/10/20
-// @version     :
-// @copyright   : BA1 Informatica - Thomas Dooms - University of Antwerp
-// @description :
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
 //============================================================================
 
 #pragma once
@@ -18,7 +15,9 @@
 
 Ast::Comment* visitComment(antlr4::tree::ParseTree* context);
 
-Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context);
+Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context);
+
+Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context);
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context);
 

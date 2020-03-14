@@ -8,3 +8,4 @@ int y = x + 5;
 float z = 5.1f * 8 / 5;
 
 int q = 10 % 2;
+printf(q);

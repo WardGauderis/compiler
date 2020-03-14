@@ -1,7 +1,8 @@
-//
-// Created by ward on 3/6/20.
-//
-
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
 #pragma once
 
 #include <array>
@@ -196,11 +197,13 @@ struct ExprStatement final : public Statement
 
 struct PrintfStatement final : public Statement
 {
-    explicit PrintfStatement() = default;
+    explicit PrintfStatement(Expr* expr) : expr(expr) {}
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
+
+    Expr* expr;
 };
 
 
@@ -225,8 +228,9 @@ void downcast_expr(Ast::Expr* node, const Func& func)
 template<typename Func>
 void downcast_statement(Ast::Statement* node, const Func& func)
 {
-
-    if(auto* res = dynamic_cast<Ast::Declaration*  >(node)) func(res);
+    if     (auto* res = dynamic_cast<Ast::Declaration*    >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::ExprStatement*  >(node)) func(res);
+    else if(auto* res = dynamic_cast<Ast::PrintfStatement*>(node)) func(res);
     else throw SyntaxError("unknown statement type");
 }
 

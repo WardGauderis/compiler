@@ -1,9 +1,10 @@
-//
-// Created by ward on 3/1/20.
-//
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
 
-#ifndef COMPILER_DOTVISITOR_H
-#define COMPILER_DOTVISITOR_H
+#pragma once
 
 #include <antlr4-runtime.h>
 #include <filesystem>
@@ -28,5 +29,3 @@ private:
     std::filesystem::path path;
     const std::vector<std::string>* names;
 };
-
-#endif // COMPILER_DOTVISITOR_H
