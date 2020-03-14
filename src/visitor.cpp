@@ -343,3 +343,10 @@ std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
     }
     return foldNodes(nodes);
 }
+
+//=================
+
+std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root)
+{
+    return visitBlock(root->block);
+}

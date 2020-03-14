@@ -10,6 +10,7 @@
 #include <optional>
 #include <variant>
 #include <vector>
+
 #include "errors.h"
 
 namespace Ast
@@ -205,8 +206,6 @@ struct PrintfStatement final : public Statement
 
     Expr* expr;
 };
-
-
 
 }
 
