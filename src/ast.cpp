@@ -192,7 +192,7 @@ std::vector<Node*> Declaration::children() const
 
 std::string ExprStatement::name() const
 {
-    return "unused expression";
+    return "expression statement";
 }
 std::string ExprStatement::value() const
 {
