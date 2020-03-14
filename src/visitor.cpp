@@ -340,5 +340,6 @@ std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
         }
         else throw WhoopsiePoopsieError(std::string("unknown node type: ") + typeid(*child).name());
     }
+	return std::make_unique<Ast::Block>(nodes);
     return foldNodes(nodes);
 }
