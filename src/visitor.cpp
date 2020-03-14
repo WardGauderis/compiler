@@ -55,9 +55,25 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context)
 	switch (terminal->getSymbol()->getType())
 	{
 	case CParser::FLOAT:
-		return new Ast::Literal(std::stof(terminal->getText()));
+		try
+		{
+			return new Ast::Literal(std::stof(terminal->getText()));
+		}
+		catch (const std::out_of_range& ex)
+		{
+			throw SemanticError(
+					"float literal '"+terminal->getText()+"' is too large to be represented in a float type");
+		}
 	case CParser::INT:
-		return new Ast::Literal(std::stoi(terminal->getText()));
+		try
+		{
+			return new Ast::Literal(std::stoi(terminal->getText()));
+		}
+		catch (const std::out_of_range& ex)
+		{
+			throw SemanticError(
+					"integer literal '"+terminal->getText()+"' is too large to be represented in an integer type");
+		}
 	case CParser::CHAR:
 		return new Ast::Literal(terminal->getText()[0]);
 	default:
@@ -131,7 +147,7 @@ Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context)
 	});
 	visitor(2, [](auto* context)
 	{
-		const auto rhs = visitUnaryExpr(context->children[0]);
+		const auto rhs = visitUnaryExpr(context->children[1]);
 		return new Ast::UnaryExpr(context->children[1]->getText(), rhs);
 	});
 	visitor(4, [](auto* context)
@@ -175,7 +191,7 @@ Ast::Expr* visitAdditiveExpr(antlr4::tree::ParseTree* context)
 	return visitor.result();
 }
 
-Ast::Expr* visitRelationalyExpr(antlr4::tree::ParseTree* context)
+Ast::Expr* visitRelationalExpr(antlr4::tree::ParseTree* context)
 {
 	VisitorHelper<Ast::Expr> visitor(context, "relational expression");
 	visitor(1, [](auto* context)
@@ -184,7 +200,7 @@ Ast::Expr* visitRelationalyExpr(antlr4::tree::ParseTree* context)
 	});
 	visitor(3, [](auto* context)
 	{
-		const auto lhs = visitRelationalyExpr(context->children[0]);
+		const auto lhs = visitRelationalExpr(context->children[0]);
 		const auto rhs = visitAdditiveExpr(context->children[2]);
 		return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs);
 	});
@@ -196,12 +212,12 @@ Ast::Expr* visitEqualityExpr(antlr4::tree::ParseTree* context)
 	VisitorHelper<Ast::Expr> visitor(context, "equality expression");
 	visitor(1, [](auto* context)
 	{
-		return visitRelationalyExpr(context->children[0]);
+		return visitRelationalExpr(context->children[0]);
 	});
 	visitor(3, [](auto* context)
 	{
 		const auto lhs = visitEqualityExpr(context->children[0]);
-		const auto rhs = visitRelationalyExpr(context->children[2]);
+		const auto rhs = visitRelationalExpr(context->children[2]);
 		return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs);
 	});
 	return visitor.result();
@@ -374,4 +390,9 @@ std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
 	}
 	return std::make_unique<Ast::Block>(nodes);
 	return foldNodes(nodes);
+}
+
+std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root)
+{
+	return visitBlock(root->block);
 }

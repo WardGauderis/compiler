@@ -12,6 +12,9 @@
 namespace Ast {
 	std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root)
 	{
+		stream << "digraph G\n";
+		stream << "{\n";
+
 		std::function<void(Node*)> recursion = [&](Node* node)
 		{
 			stream << '"' << node << "\"[label=\""
@@ -26,6 +29,7 @@ namespace Ast {
 			}
 		};
 		recursion(root.get());
+		stream << "}\n" << std::flush;
 		return stream;
 	}
 

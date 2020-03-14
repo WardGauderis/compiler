@@ -11,6 +11,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+
 #include "errors.h"
 
 namespace Ast {
@@ -246,7 +247,6 @@ namespace Ast {
 
 		Expr* expr;
 	};
-
 
 }
 

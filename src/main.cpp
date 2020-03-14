@@ -4,107 +4,99 @@
 // @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
 //============================================================================
 
-#include "dotVisitor.h"
+#include "cst.h"
 #include "visitor.h"
 #include "folding.h"
 #include "CLexer.h"
 #include "CParser.h"
 
-std::filesystem::path swapTopFolder(const std::filesystem::path& path, const std::string& newName)
+std::filesystem::path swap_top_folder(const std::filesystem::path& path, const std::string& new_name)
 {
 	const auto string = path.string();
 	const auto begin = string.find_first_of('/');
 	const auto end = string.find_last_of('.');
 
-	if (begin == std::string::npos or end == std::string::npos)
+	if (begin==std::string::npos or end==std::string::npos)
 		throw std::runtime_error("malformed path: "+string);
 
-	return std::filesystem::path("output")/string.substr(begin+1, end-begin-1);
+	return std::filesystem::path("output")/
+			string.substr(begin+1, end-begin-1);
 }
 
-void runTest(const std::filesystem::path& path, bool redoExisting)
+template<typename Type>
+void make_dot(const Type& elem, const std::filesystem::path& path)
 {
-	const auto output = swapTopFolder(path, "output");
-	if (redoExisting or not std::filesystem::exists(output.string()+".png"))
-	{
-		std::ifstream stream(path);
-		antlr4::ANTLRInputStream input(stream);
-		CLexer lexer(&input);
-		antlr4::CommonTokenStream tokens(&lexer);
-		CParser parser(&tokens);
+	auto dot = path;
+	dot.replace_extension("dot");
 
-		std::filesystem::create_directory("output");
-		DotVisitor dotVisitor(output, &parser.getRuleNames());
-		dotVisitor.visit(parser.block());
-	}
+	auto png = path;
+	png.replace_extension("png");
+
+	std::ofstream stream(dot);
+	stream << elem;
+	stream.close();
+
+	system(("dot -Tpng "+dot.string()+" -o "+png.string()).c_str());
+	std::filesystem::remove(dot);
 }
 
-void runTests(const std::filesystem::path& path, bool redoExisting)
+void output_all_tests(bool redo_existing)
 {
-	for (const auto& entry : std::filesystem::directory_iterator(path))
+	for (const auto& entry : std::filesystem::recursive_directory_iterator("tests"))
 	{
-		if (entry.is_directory())
+		try
 		{
-			runTests(entry.path(), redoExisting);
+			if (not std::filesystem::is_regular_file(entry)) continue;
+
+			const auto& input = entry.path();
+			std::cerr << input << std::endl;
+
+			auto base = swap_top_folder(input, "output");
+			const auto name = base.stem().string();
+			base = base.parent_path();
+
+			const auto cst_path = base/(name+"-cst.png");
+			const auto ast_path = base/(name+"-ast.png");
+
+			if (redo_existing or not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path))
+			{
+				std::filesystem::create_directories(base);
+
+				std::ifstream stream(input);
+				if (!stream.good()) throw std::runtime_error("problem opening "+input.string());
+
+				const auto cst = std::make_unique<Cst::Root>(stream);
+				const auto ast = Ast::from_cst(cst);
+
+				make_dot(cst, cst_path);
+				make_dot(ast, ast_path);
+			}
 		}
-		else if (entry.is_regular_file())
+		catch (const SyntaxError& ex)
 		{
-			runTest(entry.path(), redoExisting);
+			std::cerr << "Syntax Error: " << ex.what() << std::endl;
 		}
-		else
+		catch (const SemanticError& ex)
 		{
-			std::cerr << "unknown file type in examples: "+entry.path().string() << '\n';
+			std::cerr << "Semantic Error: " << ex.what() << std::endl;
+		}
+		catch (const WhoopsiePoopsieError& ex)
+		{
+			std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
+		}
+		catch (const CompilationError& ex)
+		{
+			std::cerr << "Compilation Error: " << ex.what() << std::endl;
+		}
+		catch (const std::exception& ex)
+		{
+			std::cerr << "Unknown Error: " << ex.what() << std::endl;
 		}
 	}
 }
 
 int main(int argc, const char** argv)
 {
-	try
-	{
-//		runTests("tests", true);
-
-//		std::stringstream stream("int x = 5; //test");
-		std::ifstream stream("tests/assignment/basic.c");
-		if(!stream.good()) throw CompilationError("File not found");
-
-		antlr4::ANTLRInputStream input(stream);
-		CLexer lexer(&input);
-		antlr4::CommonTokenStream tokens(&lexer);
-		CParser parser(&tokens);
-
-		antlr4::tree::ParseTree* node = parser.block();
-
-		DotVisitor dotVisitor("output/cst", &parser.getRuleNames());
-		dotVisitor.visit(node);
-
-		const auto root = visitBlock(node);
-		std::ofstream file("output/ast.dot");
-		file << "digraph G\n";
-		file << "{\n";
-		file << root;
-		file << "}\n" << std::flush;
-		system(("dot -Tpng "+std::string("output/ast.dot")+" -o "+std::string("output/ast.png")).c_str());
-	}
-	catch (const SyntaxError& ex)
-	{
-		std::cerr << "Syntax Error: " << ex.what() << std::endl;
-	}
-	catch (const SemanticError& ex)
-	{
-		std::cerr << "Semantic Error: " << ex.what() << std::endl;
-	}
-	catch (const WhoopsiePoopsieError& ex)
-	{
-		std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
-	}
-	catch (const CompilationError& ex)
-	{
-		std::cerr << "Compilation Error: " << ex.what() << std::endl;
-	}
-	catch (const std::exception& ex)
-	{
-		std::cerr << "Unknown Error: " << ex.what() << std::endl;
-	}
+	output_all_tests(true);
 	return 0;
 }
