@@ -1,6 +1,8 @@
-//
-// Created by ward on 3/1/20.
-//
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
 
 #include "dotVisitor.h"
 #include "errors.h"

@@ -1,10 +1,7 @@
 //============================================================================
-// @name        : folding.h
-// @author      : Thomas Dooms
+// @author      : Thomas Dooms & Ward Gauderis
 // @date        : 3/10/20
-// @version     :
-// @copyright   : BA1 Informatica - Thomas Dooms - University of Antwerp
-// @description :
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
 //============================================================================
 
 #include "folding.h"
@@ -122,16 +119,18 @@ std::unique_ptr<Ast::Block> foldNodes(const std::vector<Ast::Node*>& nodes)
             {
                 [&](Ast::Declaration* declaration)
                 {
-                    if(auto res = foldExpr(declaration->expr))
-                        declaration->expr = res;
+                  declaration->expr = foldExpr(declaration->expr);
                 },
                 [&](Ast::ExprStatement* statement)
                 {
-                  if(auto res = foldExpr(statement->expr))
-                      statement->expr = res;
+                  statement->expr = foldExpr(statement->expr);
                 },
                 [&](Ast::Comment* comment)
                 {
+                },
+                [&](Ast::PrintfStatement* printf)
+                {
+                  printf->expr = foldExpr(printf->expr);
                 },
                 [&](auto*)
                 {

@@ -1,10 +1,7 @@
 //============================================================================
-// @name        : visitor.cpp
-// @author      : Thomas Dooms
-// @date        : 3/13/20
-// @version     :
-// @copyright   : BA1 Informatica - Thomas Dooms - University of Antwerp
-// @description :
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
 //============================================================================
 
 #include <memory>
@@ -45,14 +42,14 @@ struct VisitorHelper
 };
 }
 
-///////////////////////
+//============================================================================
 
 Ast::Comment* visitComment(antlr4::tree::ParseTree* context)
 {
     return new Ast::Comment(context->getText());
 }
 
-Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context)
+Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context)
 {
     auto* terminal = dynamic_cast<antlr4::tree::TerminalNode*>(context->children[0]);
     if(terminal == nullptr) throw WhoopsiePoopsieError("literal node is not a terminal in the cst");
@@ -69,22 +66,25 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context)
             throw WhoopsiePoopsieError("unknown literal type, probably not yet implemented");
     }
 }
+Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context)
+{
+    if(typeid(*context) == typeid(CParser::LiteralContext))
+    {
+        return visitLiteral(context);
+    }
+    else if(typeid(*context) == typeid(antlr4::tree::TerminalNodeImpl))
+    {
+        return new Ast::Variable(context->getText());
+    }
+    else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ") + typeid(*context).name());
+}
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context)
 {
     VisitorHelper<Ast::Expr> visitor(context, "basic expression");
-    visitor(1, [](auto* context)
+    visitor(1, [](auto* context) -> Ast::Expr*
     {
-        const auto child = context->children[0];
-        if(typeid(*child) == typeid(CParser::LiteralContext))
-        {
-            return visitLiteral(child);
-        }
-        else if(typeid(*child) == typeid(antlr4::tree::TerminalNodeImpl))
-        {
-            return static_cast<Ast::Expr*>(new Ast::Variable(child->getText()));
-        }
-        else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ") + typeid(*child).name());
+        return visitLiteralOrVariable(context->children[0]);
     });
     visitor(3, [](auto* context)
     {
@@ -301,7 +301,8 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context)
 
 Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context)
 {
-    return new Ast::PrintfStatement();
+    auto* expr = visitLiteralOrVariable(context->children[2]);
+    return new Ast::PrintfStatement(expr);
 }
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
@@ -317,7 +318,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
     {
         return visitDeclaration(child);
     }
-    else if(hash == typeid(CParser::PrintfContext()).hash_code())
+    else if(hash == typeid(CParser::PrintfContext).hash_code())
     {
         return visitPrintf(child);
     }

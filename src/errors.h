@@ -1,9 +1,10 @@
-//
-// Created by ward on 3/12/20.
-//
+//============================================================================
+// @author      : Thomas Dooms & Ward Gauderis
+// @date        : 3/10/20
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
+//============================================================================
 
-#ifndef COMPILER_ERRORS_H
-#define COMPILER_ERRORS_H
+#pragma once
 
 #include <stdexcept>
 
@@ -22,5 +23,3 @@ class SemanticError : public CompilationError {
 class WhoopsiePoopsieError : public std::runtime_error {
 	using std::runtime_error::runtime_error;
 };
-
-#endif //COMPILER_ERRORS_H

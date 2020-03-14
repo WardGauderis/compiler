@@ -1,10 +1,7 @@
 //============================================================================
-// @name        : folding.h
-// @author      : Thomas Dooms
+// @author      : Thomas Dooms & Ward Gauderis
 // @date        : 3/10/20
-// @version     :
-// @copyright   : BA1 Informatica - Thomas Dooms - University of Antwerp
-// @description :
+// @copyright   : BA2 Informatica - Thomas Dooms & Ward Gauderis - University of Antwerp
 //============================================================================
 
 #pragma once
