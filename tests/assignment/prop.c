@@ -4,8 +4,6 @@
 // @copyright   : BA2 Informatica - Thomas Dooms - University of Antwerp
 //============================================================================
 
-
-const int*** a;
-const float x = 5;
-int y = (x = 7) && (a = 0);
-printf(x);
+int a = 5;
+int b = 7;
+int c = a + b;

@@ -6,13 +6,16 @@
 #pragma once
 
 #include <array>
+#include <iostream>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 #include <vector>
 
 #include "errors.h"
+#include "table.h"
 
 namespace Ast
 {
@@ -21,7 +24,8 @@ struct Literal;
 
 struct Node
 {
-    explicit Node() = default;
+    explicit Node(std::shared_ptr<SymbolTable> table)
+    : table(std::move(table)) {}
 
     friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root);
 
@@ -34,25 +38,30 @@ struct Node
     [[nodiscard]] virtual std::string color() const = 0;
 
     [[nodiscard]] virtual Literal* fold() = 0;
+
+    std::shared_ptr<SymbolTable> table;
 };
 
 struct Statement : public Node
 {
-    Statement() = default;
+    explicit Statement(std::shared_ptr<SymbolTable> table)
+    : Node(std::move(table)) {}
 
     [[nodiscard]] std::string color() const override;
 };
 
 struct Expr : public Statement
 {
-    explicit Expr() = default;
+    explicit Expr(std::shared_ptr<SymbolTable> table)
+    : Statement(std::move(table)) {}
 
     [[nodiscard]] std::string color() const override;
 };
 
 struct Comment final : public Node
 {
-    explicit Comment(std::string comment) : comment(std::move(comment))
+    explicit Comment(std::string comment, std::shared_ptr<SymbolTable> table)
+    : Node(std::move(table)), comment(std::move(comment))
     {
     }
 
@@ -67,23 +76,25 @@ struct Comment final : public Node
 
 struct Block final : public Node
 {
-    explicit Block(std::vector<Node*> nodes) : nodes(std::move(nodes))
+    explicit Block(std::vector<Node*> nodes, std::shared_ptr<SymbolTable> table)
+    : Node(std::move(table)), nodes(std::move(nodes))
     {
     }
-
-    std::vector<Node*> nodes;
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
+
+    std::vector<Node*> nodes;
 };
 
 struct Literal final : public Expr
 {
     template <typename Type>
-    explicit Literal(Type val) : literal(val)
+    explicit Literal(Type val, std::shared_ptr<SymbolTable> table)
+    : Expr(std::move(table)), literal(val)
     {
     }
 
@@ -92,66 +103,30 @@ struct Literal final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
 
-    std::variant<char, short, int, long, float, double> literal;
-};
-
-struct Type : public Node
-{
-    bool isConst;
-
-    explicit Type(bool isConst) : isConst(isConst)
-    {
-    }
-
-    [[nodiscard]] std::string name() const final;
-    [[nodiscard]] std::string color() const final;
-    Literal* fold() final;
-};
-
-struct BasicType : public Type
-{
-    std::string type;
-
-    BasicType(bool isConst, std::string type) : Type(isConst), type(std::move(type))
-    {
-    }
-
-    [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
-};
-
-struct PointerType : public Type
-{
-    PointerType(bool isConst, Type* baseType) : Type(isConst), baseType(baseType)
-    {
-    }
-
-    [[nodiscard]] std::vector<Node*> children() const final;
-    [[nodiscard]] std::string value() const final;
-
-    Type* baseType;
+    base_type literal;
 };
 
 struct Variable final : public Expr
 {
-    explicit Variable(Type* type, std::string identifier)
-        : type(type), identifier(std::move(identifier))
+    explicit Variable(SymbolTable::Entry entry, std::shared_ptr<SymbolTable> table)
+    : Expr(std::move(table)), entry(entry)
     {
     }
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] std::string color() const final;
     Literal* fold() final;
 
-    Type* type;
-    std::string identifier;
+    SymbolTable::Entry entry;
+//    Literal* literal; // can be nullptr, represents the compile time value if one exists
 };
 
 struct BinaryExpr final : public Expr
 {
-    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs)
-        : operation(std::move(operation)), lhs(lhs), rhs(rhs)
+    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table)
+        : Expr(std::move(table)), operation(std::move(operation)), lhs(lhs), rhs(rhs)
     {
     }
 
@@ -168,8 +143,8 @@ struct BinaryExpr final : public Expr
 
 struct PostfixExpr final : public Expr
 {
-    explicit PostfixExpr(std::string operation, Variable* variable)
-        : operation(std::move(operation)), variable(variable)
+    explicit PostfixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table)
+        : Expr(std::move(table)), operation(std::move(operation)), variable(variable)
     {
     }
 
@@ -184,8 +159,8 @@ struct PostfixExpr final : public Expr
 
 struct PrefixExpr final : public Expr
 {
-    explicit PrefixExpr(std::string operation, Variable* variable)
-        : operation(std::move(operation)), variable(variable)
+    explicit PrefixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table)
+        : Expr(std::move(table)), operation(std::move(operation)), variable(variable)
     {
     }
 
@@ -200,8 +175,8 @@ struct PrefixExpr final : public Expr
 
 struct UnaryExpr final : public Expr
 {
-    explicit UnaryExpr(std::string operation, Expr* operand)
-        : operation(std::move(operation)), operand(operand)
+    explicit UnaryExpr(std::string operation, Expr* operand, std::shared_ptr<SymbolTable> table)
+        : Expr(std::move(table)), operation(std::move(operation)), operand(operand)
     {
     }
 
@@ -216,7 +191,8 @@ struct UnaryExpr final : public Expr
 
 struct CastExpr final : public Expr
 {
-    explicit CastExpr(Type* type, Expr* operand) : type(type), operand(operand)
+    explicit CastExpr(Type* type, Expr* operand, std::shared_ptr<SymbolTable> table)
+    : Expr(std::move(table)), type(type), operand(operand)
     {
     }
 
@@ -231,7 +207,8 @@ struct CastExpr final : public Expr
 
 struct Assignment final : public Expr
 {
-    explicit Assignment(Variable* variable, Expr* expr) : variable(variable), expr(expr)
+    explicit Assignment(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table)
+    : Expr(std::move(table)), variable(variable), expr(expr)
     {
     }
 
@@ -246,7 +223,8 @@ struct Assignment final : public Expr
 
 struct Declaration final : public Statement
 {
-    explicit Declaration(Variable* variable, Expr* expr) : variable(variable), expr(expr)
+    explicit Declaration(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table)
+    : Statement(std::move(table)), variable(variable), expr(expr)
     {
     }
 
@@ -256,13 +234,13 @@ struct Declaration final : public Statement
     Literal* fold() final;
 
     Variable* variable;
-
     Expr* expr; // can be nullptr
 };
 
 struct PrintfStatement final : public Statement
 {
-    explicit PrintfStatement(Expr* expr) : expr(expr)
+    explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table)
+    : Statement(std::move(table)), expr(expr)
     {
     }
 
