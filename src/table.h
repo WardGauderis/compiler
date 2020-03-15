@@ -70,9 +70,9 @@ public:
         else return iter;
     }
 
-    void set_literal(const std::string& id, base_type type)
+    void set_literal(const std::string& id, std::optional<base_type> type)
     {
-        const auto iter = table.find(id);
+        const auto& iter = table.find(id);
         if(iter == table.end()) throw WhoopsiePoopsieError("settings literal for unknown element");
         else iter->second.second = type;
     }
@@ -80,7 +80,9 @@ public:
 
     Entry insert(const std::string& id, Type* type)
     {
-        return table.emplace(id, std::make_pair(type, std::nullopt)).first;
+        const auto [iter, inserted] = table.emplace(id, std::make_pair(type, std::nullopt));
+        if(not inserted) throw SyntaxError("already declared symbol with id: " + id);
+        else return iter;
     }
 
 private:
