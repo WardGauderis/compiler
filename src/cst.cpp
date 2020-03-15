@@ -45,6 +45,7 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& ro
     visitor.visit(root->block);
 
     stream << "}\n";
+    return stream;
 }
 }
 

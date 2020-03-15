@@ -30,7 +30,7 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 	png.replace_extension("png");
 
 	std::ofstream stream(dot);
-	stream << elem;
+    stream << elem;
 	stream.close();
 
 	const auto make_png = "dot -Tpng " + dot.string() + " -o " + png.string();
