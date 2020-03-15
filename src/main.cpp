@@ -33,8 +33,9 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 	stream << elem;
 	stream.close();
 
-	system(("dot -Tpng "+dot.string()+" -o "+png.string()).c_str());
-	std::filesystem::remove(dot);
+	const auto make_png = "dot -Tpng " + dot.string() + " -o " + png.string();
+    const auto remove_dot = "rm " + dot.string();
+    system(("(" + make_png + " ; " + remove_dot + " ) &").c_str());
 }
 
 void output_all_tests(bool redo_existing)
