@@ -37,16 +37,7 @@ struct Root
     : input(stream), lexer(&input), tokens(&lexer),
     parser(&tokens), block(parser.block()), rulenames(parser.getRuleNames()) {}
 
-    friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& root)
-    {
-        stream << "digraph G\n";
-        stream << "{\n";
-
-        DotVisitor visitor(stream, root->rulenames);
-        visitor.visit(root->block);
-
-        stream << "}\n" << std::flush;
-    }
+    friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& root);
 
     antlr4::ANTLRInputStream input;
     CLexer lexer;

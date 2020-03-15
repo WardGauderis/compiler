@@ -33,3 +33,18 @@ antlrcpp::Any DotVisitor::visitTerminal(antlr4::tree::TerminalNode* node) {
 	linkWithParent(node, node->getText());
 	return defaultResult();
 }
+
+namespace Cst
+{
+std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& root)
+{
+    stream << "digraph G\n";
+    stream << "{\n";
+
+    DotVisitor visitor(stream, root->rulenames);
+    visitor.visit(root->block);
+
+    stream << "}\n";
+}
+}
+

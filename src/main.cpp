@@ -6,9 +6,6 @@
 
 #include "cst.h"
 #include "visitor.h"
-#include "folding.h"
-#include "CLexer.h"
-#include "CParser.h"
 
 std::filesystem::path swap_top_folder(const std::filesystem::path& path, const std::string& new_name)
 {
@@ -16,11 +13,11 @@ std::filesystem::path swap_top_folder(const std::filesystem::path& path, const s
 	const auto begin = string.find_first_of('/');
 	const auto end = string.find_last_of('.');
 
-	if (begin==std::string::npos or end==std::string::npos)
-		throw std::runtime_error("malformed path: "+string);
+	if (begin == std::string::npos or end == std::string::npos)
+		throw std::runtime_error("malformed path: " + string);
 
 	return std::filesystem::path("output")/
-			string.substr(begin+1, end-begin-1);
+			string.substr(begin + 1, end-begin - 1);
 }
 
 template<typename Type>
@@ -66,7 +63,7 @@ void output_all_tests(bool redo_existing)
 				if (!stream.good()) throw std::runtime_error("problem opening "+input.string());
 
 				const auto cst = std::make_unique<Cst::Root>(stream);
-				const auto ast = Ast::from_cst(cst);
+				const auto ast = Ast::from_cst(cst, true);
 
 				make_dot(cst, cst_path);
 				make_dot(ast, ast_path);
@@ -74,23 +71,23 @@ void output_all_tests(bool redo_existing)
 		}
 		catch (const SyntaxError& ex)
 		{
-			std::cerr << "Syntax Error: " << ex.what() << std::endl;
+			std::cerr << "Syntax Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
 		}
 		catch (const SemanticError& ex)
 		{
-			std::cerr << "Semantic Error: " << ex.what() << std::endl;
+			std::cerr << "Semantic Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
 		}
 		catch (const WhoopsiePoopsieError& ex)
 		{
-			std::cerr << "Whoopsie Poopsie Error: " << ex.what() << std::endl;
+			std::cerr << "Whoopsie Poopsie Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
 		}
 		catch (const CompilationError& ex)
 		{
-			std::cerr << "Compilation Error: " << ex.what() << std::endl;
+			std::cerr << "Compilation Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
 		}
 		catch (const std::exception& ex)
 		{
-			std::cerr << "Unknown Error: " << ex.what() << std::endl;
+			std::cerr << "Unknown Error: " << ex.what() << " in file: " << entry.path() << std::endl;
 		}
 	}
 }

@@ -10,7 +10,6 @@
 #include "CParser.h"
 #include "ast.h"
 #include "errors.h"
-#include "folding.h"
 #include "visitor.h"
 
 namespace {
@@ -148,7 +147,7 @@ Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context)
 	visitor(2, [](auto* context)
 	{
 		const auto rhs = visitUnaryExpr(context->children[1]);
-		return new Ast::UnaryExpr(context->children[1]->getText(), rhs);
+		return new Ast::UnaryExpr(context->children[0]->getText(), rhs);
 	});
 	visitor(4, [](auto* context)
 	{
@@ -299,7 +298,7 @@ Ast::Type* visitTypeName(antlr4::tree::ParseTree* context)
 
 Ast::BasicType* visitBasicType(antlr4::tree::ParseTree* context)
 {
-	bool isConst = context->children.size()!=1;
+	bool isConst = context->children.size() != 1;
 	antlr4::tree::ParseTree* specifier = *std::find_if(context->children.begin(), context->children.end(),
 			[](const auto& context)
 			{
@@ -372,7 +371,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context)
 				std::string("unknown statement type: ")+typeid(*context).name()+":\n\t"+context->getText());
 }
 
-std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
+Ast::Block* visitBlock(antlr4::tree::ParseTree* context)
 {
 	std::vector<Ast::Node*> nodes;
 	for (size_t i = 0; i<context->children.size()-1; i++)
@@ -388,11 +387,12 @@ std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context)
 		}
 		else throw WhoopsiePoopsieError(std::string("unknown node type: ")+typeid(*child).name());
 	}
-	return std::make_unique<Ast::Block>(nodes);
-	return foldNodes(nodes);
+	return new Ast::Block(nodes);
 }
 
-std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root)
+std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root, bool fold)
 {
-	return visitBlock(root->block);
+	auto ptr = visitBlock(root->block);
+	if(fold) ptr->fold();
+	return std::unique_ptr<Ast::Block>(ptr);
 }

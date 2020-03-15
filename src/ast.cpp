@@ -9,6 +9,83 @@
 #include <functional>
 #include <fstream>
 
+namespace
+{
+    template<typename Type>
+    bool assign_fold(Type*& elem)
+    {
+        if(auto* res = elem->fold())
+        {
+            elem = res;
+            return true;
+        }
+        return false;
+    }
+
+    template <typename Type0, typename Type1>
+    Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs)
+    {
+        if constexpr (std::is_integral_v<Type0> and std::is_integral_v<Type1>)
+        {
+            return new Ast::Literal(lhs % rhs);
+        }
+        else
+        {
+            throw WhoopsiePoopsieError("Someone should already have checked if "
+                                       "modulo is done on floating point before");
+        }
+    }
+
+    template <typename Type0, typename Type1>
+    Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, const std::string& operation)
+    {
+        if ((operation == "/" or operation == "%") and rhs == 0)
+            return nullptr;
+
+        if (operation == "+")
+            return new Ast::Literal(lhs + rhs);
+        else if (operation == "-")
+            return new Ast::Literal(lhs - rhs);
+        else if (operation == "*")
+            return new Ast::Literal(lhs * rhs);
+        else if (operation == "/")
+            return new Ast::Literal(lhs / rhs);
+        else if (operation == "%")
+            return fold_modulo(lhs, rhs);
+        else if (operation == "<")
+            return new Ast::Literal(lhs < rhs);
+        else if (operation == ">")
+            return new Ast::Literal(lhs > rhs);
+        else if (operation == "<=")
+            return new Ast::Literal(lhs <= rhs);
+        else if (operation == ">=")
+            return new Ast::Literal(lhs >= rhs);
+        else if (operation == "==")
+            return new Ast::Literal(lhs == rhs);
+        else if (operation == "!=")
+            return new Ast::Literal(lhs != rhs);
+        else if (operation == "&&")
+            return new Ast::Literal(lhs && rhs);
+        else if (operation == "||")
+            return new Ast::Literal(lhs || rhs);
+        else
+            throw SyntaxError("unknown binary operation");
+    }
+
+    template <typename Type>
+    Ast::Literal* fold_unary(Type rhs, const std::string& operation)
+    {
+        if (operation == "+")
+            return new Ast::Literal(rhs);
+        else if (operation == "-")
+            return new Ast::Literal(-rhs);
+        else if (operation == "!")
+            return new Ast::Literal(!rhs);
+        else
+            throw SyntaxError("unknown unary operation");
+    }
+}
+
 namespace Ast {
 	std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root)
 	{
@@ -24,12 +101,13 @@ namespace Ast {
 
 			for (const auto child : node->children())
 			{
+			    if(child == nullptr) std::cout << typeid(*node).name() << '\n';
 				stream << '"' << node << "\" -> \"" << child << "\";\n";
 				recursion(child);
 			}
 		};
 		recursion(root.get());
-		stream << "}\n" << std::flush;
+		stream << "}\n";
 		return stream;
 	}
 
@@ -62,6 +140,10 @@ namespace Ast {
 	{
 		return "#d5ceeb"; // light purple
 	}
+    Literal* Comment::fold()
+    {
+	    return nullptr;
+    }
 
 	std::string Block::name() const
 	{
@@ -83,6 +165,12 @@ namespace Ast {
 		return "#ceebe3"; // light green
 	}
 
+    Literal* Block::fold()
+    {
+        for(auto& child : nodes) assign_fold(child);
+        return nullptr;
+    }
+
 	std::string Literal::name() const
 	{
 		return "literal";
@@ -99,6 +187,11 @@ namespace Ast {
 		return {};
 	}
 
+    Literal* Literal::fold()
+    {
+        return this;
+    }
+
 	std::string Type::name() const
 	{
 		return "type";
@@ -108,6 +201,10 @@ namespace Ast {
 	{
 		return "";
 	}
+    Literal* Type::fold()
+    {
+        return nullptr;
+    }
 
 	std::string BasicType::value() const
 	{
@@ -144,6 +241,10 @@ namespace Ast {
 	{
 		return {};
 	}
+    Literal* Variable::fold()
+    {
+        return nullptr;
+    }
 
 	std::string BinaryExpr::name() const
 	{
@@ -159,6 +260,34 @@ namespace Ast {
 	{
 		return {lhs, rhs};
 	}
+    Literal* BinaryExpr::fold()
+    {
+	    auto* new_lhs = lhs->fold();
+	    auto* new_rhs = rhs->fold();
+
+	    const auto set_folded = [&]()
+	        {
+              if(new_lhs) lhs = new_lhs;
+              if(new_rhs) rhs = new_rhs;
+              return nullptr;
+	        };
+
+	    if(new_lhs and new_rhs)
+	    {
+            const auto lambda = [&](const auto& lhs, const auto& rhs)
+            {
+              auto* res = fold_binary(lhs, rhs, operation);
+              if(res) return res;
+              else set_folded();
+            };
+	        // TODO: deletus feetus, memory leakus
+            return std::visit(lambda, new_lhs->literal, new_rhs->literal);
+	    }
+	    else
+        {
+	        return set_folded();
+        }
+    }
 
 	std::string PostfixExpr::name() const
 	{
@@ -174,6 +303,10 @@ namespace Ast {
 	{
 		return {variable};
 	}
+    Literal* PostfixExpr::fold()
+    {
+        return nullptr;
+    }
 
 	std::string PrefixExpr::name() const
 	{
@@ -189,6 +322,10 @@ namespace Ast {
 	{
 		return {variable};
 	}
+    Literal* PrefixExpr::fold()
+    {
+        return nullptr;
+    }
 
 	std::string UnaryExpr::name() const
 	{
@@ -204,6 +341,17 @@ namespace Ast {
 	{
 		return {operand};
 	}
+    Literal* UnaryExpr::fold()
+    {
+	    auto* new_operand = operand->fold();
+        const auto lambda = [&](const auto& val)
+        {
+          return fold_unary(val, operation);
+        };
+
+	    if(new_operand) return std::visit(lambda, new_operand->literal);
+        return nullptr;
+    }
 
 	std::string CastExpr::name() const
 	{
@@ -219,6 +367,11 @@ namespace Ast {
 	{
 		return {operand};
 	}
+    Literal* CastExpr::fold()
+    {
+        assign_fold(operand);
+        return nullptr;
+    }
 
 	std::string Assignment::name() const
 	{
@@ -235,6 +388,12 @@ namespace Ast {
 		return {variable, expr};
 	}
 
+    Literal* Assignment::fold()
+    {
+	    assign_fold(expr);
+        return nullptr;
+    }
+
 	std::string Declaration::name() const
 	{
 		return "declaration";
@@ -250,6 +409,11 @@ namespace Ast {
 		if (expr) return {variable, expr};
 		else return {variable};
 	}
+    Literal* Declaration::fold()
+    {
+        if(expr) assign_fold(expr);
+        return nullptr;
+    }
 
 	std::string PrintfStatement::name() const
 	{
@@ -265,5 +429,10 @@ namespace Ast {
 	{
 		return {expr};
 	}
+    Literal* PrintfStatement::fold()
+    {
+        assign_fold(expr);
+        return nullptr;
+    }
 
 }

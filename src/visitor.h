@@ -57,9 +57,9 @@ Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context);
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context);
 
-std::unique_ptr<Ast::Node> visitBlock(antlr4::tree::ParseTree* context);
+Ast::Block* visitBlock(antlr4::tree::ParseTree* context);
 
 namespace Ast
 {
-    std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root);
+    std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root, bool fold);
 }
