@@ -13,51 +13,51 @@
 #include "ast.h"
 #include "errors.h"
 
-Ast::Comment* visitComment(antlr4::tree::ParseTree* context);
+Ast::Comment* visitComment(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context);
+Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context);
+Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitMultiplicativeExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitMultiplicativeExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitAdditiveExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitAdditiveExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitRelationalExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitRelationalExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitEqualityExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitEqualityExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitAndExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitAndExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitExpr(antlr4::tree::ParseTree* context);
+Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Type* visitTypeName(antlr4::tree::ParseTree* context);
+Type* visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::BasicType* visitBasicType(antlr4::tree::ParseTree* context);
+Type* visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::PointerType* visitPointerType(antlr4::tree::ParseTree* context, Ast::Type* baseType);
+Type* visitPointerType(antlr4::tree::ParseTree* context, Type* type, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context);
+Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context);
+Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context);
+Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Statement* visitStatement(antlr4::tree::ParseTree* context);
+Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Block* visitBlock(antlr4::tree::ParseTree* context);
+std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 namespace Ast
 {

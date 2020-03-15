@@ -47,7 +47,6 @@ void output_all_tests(bool redo_existing)
 			if (not std::filesystem::is_regular_file(entry)) continue;
 
 			const auto& input = entry.path();
-			std::cerr << input << std::endl;
 
 			auto base = swap_top_folder(input, "output");
 			const auto name = base.stem().string();
@@ -58,6 +57,7 @@ void output_all_tests(bool redo_existing)
 
 			if (redo_existing or not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path))
 			{
+                std::cout << input << std::endl;
 				std::filesystem::create_directories(base);
 
 				std::ifstream stream(input);
