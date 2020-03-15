@@ -231,6 +231,11 @@ namespace Ast {
     Literal* Variable::fold()
     {
         const auto& entry = table->lookup(name());
+        if(name() == "xxx")
+        {
+            const auto temp = *table;
+            std::cout << '\n';
+        }
         if(entry->second.second.has_value())
         {
             return new Ast::Literal(entry->second.second.value(), table);
@@ -413,7 +418,10 @@ namespace Ast {
 
         if(auto* res = expr->fold())
         {
-            table->set_literal(variable->name(), res->literal);
+            if(variable->entry->second.first->isConst)
+            {
+                table->set_literal(variable->name(), res->literal);
+            }
             expr = res;
         }
         return nullptr;
