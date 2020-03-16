@@ -366,7 +366,7 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
 
 Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-	auto* expr = visitLiteralOrVariable(context->children[2], table);
+	auto* expr = visitExpr(context->children[2], table);
 	return new Ast::PrintfStatement(expr, table);
 }
 

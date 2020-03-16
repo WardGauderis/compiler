@@ -120,7 +120,7 @@ declaration:
     typeName IDENTIFIER ('=' initizalizer)?;
 
 printf:
-    'printf' '(' (IDENTIFIER | literal) ')';
+    'printf' '(' expr ')';
 
 statement:
     (declaration | expr | printf) ';';
