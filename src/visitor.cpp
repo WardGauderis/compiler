@@ -61,7 +61,8 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 		catch (const std::out_of_range& ex)
 		{
 			throw SemanticError(
-					"float literal '"+terminal->getText()+"' is too large to be represented in a float type");
+					"float literal '" + terminal->getText()
+					+ "' is too large to be represented in a float type");
 		}
 	case CParser::INT:
 		try
@@ -71,7 +72,8 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 		catch (const std::out_of_range& ex)
 		{
 			throw SemanticError(
-					"integer literal '"+terminal->getText()+"' is too large to be represented in an integer type");
+					"integer literal '" + terminal->getText()
+					+ "' is too large to be represented in an integer type");
 		}
 	case CParser::CHAR:
 		return new Ast::Literal(terminal->getText()[1], table);
@@ -89,7 +91,8 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
 	else if (typeid(*context)==typeid(antlr4::tree::TerminalNodeImpl))
 	{
 	    const auto entry = table->lookup(context->getText());
-		return new Ast::Variable(entry, table);
+	    if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+		return new Ast::Variable(entry.value(), table);
 	}
 	else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ")+typeid(*context).name());
 }
@@ -118,7 +121,8 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 	visitor(2, [&](auto* context)
 	{
 	    const auto entry = table->lookup(context->children[0]->getText());
-		const auto lhs = new Ast::Variable(entry, table);
+         if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+		const auto lhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table);
 	});
 	return visitor.result();
@@ -134,7 +138,8 @@ Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 	visitor(2, [&](auto* context)
 	{
         const auto entry = table->lookup(context->children[1]->getText());
-		const auto rhs = new Ast::Variable(entry, table);
+        if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+		const auto rhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table);
 	});
 	return visitor.result();
@@ -268,7 +273,10 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 	{
 		const auto identifier = context->children[0]->getText();
 		const auto rhs = visitAssignExpr(context->children[2], table);
-		auto* var = new Ast::Variable(table->lookup(identifier), table);
+		const auto entry = table->lookup(identifier);
+
+        if(not entry.has_value()) throw SyntaxError("variable with name " + identifier + " not yet declared.");
+		auto* var = new Ast::Variable(entry.value(), table);
 		return new Ast::Assignment(var, rhs, table);
 	});
 	return visitor.result();
@@ -408,7 +416,7 @@ std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root,
     auto table = std::make_shared<SymbolTable>();
 	auto vec = visitBlock(root->block, table);
 
-	auto res =std::make_unique<Ast::Block>(std::move(vec), std::move(table));
-	if(fold) res->fold();
+	auto res = std::make_unique<Ast::Block>(std::move(vec), std::move(table));
+	res->complete(true, true, true);
 	return res;
 }

@@ -29,6 +29,8 @@ struct Node
 
     friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root);
 
+    void complete(bool check, bool fold, bool output);
+
     [[nodiscard]] virtual std::string name() const = 0;
 
     [[nodiscard]] virtual std::string value() const = 0;
@@ -37,7 +39,11 @@ struct Node
 
     [[nodiscard]] virtual std::string color() const = 0;
 
-    [[nodiscard]] virtual Literal* fold() = 0;
+    virtual Literal* fold() = 0;
+
+    virtual void check(std::ostream& error, std::ostream& warning) const = 0;
+
+//    virtual void llvm(std::ofstream& stream) = 0;
 
     std::shared_ptr<SymbolTable> table;
 };
@@ -70,6 +76,7 @@ struct Comment final : public Node
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::string comment;
 };
@@ -86,6 +93,7 @@ struct Block final : public Node
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::vector<Node*> nodes;
 };
@@ -102,6 +110,7 @@ struct Literal final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     base_type literal;
 };
@@ -118,6 +127,7 @@ struct Variable final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     SymbolTable::Entry entry;
 //    Literal* literal; // can be nullptr, represents the compile time value if one exists
@@ -134,6 +144,7 @@ struct BinaryExpr final : public Expr
     [[nodiscard]] std::string value() const override;
     [[nodiscard]] std::vector<Node*> children() const override;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::string operation;
 
@@ -152,6 +163,7 @@ struct PostfixExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::string operation;
     Variable* variable;
@@ -168,6 +180,7 @@ struct PrefixExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::string operation;
     Variable* variable;
@@ -184,6 +197,7 @@ struct UnaryExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     std::string operation;
     Expr* operand;
@@ -200,6 +214,7 @@ struct CastExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     Type* type;
     Expr* operand;
@@ -216,6 +231,7 @@ struct Assignment final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     Variable* variable;
     Expr* expr;
@@ -232,6 +248,7 @@ struct Declaration final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     Variable* variable;
     Expr* expr; // can be nullptr
@@ -248,6 +265,7 @@ struct PrintfStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
+    void check(std::ostream& error, std::ostream& warning) const final;
 
     Expr* expr;
 };

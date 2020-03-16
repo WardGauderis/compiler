@@ -11,6 +11,8 @@ file(GLOB_RECURSE GEN_SRCS ${PROJECT_SOURCE_DIR}/gen/*.h)
 
 add_executable(compiler ${HDRS} ${SRCS} ${GEN_HDRS} ${GEN_SRCS})
 
+set(CMAKE_CXX_FLAGS "-O3")
+
 target_link_libraries(compiler antlr4-runtime)
 
 target_include_directories(

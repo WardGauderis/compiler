@@ -129,6 +129,21 @@ namespace Ast {
 		return stream;
 	}
 
+	void Node::complete(bool check, bool fold, bool output)
+	{
+        std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root)
+        {
+          root->check(std::cerr, std::cerr);
+          for(const auto child : root->children())
+          {
+              recursion(child);
+          }
+        };
+        recursion(this);
+
+        if(fold) this->fold();
+	}
+
 	std::string Expr::color() const
 	{
 		return "#ced6eb"; // light blue
@@ -162,6 +177,9 @@ namespace Ast {
     {
 	    return nullptr;
     }
+    void Comment::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
 
 	std::string Block::name() const
 	{
@@ -188,6 +206,9 @@ namespace Ast {
         for(auto& child : nodes) assign_fold(child);
         return nullptr;
     }
+    void Block::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
 
 	std::string Literal::name() const
 	{
@@ -209,6 +230,9 @@ namespace Ast {
     {
         return this;
     }
+    void Literal::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
 
 	std::string Variable::name() const
 	{
@@ -217,7 +241,7 @@ namespace Ast {
 
 	std::string Variable::value() const
 	{
-		return entry->second.first->print();
+		return entry->second.type->print();
 	}
 
 	std::vector<Node*> Variable::children() const
@@ -230,17 +254,15 @@ namespace Ast {
     }
     Literal* Variable::fold()
     {
-        const auto& entry = table->lookup(name());
-        if(name() == "xxx")
+        const auto& literal = table->get_literal(name());
+        if(literal.has_value())
         {
-            const auto temp = *table;
-            std::cout << '\n';
-        }
-        if(entry->second.second.has_value())
-        {
-            return new Ast::Literal(entry->second.second.value(), table);
+            return new Ast::Literal(literal.value(), table);
         }
         else return nullptr;
+    }
+    void Variable::check(std::ostream& error, std::ostream& warning) const
+    {
     }
 
 	std::string BinaryExpr::name() const
@@ -285,6 +307,10 @@ namespace Ast {
 	        return set_folded();
         }
     }
+    void BinaryExpr::check(std::ostream& error, std::ostream& warning) const
+    {
+	    // TODO: check modulo on floating point
+    }
 
 	std::string PostfixExpr::name() const
 	{
@@ -304,6 +330,9 @@ namespace Ast {
     {
         return nullptr;
     }
+    void PostfixExpr::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
 
 	std::string PrefixExpr::name() const
 	{
@@ -322,6 +351,9 @@ namespace Ast {
     Literal* PrefixExpr::fold()
     {
         return nullptr;
+    }
+    void PrefixExpr::check(std::ostream& error, std::ostream& warning) const
+    {
     }
 
 	std::string UnaryExpr::name() const
@@ -346,9 +378,14 @@ namespace Ast {
           return fold_unary(val, operation, table);
         };
 
+        // TODO: deletus feetus, memory leakus
 	    if(new_operand) return std::visit(lambda, new_operand->literal);
         return nullptr;
     }
+    void UnaryExpr::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
+
 
 	std::string CastExpr::name() const
 	{
@@ -375,6 +412,10 @@ namespace Ast {
         if(new_operand) return std::visit(lambda, new_operand->literal);
         else return nullptr;
     }
+    void CastExpr::check(std::ostream& error, std::ostream& warning) const
+    {
+	    // TODO: give warning when casting to incompatible types
+    }
 
 	std::string Assignment::name() const
 	{
@@ -395,6 +436,14 @@ namespace Ast {
     {
 	    assign_fold(expr);
         return nullptr;
+    }
+    void Assignment::check(std::ostream& error, std::ostream& warning) const
+    {
+	    if(table->lookup(variable->name()).value()->second.type->isConst)
+	    {
+            error << "assigning " << expr->value() << " to "
+                  << variable->name() << " which is const-qualified\n";
+	    }
     }
 
 	std::string Declaration::name() const
@@ -418,13 +467,16 @@ namespace Ast {
 
         if(auto* res = expr->fold())
         {
-            if(variable->entry->second.first->isConst)
+            if(variable->entry->second.type->isConst)
             {
                 table->set_literal(variable->name(), res->literal);
             }
             expr = res;
         }
         return nullptr;
+    }
+    void Declaration::check(std::ostream& error, std::ostream& warning) const
+    {
     }
 
 	std::string PrintfStatement::name() const
@@ -447,4 +499,7 @@ namespace Ast {
         return nullptr;
     }
 
+    void PrintfStatement::check(std::ostream& error, std::ostream& warning) const
+    {
+    }
 }
