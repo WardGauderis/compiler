@@ -129,6 +129,21 @@ namespace Ast {
 		return stream;
 	}
 
+	void Node::complete(bool check, bool fold, bool output)
+	{
+        std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root)
+        {
+          root->check(std::cerr, std::cerr);
+          for(const auto child : root->children())
+          {
+              recursion(child);
+          }
+        };
+        recursion(this);
+
+        if(fold) this->fold();
+	}
+
 	std::string Expr::color() const
 	{
 		return "#ced6eb"; // light blue
@@ -162,7 +177,7 @@ namespace Ast {
     {
 	    return nullptr;
     }
-    void Comment::check(std::ofstream& error, std::ofstream& warning) const
+    void Comment::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -191,7 +206,7 @@ namespace Ast {
         for(auto& child : nodes) assign_fold(child);
         return nullptr;
     }
-    void Block::check(std::ofstream& error, std::ofstream& warning) const
+    void Block::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -215,7 +230,7 @@ namespace Ast {
     {
         return this;
     }
-    void Literal::check(std::ofstream& error, std::ofstream& warning) const
+    void Literal::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -246,7 +261,7 @@ namespace Ast {
         }
         else return nullptr;
     }
-    void Variable::check(std::ofstream& error, std::ofstream& warning) const
+    void Variable::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -292,8 +307,9 @@ namespace Ast {
 	        return set_folded();
         }
     }
-    void BinaryExpr::check(std::ofstream& error, std::ofstream& warning) const
+    void BinaryExpr::check(std::ostream& error, std::ostream& warning) const
     {
+	    // TODO: check modulo on floating point
     }
 
 	std::string PostfixExpr::name() const
@@ -314,7 +330,7 @@ namespace Ast {
     {
         return nullptr;
     }
-    void PostfixExpr::check(std::ofstream& error, std::ofstream& warning) const
+    void PostfixExpr::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -336,7 +352,7 @@ namespace Ast {
     {
         return nullptr;
     }
-    void PrefixExpr::check(std::ofstream& error, std::ofstream& warning) const
+    void PrefixExpr::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -366,7 +382,7 @@ namespace Ast {
 	    if(new_operand) return std::visit(lambda, new_operand->literal);
         return nullptr;
     }
-    void UnaryExpr::check(std::ofstream& error, std::ofstream& warning) const
+    void UnaryExpr::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -396,7 +412,7 @@ namespace Ast {
         if(new_operand) return std::visit(lambda, new_operand->literal);
         else return nullptr;
     }
-    void CastExpr::check(std::ofstream& error, std::ofstream& warning) const
+    void CastExpr::check(std::ostream& error, std::ostream& warning) const
     {
 	    // TODO: give warning when casting to incompatible types
     }
@@ -421,12 +437,12 @@ namespace Ast {
 	    assign_fold(expr);
         return nullptr;
     }
-    void Assignment::check(std::ofstream& error, std::ofstream& warning) const
+    void Assignment::check(std::ostream& error, std::ostream& warning) const
     {
 	    if(table->lookup(variable->name()).value()->second.type->isConst)
 	    {
             error << "assigning " << expr->value() << " to "
-                  << variable->name() << " which is const-qualified";
+                  << variable->name() << " which is const-qualified\n";
 	    }
     }
 
@@ -459,7 +475,7 @@ namespace Ast {
         }
         return nullptr;
     }
-    void Declaration::check(std::ofstream& error, std::ofstream& warning) const
+    void Declaration::check(std::ostream& error, std::ostream& warning) const
     {
     }
 
@@ -483,7 +499,7 @@ namespace Ast {
         return nullptr;
     }
 
-    void PrintfStatement::check(std::ofstream& error, std::ofstream& warning) const
+    void PrintfStatement::check(std::ostream& error, std::ostream& warning) const
     {
     }
 }

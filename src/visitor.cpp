@@ -416,7 +416,7 @@ std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root,
     auto table = std::make_shared<SymbolTable>();
 	auto vec = visitBlock(root->block, table);
 
-	auto res =std::make_unique<Ast::Block>(std::move(vec), std::move(table));
-	if(fold) res->fold();
+	auto res = std::make_unique<Ast::Block>(std::move(vec), std::move(table));
+	res->complete(true, true, true);
 	return res;
 }
