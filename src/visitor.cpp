@@ -91,7 +91,7 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
 	else if (typeid(*context)==typeid(antlr4::tree::TerminalNodeImpl))
 	{
 	    const auto entry = table->lookup(context->getText());
-	    if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+	    if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
 		return new Ast::Variable(entry.value(), table);
 	}
 	else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ")+typeid(*context).name());
@@ -121,7 +121,7 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 	visitor(2, [&](auto* context)
 	{
 	    const auto entry = table->lookup(context->children[0]->getText());
-         if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+         if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
 		const auto lhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table);
 	});
@@ -138,7 +138,7 @@ Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 	visitor(2, [&](auto* context)
 	{
         const auto entry = table->lookup(context->children[1]->getText());
-        if(not entry.has_value()) throw SyntaxError("variable with name " + context->getText() + " not yet declared.");
+        if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
 		const auto rhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table);
 	});
@@ -275,7 +275,7 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 		const auto rhs = visitAssignExpr(context->children[2], table);
 		const auto entry = table->lookup(identifier);
 
-        if(not entry.has_value()) throw SyntaxError("variable with name " + identifier + " not yet declared.");
+        if(not entry.has_value()) throw SemanticError("'" + identifier + "' undeclared");
 		auto* var = new Ast::Variable(entry.value(), table);
 		return new Ast::Assignment(var, rhs, table);
 	});

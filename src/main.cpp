@@ -13,11 +13,11 @@ std::filesystem::path swap_top_folder(const std::filesystem::path& path, const s
 	const auto begin = string.find_first_of('/');
 	const auto end = string.find_last_of('.');
 
-	if (begin == std::string::npos or end == std::string::npos)
-		throw std::runtime_error("malformed path: " + string);
+	if (begin==std::string::npos or end==std::string::npos)
+		throw std::runtime_error("malformed path: "+string);
 
 	return std::filesystem::path("output")/
-			string.substr(begin + 1, end-begin - 1);
+			string.substr(begin+1, end-begin-1);
 }
 
 template<typename Type>
@@ -30,12 +30,12 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 	png.replace_extension("png");
 
 	std::ofstream stream(dot);
-    stream << elem;
+	stream << elem;
 	stream.close();
 
-	const auto make_png = "dot -Tpng " + dot.string() + " -o " + png.string();
-    const auto remove_dot = "rm " + dot.string();
-    system(("(" + make_png + " ; " + remove_dot + " ) &").c_str());
+	const auto make_png = "dot -Tpng "+dot.string()+" -o "+png.string();
+	const auto remove_dot = "rm "+dot.string();
+	system(("("+make_png+" ; "+remove_dot+" ) &").c_str());
 }
 
 void output_all_tests(bool redo_existing)
@@ -57,13 +57,19 @@ void output_all_tests(bool redo_existing)
 
 			if (redo_existing or not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path))
 			{
-                std::cout << input << std::endl;
+				std::cout << input << std::endl;
 				std::filesystem::create_directories(base);
 
 				std::ifstream stream(input);
 				if (!stream.good()) throw std::runtime_error("problem opening "+input.string());
 
+				std::stringstream buffer;
+				std::streambuf * old = std::cerr.rdbuf(buffer.rdbuf());
 				const auto cst = std::make_unique<Cst::Root>(stream);
+				std::cerr.rdbuf(old);
+				std::string warning = buffer.str();
+				if(!warning.empty()) throw SyntaxError(warning.substr(0, warning.size()-1));
+
 				const auto ast = Ast::from_cst(cst, true);
 
 				make_dot(cst, cst_path);
@@ -72,23 +78,28 @@ void output_all_tests(bool redo_existing)
 		}
 		catch (const SyntaxError& ex)
 		{
-			std::cerr << "Syntax Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
+			std::cout << "\033[1;31mSyntax Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
+			          << std::endl;
 		}
 		catch (const SemanticError& ex)
 		{
-			std::cerr << "Semantic Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
+			std::cout << "\033[1;31mSemantic Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
+			          << std::endl;
 		}
 		catch (const WhoopsiePoopsieError& ex)
 		{
-			std::cerr << "Whoopsie Poopsie Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
+			std::cout << "\033[1;31mWhoopsie Poopsie Error: " << ex.what() << " --- in file: " << entry.path()
+			          << "\033[0m" << std::endl;
 		}
 		catch (const CompilationError& ex)
 		{
-			std::cerr << "Compilation Error: " << ex.what() << " --- in file: " << entry.path() << std::endl;
+			std::cout << "\033[1;31mCompilation Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
+			          << std::endl;
 		}
 		catch (const std::exception& ex)
 		{
-			std::cerr << "Unknown Error: " << ex.what() << " in file: " << entry.path() << std::endl;
+			std::cout << "\033[1;31mUnknown Error: " << ex.what() << " in file: " << entry.path() << "\033[0m"
+			          << std::endl;
 		}
 	}
 }

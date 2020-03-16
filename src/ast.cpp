@@ -9,100 +9,100 @@
 #include <functional>
 #include <fstream>
 
-namespace
-{
-    template<typename Type>
-    bool assign_fold(Type*& elem)
-    {
-        if(auto* res = elem->fold())
-        {
-            elem = res;
-            return true;
-        }
-        return false;
-    }
+namespace {
+	template<typename Type>
+	bool assign_fold(Type*& elem)
+	{
+		if (auto* res = elem->fold())
+		{
+			elem = res;
+			return true;
+		}
+		return false;
+	}
 
-    template <typename Type0, typename Type1>
-    Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table)
-    {
-        if constexpr (std::is_integral_v<Type0> and std::is_integral_v<Type1>)
-        {
-            return new Ast::Literal(lhs % rhs, std::move(table));
-        }
-        else
-        {
-            throw WhoopsiePoopsieError("Someone should already have checked if "
-                                       "modulo is done on floating point before");
-        }
-    }
+	template<typename Type0, typename Type1>
+	Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table)
+	{
+		if constexpr (std::is_integral_v<Type0> and std::is_integral_v<Type1>)
+		{
+			return new Ast::Literal(lhs%rhs, std::move(table));
+		}
+		else
+		{
+			throw WhoopsiePoopsieError("Someone should already have checked if "
+			                           "modulo is done on floating point before");
+		}
+	}
 
-    template <typename Type0, typename Type1>
-    Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, const std::string& operation, std::shared_ptr<SymbolTable> table)
-    {
-        if ((operation == "/" or operation == "%") and rhs == 0)
-            return nullptr;
+	template<typename Type0, typename Type1>
+	Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, const std::string& operation, std::shared_ptr<SymbolTable> table)
+	{
+		if ((operation=="/" or operation=="%") and rhs==0)
+			return nullptr;
 
-        if (operation == "+")
-            return new Ast::Literal(lhs + rhs, std::move(table));
-        else if (operation == "-")
-            return new Ast::Literal(lhs - rhs, std::move(table));
-        else if (operation == "*")
-            return new Ast::Literal(lhs * rhs, std::move(table));
-        else if (operation == "/")
-            return new Ast::Literal(lhs / rhs, std::move(table));
-        else if (operation == "%")
-            return fold_modulo(lhs, rhs, std::move(table));
-        else if (operation == "<")
-            return new Ast::Literal(lhs < rhs, std::move(table));
-        else if (operation == ">")
-            return new Ast::Literal(lhs > rhs, std::move(table));
-        else if (operation == "<=")
-            return new Ast::Literal(lhs <= rhs, std::move(table));
-        else if (operation == ">=")
-            return new Ast::Literal(lhs >= rhs, std::move(table));
-        else if (operation == "==")
-            return new Ast::Literal(lhs == rhs, std::move(table));
-        else if (operation == "!=")
-            return new Ast::Literal(lhs != rhs, std::move(table));
-        else if (operation == "&&")
-            return new Ast::Literal(lhs && rhs, std::move(table));
-        else if (operation == "||")
-            return new Ast::Literal(lhs || rhs, std::move(table));
-        else
-            throw SyntaxError("unknown binary operation");
-    }
+		if (operation=="+")
+			return new Ast::Literal(lhs+rhs, std::move(table));
+		else if (operation=="-")
+			return new Ast::Literal(lhs-rhs, std::move(table));
+		else if (operation=="*")
+			return new Ast::Literal(lhs*rhs, std::move(table));
+		else if (operation=="/")
+			return new Ast::Literal(lhs/rhs, std::move(table));
+		else if (operation=="%")
+			return fold_modulo(lhs, rhs, std::move(table));
+		else if (operation=="<")
+			return new Ast::Literal(lhs<rhs, std::move(table));
+		else if (operation==">")
+			return new Ast::Literal(lhs>rhs, std::move(table));
+		else if (operation=="<=")
+			return new Ast::Literal(lhs<=rhs, std::move(table));
+		else if (operation==">=")
+			return new Ast::Literal(lhs>=rhs, std::move(table));
+		else if (operation=="==")
+			return new Ast::Literal(lhs==rhs, std::move(table));
+		else if (operation=="!=")
+			return new Ast::Literal(lhs!=rhs, std::move(table));
+		else if (operation=="&&")
+			return new Ast::Literal(lhs && rhs, std::move(table));
+		else if (operation=="||")
+			return new Ast::Literal(lhs || rhs, std::move(table));
+		else
+			throw SyntaxError("unknown binary operation");
+	}
 
-    template <typename Type>
-    Ast::Literal* fold_unary(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
-    {
-        if (operation == "+")
-            return new Ast::Literal(operand, std::move(table));
-        else if (operation == "-")
-            return new Ast::Literal(-operand, std::move(table));
-        else if (operation == "!")
-            return new Ast::Literal(!operand, std::move(table));
-        else
-            throw SyntaxError("unknown unary operation");
-    }
-    template<typename Type>
-    Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
-    {
-        if(operation == "float")
-            return new Ast::Literal((float)operand, std::move(table));
-        else if(operation == "double")
-            return new Ast::Literal((double)operand, std::move(table));
-        else if(operation == "char")
-            return new Ast::Literal((char)operand, std::move(table));
-        else if(operation == "short")
-            return new Ast::Literal((short)operand, std::move(table));
-        else if(operation == "int")
-            return new Ast::Literal((int)operand, std::move(table));
-        else if(operation == "long")
-            return new Ast::Literal((long)operand, std::move(table));
-        else if(operation.find('*') != std::string::npos)
-            return new Ast::Literal((ptr_type)operand, std::move(table));
-        else throw WhoopsiePoopsieError("unknown type for conversion: " + operation);
-    }
+	template<typename Type>
+	Ast::Literal* fold_unary(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
+	{
+		if (operation=="+")
+			return new Ast::Literal(operand, std::move(table));
+		else if (operation=="-")
+			return new Ast::Literal(-operand, std::move(table));
+		else if (operation=="!")
+			return new Ast::Literal(!operand, std::move(table));
+		else
+			throw SyntaxError("unknown unary operation");
+	}
+
+	template<typename Type>
+	Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
+	{
+		if (operation=="float")
+			return new Ast::Literal((float) operand, std::move(table));
+		else if (operation=="double")
+			return new Ast::Literal((double) operand, std::move(table));
+		else if (operation=="char")
+			return new Ast::Literal((char) operand, std::move(table));
+		else if (operation=="short")
+			return new Ast::Literal((short) operand, std::move(table));
+		else if (operation=="int")
+			return new Ast::Literal((int) operand, std::move(table));
+		else if (operation=="long")
+			return new Ast::Literal((long) operand, std::move(table));
+		else if (operation.find('*')!=std::string::npos)
+			return new Ast::Literal((ptr_type) operand, std::move(table));
+		else throw WhoopsiePoopsieError("unknown type for conversion: "+operation);
+	}
 }
 
 namespace Ast {
@@ -131,17 +131,17 @@ namespace Ast {
 
 	void Node::complete(bool check, bool fold, bool output)
 	{
-        std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root)
-        {
-          root->check(std::cerr, std::cerr);
-          for(const auto child : root->children())
-          {
-              recursion(child);
-          }
-        };
-        recursion(this);
+		std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root)
+		{
+			if(check) root->check(std::cerr, std::cerr);
+			for (const auto child : root->children())
+			{
+				recursion(child);
+			}
+		};
+		recursion(this);
 
-        if(fold) this->fold();
+		if (fold) this->fold();
 	}
 
 	std::string Expr::color() const
@@ -173,13 +173,15 @@ namespace Ast {
 	{
 		return "#d5ceeb"; // light purple
 	}
-    Literal* Comment::fold()
-    {
-	    return nullptr;
-    }
-    void Comment::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+
+	Literal* Comment::fold()
+	{
+		return nullptr;
+	}
+
+	void Comment::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string Block::name() const
 	{
@@ -201,14 +203,15 @@ namespace Ast {
 		return "#ceebe3"; // light green
 	}
 
-    Literal* Block::fold()
-    {
-        for(auto& child : nodes) assign_fold(child);
-        return nullptr;
-    }
-    void Block::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+	Literal* Block::fold()
+	{
+		for (auto& child : nodes) assign_fold(child);
+		return nullptr;
+	}
+
+	void Block::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string Literal::name() const
 	{
@@ -226,13 +229,14 @@ namespace Ast {
 		return {};
 	}
 
-    Literal* Literal::fold()
-    {
-        return this;
-    }
-    void Literal::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+	Literal* Literal::fold()
+	{
+		return this;
+	}
+
+	void Literal::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string Variable::name() const
 	{
@@ -248,22 +252,25 @@ namespace Ast {
 	{
 		return {};
 	}
-    std::string Variable::color() const
-    {
-        return "#ebe6ce";
-    }
-    Literal* Variable::fold()
-    {
-        const auto& literal = table->get_literal(name());
-        if(literal.has_value())
-        {
-            return new Ast::Literal(literal.value(), table);
-        }
-        else return nullptr;
-    }
-    void Variable::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+
+	std::string Variable::color() const
+	{
+		return "#ebe6ce";
+	}
+
+	Literal* Variable::fold()
+	{
+		const auto& literal = table->get_literal(name());
+		if (literal.has_value())
+		{
+			return new Ast::Literal(literal.value(), table);
+		}
+		else return nullptr;
+	}
+
+	void Variable::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string BinaryExpr::name() const
 	{
@@ -279,38 +286,40 @@ namespace Ast {
 	{
 		return {lhs, rhs};
 	}
-    Literal* BinaryExpr::fold()
-    {
-	    auto* new_lhs = lhs->fold();
-	    auto* new_rhs = rhs->fold();
 
-	    const auto set_folded = [&]() -> Ast::Literal*
-	        {
-              if(new_lhs) lhs = new_lhs;
-              if(new_rhs) rhs = new_rhs;
-              return nullptr;
-	        };
+	Literal* BinaryExpr::fold()
+	{
+		auto* new_lhs = lhs->fold();
+		auto* new_rhs = rhs->fold();
 
-	    if(new_lhs and new_rhs)
-	    {
-            const auto lambda = [&](const auto& lhs, const auto& rhs)
-            {
-              auto* res = fold_binary(lhs, rhs, operation, table);
-              if(res) return res;
-              else return set_folded();
-            };
-	        // TODO: deletus feetus, memory leakus
-            return std::visit(lambda, new_lhs->literal, new_rhs->literal);
-	    }
-	    else
-        {
-	        return set_folded();
-        }
-    }
-    void BinaryExpr::check(std::ostream& error, std::ostream& warning) const
-    {
-	    // TODO: check modulo on floating point
-    }
+		const auto set_folded = [&]() -> Ast::Literal*
+		{
+			if (new_lhs) lhs = new_lhs;
+			if (new_rhs) rhs = new_rhs;
+			return nullptr;
+		};
+
+		if (new_lhs and new_rhs)
+		{
+			const auto lambda = [&](const auto& lhs, const auto& rhs)
+			{
+				auto* res = fold_binary(lhs, rhs, operation, table);
+				if (res) return res;
+				else return set_folded();
+			};
+			// TODO: deletus feetus, memory leakus
+			return std::visit(lambda, new_lhs->literal, new_rhs->literal);
+		}
+		else
+		{
+			return set_folded();
+		}
+	}
+
+	void BinaryExpr::check(std::ostream& error, std::ostream& warning) const
+	{
+		// TODO: check modulo on floating point
+	}
 
 	std::string PostfixExpr::name() const
 	{
@@ -326,13 +335,15 @@ namespace Ast {
 	{
 		return {variable};
 	}
-    Literal* PostfixExpr::fold()
-    {
-        return nullptr;
-    }
-    void PostfixExpr::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+
+	Literal* PostfixExpr::fold()
+	{
+		return nullptr;
+	}
+
+	void PostfixExpr::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string PrefixExpr::name() const
 	{
@@ -348,13 +359,15 @@ namespace Ast {
 	{
 		return {variable};
 	}
-    Literal* PrefixExpr::fold()
-    {
-        return nullptr;
-    }
-    void PrefixExpr::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+
+	Literal* PrefixExpr::fold()
+	{
+		return nullptr;
+	}
+
+	void PrefixExpr::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string UnaryExpr::name() const
 	{
@@ -370,22 +383,23 @@ namespace Ast {
 	{
 		return {operand};
 	}
-    Literal* UnaryExpr::fold()
-    {
-	    auto* new_operand = operand->fold();
-        const auto lambda = [&](const auto& val)
-        {
-          return fold_unary(val, operation, table);
-        };
 
-        // TODO: deletus feetus, memory leakus
-	    if(new_operand) return std::visit(lambda, new_operand->literal);
-        return nullptr;
-    }
-    void UnaryExpr::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+	Literal* UnaryExpr::fold()
+	{
+		auto* new_operand = operand->fold();
+		const auto lambda = [&](const auto& val)
+		{
+			return fold_unary(val, operation, table);
+		};
 
+		// TODO: deletus feetus, memory leakus
+		if (new_operand) return std::visit(lambda, new_operand->literal);
+		return nullptr;
+	}
+
+	void UnaryExpr::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string CastExpr::name() const
 	{
@@ -394,28 +408,30 @@ namespace Ast {
 
 	std::string CastExpr::value() const
 	{
-		return '(' + type->print()+')';
+		return '('+type->print()+')';
 	}
 
 	std::vector<Node*> CastExpr::children() const
 	{
 		return {operand};
 	}
-    Literal* CastExpr::fold()
-    {
-        auto* new_operand = operand->fold();
-        const auto lambda = [&](const auto& val)
-        {
-          return fold_cast(val, type->print(), table);
-        };
 
-        if(new_operand) return std::visit(lambda, new_operand->literal);
-        else return nullptr;
-    }
-    void CastExpr::check(std::ostream& error, std::ostream& warning) const
-    {
-	    // TODO: give warning when casting to incompatible types
-    }
+	Literal* CastExpr::fold()
+	{
+		auto* new_operand = operand->fold();
+		const auto lambda = [&](const auto& val)
+		{
+			return fold_cast(val, type->print(), table);
+		};
+
+		if (new_operand) return std::visit(lambda, new_operand->literal);
+		else return nullptr;
+	}
+
+	void CastExpr::check(std::ostream& error, std::ostream& warning) const
+	{
+		// TODO: give warning when casting to incompatible types
+	}
 
 	std::string Assignment::name() const
 	{
@@ -432,19 +448,19 @@ namespace Ast {
 		return {variable, expr};
 	}
 
-    Literal* Assignment::fold()
-    {
-	    assign_fold(expr);
-        return nullptr;
-    }
-    void Assignment::check(std::ostream& error, std::ostream& warning) const
-    {
-	    if(table->lookup(variable->name()).value()->second.type->isConst)
-	    {
-            error << "assigning " << expr->value() << " to "
-                  << variable->name() << " which is const-qualified\n";
-	    }
-    }
+	Literal* Assignment::fold()
+	{
+		assign_fold(expr);
+		return nullptr;
+	}
+
+	void Assignment::check(std::ostream& error, std::ostream& warning) const
+	{
+		if (table->lookup(variable->name()).value()->second.type->isConst)
+		{
+			throw SemanticError("assignment of read-only variable '" + variable->name() + "'");
+		}
+	}
 
 	std::string Declaration::name() const
 	{
@@ -461,23 +477,25 @@ namespace Ast {
 		if (expr) return {variable, expr};
 		else return {variable};
 	}
-    Literal* Declaration::fold()
-    {
-	    if(not expr) return nullptr;
 
-        if(auto* res = expr->fold())
-        {
-            if(variable->entry->second.type->isConst)
-            {
-                table->set_literal(variable->name(), res->literal);
-            }
-            expr = res;
-        }
-        return nullptr;
-    }
-    void Declaration::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+	Literal* Declaration::fold()
+	{
+		if (not expr) return nullptr;
+
+		if (auto* res = expr->fold())
+		{
+			if (variable->entry->second.type->isConst)
+			{
+				table->set_literal(variable->name(), res->literal);
+			}
+			expr = res;
+		}
+		return nullptr;
+	}
+
+	void Declaration::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 
 	std::string PrintfStatement::name() const
 	{
@@ -493,13 +511,14 @@ namespace Ast {
 	{
 		return {expr};
 	}
-    Literal* PrintfStatement::fold()
-    {
-        assign_fold(expr);
-        return nullptr;
-    }
 
-    void PrintfStatement::check(std::ostream& error, std::ostream& warning) const
-    {
-    }
+	Literal* PrintfStatement::fold()
+	{
+		assign_fold(expr);
+		return nullptr;
+	}
+
+	void PrintfStatement::check(std::ostream& error, std::ostream& warning) const
+	{
+	}
 }

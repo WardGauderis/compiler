@@ -39,7 +39,7 @@ std::optional<SymbolTable::Entry> SymbolTable::lookup(const std::string& id) con
 SymbolTable::Entry SymbolTable::insert(const std::string& id, Type* type)
 {
     const auto [iter, inserted] = table.emplace(id, TableElement{type, std::nullopt});
-    if(not inserted) throw SyntaxError("already declared symbol with id: " + id);
+    if(not inserted) throw SyntaxError("redefinition of '" + id + "'");
     else return iter;
 }
 
