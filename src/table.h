@@ -81,7 +81,7 @@ public:
     Entry insert(const std::string& id, Type* type)
     {
         const auto [iter, inserted] = table.emplace(id, std::make_pair(type, std::nullopt));
-        if(not inserted) throw SyntaxError("already declared symbol with id: " + id);
+        if(not inserted) throw SemanticError("already declared symbol with id: " + id);
         else return iter;
     }
 
