@@ -24,12 +24,13 @@ antlrcpp::Any DotVisitor::visitChildren(antlr4::tree::ParseTree* node) {
 	}
 	else
     {
-		throw WhoopsiePoopsieError("Geen RuleContext");
+		throw WhoopsiePoopsieError(std::string("node is not rule context but: ") + typeid(*node).name());
 	}
 	return antlr4::tree::AbstractParseTreeVisitor::visitChildren(node);
 }
 
-antlrcpp::Any DotVisitor::visitTerminal(antlr4::tree::TerminalNode* node) {
+antlrcpp::Any DotVisitor::visitTerminal(antlr4::tree::TerminalNode* node)
+{
 	linkWithParent(node, node->getText());
 	return defaultResult();
 }
