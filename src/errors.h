@@ -16,9 +16,7 @@ public:
 
 	explicit CompilationError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0,
 			bool warning = false)
-	{
-		createMessage(message, line, column, warning);
-	}
+			:CompilationError(message, line, column, warning, "error") { }
 
 	[[nodiscard]] const char* what() const noexcept final
 	{
@@ -31,43 +29,35 @@ public:
 		return os;
 	}
 
-private:
-	std::string message;
+protected:
 
-	void createMessage(const std::string& message, const unsigned int line, const unsigned int column, bool warning)
+	explicit CompilationError(const std::string& message, const unsigned int line, const unsigned int column,
+			bool warning, const std::string& type)
 	{
 		CompilationError::message = "\033[1m"+
 				file+":"+
 				(line ? std::to_string(line)+":" : "")+
 				(column ? std::to_string(column)+":" : "")+(warning ? " \033[1;33m" : " \033[1;31m")+
-				type()+(warning ? " warning" : " error")+":\033[0m "+
+				type+(warning ? " warning" : " error")+":\033[0m "+
 				message+"\n";
 	}
 
-	[[nodiscard]] virtual std::string type() const
-	{
-		return "compilation";
-	}
+private:
+	std::string message;
 };
 
 class SyntaxError : public CompilationError {
 public:
-	using CompilationError::CompilationError;
-private:
-	[[nodiscard]] std::string type() const final
-	{
-		return "syntax";
-	}
+	explicit SyntaxError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0.,
+			bool warning = false)
+			:CompilationError(message, line, column, warning, "syntax") { }
 };
 
 class SemanticError : public CompilationError {
 public:
-	using CompilationError::CompilationError;
-private:
-	[[nodiscard]] std::string type() const final
-	{
-		return "semantic";
-	}
+	explicit SemanticError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0.,
+			bool warning = false)
+			:CompilationError(message, line, column, warning, "semantic") { }
 };
 
 class UndeclaredError : public SemanticError {
@@ -78,10 +68,7 @@ public:
 
 class InternalError : public CompilationError {
 public:
-	using CompilationError::CompilationError;
-private:
-	[[nodiscard]] std::string type() const final
-	{
-		return "internal";
-	}
+	explicit InternalError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0.,
+			bool warning = false)
+			:CompilationError(message, line, column, warning, "internal") { }
 };
