@@ -24,7 +24,7 @@ antlrcpp::Any DotVisitor::visitChildren(antlr4::tree::ParseTree* node) {
 	}
 	else
     {
-		throw WhoopsiePoopsieError(std::string("node is not rule context but: ") + typeid(*node).name());
+		throw InternalError(std::string("node is not rule context but: ") + typeid(*node).name());
 	}
 	return antlr4::tree::AbstractParseTreeVisitor::visitChildren(node);
 }

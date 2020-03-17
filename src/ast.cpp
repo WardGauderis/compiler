@@ -30,7 +30,7 @@ namespace {
 		}
 		else
 		{
-			throw WhoopsiePoopsieError("Someone should already have checked if "
+			throw InternalError("Someone should already have checked if "
 			                           "modulo is done on floating point before");
 		}
 	}
@@ -101,7 +101,7 @@ namespace {
 			return new Ast::Literal((long) operand, std::move(table));
 		else if (operation.find('*')!=std::string::npos)
 			return new Ast::Literal((ptr_type) operand, std::move(table));
-		else throw WhoopsiePoopsieError("unknown type for conversion: "+operation);
+		else throw InternalError("unknown type for conversion: "+operation);
 	}
 }
 

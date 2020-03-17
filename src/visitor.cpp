@@ -49,7 +49,7 @@ Ast::Comment* visitComment(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
 	auto* terminal = dynamic_cast<antlr4::tree::TerminalNode*>(context->children[0]);
-	if (terminal==nullptr) throw WhoopsiePoopsieError("literal node is not a terminal in the cst");
+	if (terminal==nullptr) throw InternalError("literal node is not a terminal in the cst");
 
 	switch (terminal->getSymbol()->getType())
 	{
@@ -78,7 +78,7 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 	case CParser::CHAR:
 		return new Ast::Literal(terminal->getText()[1], table);
 	default:
-		throw WhoopsiePoopsieError("unknown literal type, probably not yet implemented");
+		throw InternalError("unknown literal type, probably not yet implemented");
 	}
 }
 
@@ -91,10 +91,10 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
 	else if (typeid(*context)==typeid(antlr4::tree::TerminalNodeImpl))
 	{
 	    const auto entry = table->lookup(context->getText());
-	    if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
+	    if(not entry.has_value()) throw UndeclaredError(context->getText());
 		return new Ast::Variable(entry.value(), table);
 	}
-	else throw WhoopsiePoopsieError(std::string("unknown basic expression type: ")+typeid(*context).name());
+	else throw InternalError(std::string("unknown basic expression type: ")+typeid(*context).name());
 }
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -121,7 +121,7 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 	visitor(2, [&](auto* context)
 	{
 	    const auto entry = table->lookup(context->children[0]->getText());
-         if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
+         if(not entry.has_value()) throw UndeclaredError(context->getText());
 		const auto lhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table);
 	});
@@ -138,7 +138,7 @@ Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 	visitor(2, [&](auto* context)
 	{
         const auto entry = table->lookup(context->children[1]->getText());
-        if(not entry.has_value()) throw SemanticError("'" + context->getText() + "' undeclared");
+        if(not entry.has_value()) throw UndeclaredError(context->getText());
 		const auto rhs = new Ast::Variable(entry.value(), table);
 		return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table);
 	});
@@ -275,7 +275,7 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 		const auto rhs = visitAssignExpr(context->children[2], table);
 		const auto entry = table->lookup(identifier);
 
-        if(not entry.has_value()) throw SemanticError("'" + identifier + "' undeclared");
+        if(not entry.has_value()) throw UndeclaredError(identifier);
 		auto* var = new Ast::Variable(entry.value(), table);
 		return new Ast::Assignment(var, rhs, table);
 	});
@@ -387,7 +387,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
 	{
 		return visitPrintf(child, table);
 	}
-	else throw WhoopsiePoopsieError(
+	else throw InternalError(
 				std::string("unknown statement type: ") +
 				typeid(*context).name() + ":\n\t" + context->getText());
 }
@@ -406,7 +406,7 @@ std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared
 		{
 			nodes.emplace_back(visitStatement(child, table));
 		}
-		else throw WhoopsiePoopsieError(std::string("unknown node type: ")+typeid(*child).name());
+		else throw InternalError(std::string("unknown node type: ")+typeid(*child).name());
 	}
 	return nodes;
 }
