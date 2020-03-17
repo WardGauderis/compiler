@@ -7,6 +7,8 @@
 #include "cst.h"
 #include "visitor.h"
 
+std::string CompilationError::file;
+
 std::filesystem::path swap_top_folder(const std::filesystem::path& path, const std::string& new_name)
 {
 	const auto string = path.string();
@@ -57,18 +59,18 @@ void output_all_tests(bool redo_existing)
 
 			if (redo_existing or not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path))
 			{
-				std::cout << input << std::endl;
+				CompilationError::file = input;
 				std::filesystem::create_directories(base);
 
 				std::ifstream stream(input);
 				if (!stream.good()) throw std::runtime_error("problem opening "+input.string());
 
 				std::stringstream buffer;
-				std::streambuf * old = std::cerr.rdbuf(buffer.rdbuf());
+				std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
 				const auto cst = std::make_unique<Cst::Root>(stream);
 				std::cerr.rdbuf(old);
 				std::string warning = buffer.str();
-				if(!warning.empty()) throw SyntaxError(warning.substr(0, warning.size()-1));
+				if (!warning.empty()) throw SyntaxError(warning.substr(0, warning.size()-1));
 
 				const auto ast = Ast::from_cst(cst, true);
 
@@ -76,30 +78,9 @@ void output_all_tests(bool redo_existing)
 				make_dot(ast, ast_path);
 			}
 		}
-		catch (const SyntaxError& ex)
-		{
-			std::cout << "\033[1;31mSyntax Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
-			          << std::endl;
-		}
-		catch (const SemanticError& ex)
-		{
-			std::cout << "\033[1;31mSemantic Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
-			          << std::endl;
-		}
-		catch (const WhoopsiePoopsieError& ex)
-		{
-			std::cout << "\033[1;31mWhoopsie Poopsie Error: " << ex.what() << " --- in file: " << entry.path()
-			          << "\033[0m" << std::endl;
-		}
-		catch (const CompilationError& ex)
-		{
-			std::cout << "\033[1;31mCompilation Error: " << ex.what() << " --- in file: " << entry.path() << "\033[0m"
-			          << std::endl;
-		}
 		catch (const std::exception& ex)
 		{
-			std::cout << "\033[1;31mUnknown Error: " << ex.what() << " in file: " << entry.path() << "\033[0m"
-			          << std::endl;
+			std::cout << ex.what();
 		}
 	}
 }

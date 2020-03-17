@@ -63,7 +63,7 @@ std::string Type::toString(BaseType type)
     case BaseType::Double:
         return "double";
     default:
-        throw WhoopsiePoopsieError("unknown base type");
+        throw InternalError("unknown base type");
     }
 }
 
@@ -90,6 +90,6 @@ BaseType Type::combine(Type lhs, Type rhs)
     }
     else
     {
-        throw WhoopsiePoopsieError("pointer cast stuff not yet defined");
+        throw InternalError("pointer cast stuff not yet defined");
     }
 }
