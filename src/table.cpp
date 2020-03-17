@@ -6,24 +6,7 @@
 
 #include "table.h"
 
-[[nodiscard]] std::string Type::print() const
-{
-    return std::visit(overloaded
-        {
-            [&](Type* ptr)
-            {
-                return ptr->print() + "*" + (isConst ? " const" : "");
-            },
-            [&](const std::string& name)
-            {
-                return (isConst ? "const " : "") + name;
-            },
-            [&](const void_ptr& name)
-            {
-                return (isConst ? "const " : "") + std::string("void*");
-            }
-        }, type);
-}
+
 
 std::optional<SymbolTable::Entry> SymbolTable::lookup(const std::string& id) const
 {
@@ -36,25 +19,30 @@ std::optional<SymbolTable::Entry> SymbolTable::lookup(const std::string& id) con
     else return iter;
 }
 
-SymbolTable::Entry SymbolTable::insert(const std::string& id, Type* type)
+SymbolTable::Entry SymbolTable::insert(const std::string& id, Type type)
 {
     const auto [iter, inserted] = table.emplace(id, TableElement{type, std::nullopt});
     if(not inserted) throw SemanticError("redefinition of '" + id + "'");
     else return iter;
 }
 
-void SymbolTable::set_literal(const std::string& id, std::optional<base_type> literal)
+void SymbolTable::set_literal(const std::string& id, std::optional<TypeVariant> literal)
 {
     const auto& iter = table.find(id);
     if(iter == table.end()) throw InternalError("setting literal for unknown element");
     else iter->second.literal = literal;
 }
 
-std::optional<base_type> SymbolTable::get_literal(const std::string& id)
+std::optional<TypeVariant> SymbolTable::get_literal(const std::string& id)
 {
     const auto& iter = table.find(id);
     if(iter == table.end()) throw InternalError("getting literal for unknown element");
     else return iter->second.literal;
+}
+
+bool SymbolTable::lookup_const(const std::string& id)
+{
+    return lookup(id).value()->second.type.isConst();
 }
 
 

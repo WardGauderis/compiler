@@ -7,40 +7,17 @@
 #pragma once
 
 #include "errors.h"
+#include "type.h"
 #include <memory>
 #include <unordered_map>
 #include <variant>
 
-namespace
-{
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-}
 
-using ptr_type = std::uint32_t;
-using base_type = std::variant<char, short, int, long, float, double, ptr_type>;
-using void_ptr = ptr_type;
-
-struct Type
-{
-    explicit Type(bool isConst, Type* ptr) : isConst(isConst), type(ptr)
-    {
-    }
-
-    explicit Type(bool isConst, std::string base) : isConst(isConst), type(std::move(base))
-    {
-    }
-
-    [[nodiscard]] std::string print() const;
-
-    bool isConst;
-    std::variant<Type*, std::string, void_ptr> type;
-};
 
 struct TableElement
 {
-    Type* type;
-    std::optional<base_type> literal;
+    Type type;
+    std::optional<TypeVariant> literal;
 };
 
 class SymbolTable
@@ -56,11 +33,13 @@ public:
 
     std::optional<Entry> lookup(const std::string& id) const;
 
-    Entry insert(const std::string& id, Type* type);
+    Entry insert(const std::string& id, Type type);
 
-    void set_literal(const std::string& id, std::optional<base_type> type);
+    void set_literal(const std::string& id, std::optional<TypeVariant> type);
 
-    std::optional<base_type> get_literal(const std::string& id);
+    std::optional<TypeVariant> get_literal(const std::string& id);
+
+    bool lookup_const(const std::string& id);
 
 private:
     std::shared_ptr<SymbolTable> parent;

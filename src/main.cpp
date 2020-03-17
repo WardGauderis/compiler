@@ -80,7 +80,7 @@ void output_all_tests(bool redo_existing)
 		}
 		catch (const std::exception& ex)
 		{
-			std::cout << ex.what() << std::endl;
+			std::cout << ex.what();
 		}
 	}
 }
