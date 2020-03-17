@@ -19,11 +19,9 @@ std::optional<SymbolTable::Entry> SymbolTable::lookup(const std::string& id) con
     else return iter;
 }
 
-SymbolTable::Entry SymbolTable::insert(const std::string& id, Type type)
+std::pair<SymbolTable::Entry, bool> SymbolTable::insert(const std::string& id, Type type)
 {
-    const auto [iter, inserted] = table.emplace(id, TableElement{type, std::nullopt});
-    if(not inserted) throw SemanticError("redefinition of '" + id + "'");
-    else return iter;
+    return table.emplace(id, TableElement{type, std::nullopt});
 }
 
 void SymbolTable::set_literal(const std::string& id, std::optional<TypeVariant> literal)

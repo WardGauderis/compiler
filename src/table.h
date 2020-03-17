@@ -33,7 +33,7 @@ public:
 
     std::optional<Entry> lookup(const std::string& id) const;
 
-    Entry insert(const std::string& id, Type type);
+    std::pair<Entry, bool> insert(const std::string& id, Type type);
 
     void set_literal(const std::string& id, std::optional<TypeVariant> type);
 
