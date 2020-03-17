@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <antlr4-runtime.h>
-#include <filesystem>
 #include <CLexer.h>
 #include <CParser.h>
+#include <antlr4-runtime.h>
+#include <filesystem>
 
 class DotVisitor : antlr4::tree::AbstractParseTreeVisitor
 {
@@ -34,8 +34,14 @@ namespace Cst
 struct Root
 {
     explicit Root(std::ifstream& stream)
-    : input(stream), lexer(&input), tokens(&lexer),
-    parser(&tokens), block(parser.block()), rulenames(parser.getRuleNames()) {}
+        : input(stream),
+          lexer(&input),
+          tokens(&lexer),
+          parser(&tokens),
+          block(parser.block()),
+          rulenames(parser.getRuleNames())
+    {
+    }
 
     friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& root);
 
@@ -48,4 +54,4 @@ struct Root
     std::vector<std::string> rulenames;
 };
 
-}
+} // namespace Cst

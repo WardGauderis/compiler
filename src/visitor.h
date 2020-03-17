@@ -9,8 +9,8 @@
 #include <memory>
 #include <tree/ParseTree.h>
 
-#include "cst.h"
 #include "ast.h"
+#include "cst.h"
 #include "errors.h"
 
 Ast::Comment* visitComment(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
@@ -61,5 +61,5 @@ std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared
 
 namespace Ast
 {
-    std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root, bool fold);
+std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root, bool fold);
 }

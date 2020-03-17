@@ -14,6 +14,21 @@ BreakBeforeBraces: Allman
 BreakBeforeTernaryOperators: true
 BreakStringLiterals: true
 
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
 AccessModifierOffset: -4
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortFunctionsOnASingleLine: None
@@ -42,14 +57,8 @@ PenaltyBreakFirstLessLess: 120
 PenaltyExcessCharacter: 1
 PenaltyReturnTypeOnItsOwnLine: 1000
 PointerAlignment: Left
-SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
-SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
-SpacesInAngles: false
-SpacesInCStyleCastParentheses: false
-SpacesInContainerLiterals: true
-SpacesInParentheses: false
 Cpp11BracedListStyle: true
 Standard: Auto
 TabWidth: 4
