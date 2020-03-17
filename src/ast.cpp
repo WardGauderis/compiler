@@ -23,11 +23,11 @@ bool assign_fold(Type*& elem)
 }
 
 template<typename Type0, typename Type1>
-Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table)
+Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
 {
     if constexpr (std::is_integral_v<Type0> and std::is_integral_v<Type1>)
     {
-        return new Ast::Literal(lhs % rhs, std::move(table));
+        return new Ast::Literal(lhs % rhs, std::move(table), column, line);
     }
     else
     {
@@ -38,65 +38,65 @@ Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> tab
 }
 
 template<typename Type0, typename Type1>
-Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, const std::string& operation, std::shared_ptr<SymbolTable> table)
+Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, const std::string& operation, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
 {
     if ((operation == "/" or operation == "%") and rhs == 0) return nullptr;
 
-    if (operation == "+") return new Ast::Literal(lhs + rhs, std::move(table));
+    if (operation == "+") return new Ast::Literal(lhs + rhs, std::move(table), column, line);
     else if (operation == "-")
-        return new Ast::Literal(lhs - rhs, std::move(table));
+        return new Ast::Literal(lhs - rhs, std::move(table), column, line);
     else if (operation == "*")
-        return new Ast::Literal(lhs * rhs, std::move(table));
+        return new Ast::Literal(lhs * rhs, std::move(table), column, line);
     else if (operation == "/")
-        return new Ast::Literal(lhs / rhs, std::move(table));
+        return new Ast::Literal(lhs / rhs, std::move(table), column, line);
     else if (operation == "%")
-        return fold_modulo(lhs, rhs, std::move(table));
+        return fold_modulo(lhs, rhs, std::move(table), column, line);
     else if (operation == "<")
-        return new Ast::Literal(lhs < rhs, std::move(table));
+        return new Ast::Literal(lhs < rhs, std::move(table), column, line);
     else if (operation == ">")
-        return new Ast::Literal(lhs > rhs, std::move(table));
+        return new Ast::Literal(lhs > rhs, std::move(table), column, line);
     else if (operation == "<=")
-        return new Ast::Literal(lhs <= rhs, std::move(table));
+        return new Ast::Literal(lhs <= rhs, std::move(table), column, line);
     else if (operation == ">=")
-        return new Ast::Literal(lhs >= rhs, std::move(table));
+        return new Ast::Literal(lhs >= rhs, std::move(table), column, line);
     else if (operation == "==")
-        return new Ast::Literal(lhs == rhs, std::move(table));
+        return new Ast::Literal(lhs == rhs, std::move(table), column, line);
     else if (operation == "!=")
-        return new Ast::Literal(lhs != rhs, std::move(table));
+        return new Ast::Literal(lhs != rhs, std::move(table), column, line);
     else if (operation == "&&")
-        return new Ast::Literal(lhs && rhs, std::move(table));
+        return new Ast::Literal(lhs && rhs, std::move(table), column, line);
     else if (operation == "||")
-        return new Ast::Literal(lhs || rhs, std::move(table));
+        return new Ast::Literal(lhs || rhs, std::move(table), column, line);
     else
         throw SyntaxError("unknown binary operation");
 }
 
 template<typename Type>
-Ast::Literal* fold_unary(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
+Ast::Literal* fold_unary(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
 {
-    if (operation == "+") return new Ast::Literal(operand, std::move(table));
+    if (operation == "+") return new Ast::Literal(operand, std::move(table), column, line);
     else if (operation == "-")
-        return new Ast::Literal(-operand, std::move(table));
+        return new Ast::Literal(-operand, std::move(table), column, line);
     else if (operation == "!")
-        return new Ast::Literal(!operand, std::move(table));
+        return new Ast::Literal(!operand, std::move(table), column, line);
     else
         throw SyntaxError("unknown unary operation");
 }
 
 template<typename Type>
-Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table)
+Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
 {
-    if (operation == "float") return new Ast::Literal((float)operand, std::move(table));
+    if (operation == "float") return new Ast::Literal((float)operand, std::move(table), column, line);
     else if (operation == "double")
-        return new Ast::Literal((double)operand, std::move(table));
+        return new Ast::Literal((double)operand, std::move(table), column, line);
     else if (operation == "char")
-        return new Ast::Literal((char)operand, std::move(table));
+        return new Ast::Literal((char)operand, std::move(table), column, line);
     else if (operation == "short")
-        return new Ast::Literal((short)operand, std::move(table));
+        return new Ast::Literal((short)operand, std::move(table), column, line);
     else if (operation == "int")
-        return new Ast::Literal((int)operand, std::move(table));
+        return new Ast::Literal((int)operand, std::move(table), column, line);
     else if (operation == "long")
-        return new Ast::Literal((long)operand, std::move(table));
+        return new Ast::Literal((long)operand, std::move(table), column, line);
     else
         throw WhoopsiePoopsieError("unknown type for conversion: " + operation);
 }
@@ -261,7 +261,7 @@ Literal* Variable::fold()
     const auto& literal = table->get_literal(name());
     if (literal.has_value())
     {
-        return new Ast::Literal(literal.value(), table);
+        return new Ast::Literal(literal.value(), table, column, line);
     }
     else
         return nullptr;
@@ -304,7 +304,7 @@ Literal* BinaryExpr::fold()
     if (new_lhs and new_rhs)
     {
         const auto lambda = [&](const auto& lhs, const auto& rhs) {
-            auto* res = fold_binary(lhs, rhs, operation, table);
+            auto* res = fold_binary(lhs, rhs, operation, table, column, line);
             if (res) return res;
             else
                 return set_folded();
@@ -417,7 +417,7 @@ std::vector<Node*> UnaryExpr::children() const
 Literal* UnaryExpr::fold()
 {
     auto* new_operand = operand->fold();
-    const auto lambda = [&](const auto& val) { return fold_unary(val, operation, table); };
+    const auto lambda = [&](const auto& val) { return fold_unary(val, operation, table, column, line); };
 
     // TODO: deletus feetus, memory leakus
     if (new_operand) return std::visit(lambda, new_operand->literal);
@@ -451,7 +451,7 @@ std::vector<Node*> CastExpr::children() const
 Literal* CastExpr::fold()
 {
     auto* new_operand = operand->fold();
-    const auto lambda = [&](const auto& val) { return fold_cast(val, cast.print(), table); };
+    const auto lambda = [&](const auto& val) { return fold_cast(val, cast.print(), table, column, line); };
 
     if (new_operand) return std::visit(lambda, new_operand->literal);
     else

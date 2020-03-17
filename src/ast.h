@@ -24,7 +24,8 @@ struct Literal;
 
 struct Node
 {
-    explicit Node(std::shared_ptr<SymbolTable> table) : table(std::move(table))
+    explicit Node(std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : table(std::move(table)), column(column), line(line)
     {
     }
 
@@ -46,12 +47,16 @@ struct Node
 
     //    virtual void llvm(std::ofstream& stream) = 0;
 
+    size_t column;
+    size_t line;
+
     std::shared_ptr<SymbolTable> table;
 };
 
 struct Statement : public Node
 {
-    explicit Statement(std::shared_ptr<SymbolTable> table) : Node(std::move(table))
+    explicit Statement(std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Node(std::move(table), column, line)
     {
     }
 
@@ -60,7 +65,8 @@ struct Statement : public Node
 
 struct Expr : public Statement
 {
-    explicit Expr(std::shared_ptr<SymbolTable> table) : Statement(std::move(table))
+    explicit Expr(std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Statement(std::move(table), column, line)
     {
     }
 
@@ -70,8 +76,8 @@ struct Expr : public Statement
 
 struct Comment final : public Node
 {
-    explicit Comment(std::string comment, std::shared_ptr<SymbolTable> table)
-        : Node(std::move(table)), comment(std::move(comment))
+    explicit Comment(std::string comment, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Node(std::move(table), column, line), comment(std::move(comment))
     {
     }
 
@@ -87,8 +93,8 @@ struct Comment final : public Node
 
 struct Block final : public Node
 {
-    explicit Block(std::vector<Node*> nodes, std::shared_ptr<SymbolTable> table)
-        : Node(std::move(table)), nodes(std::move(nodes))
+    explicit Block(std::vector<Node*> nodes, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        :Node(std::move(table), column, line), nodes(std::move(nodes))
     {
     }
 
@@ -105,8 +111,8 @@ struct Block final : public Node
 struct Literal final : public Expr
 {
     template<typename Type>
-    explicit Literal(Type val, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), literal(val)
+    explicit Literal(Type val, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), literal(val)
     {
     }
 
@@ -122,8 +128,8 @@ struct Literal final : public Expr
 
 struct Variable final : public Expr
 {
-    explicit Variable(SymbolTable::Entry entry, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), entry(entry)
+    explicit Variable(SymbolTable::Entry entry, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), entry(entry)
     {
     }
 
@@ -140,8 +146,8 @@ struct Variable final : public Expr
 
 struct BinaryExpr final : public Expr
 {
-    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), operation(std::move(operation)), lhs(lhs), rhs(rhs)
+    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), operation(std::move(operation)), lhs(lhs), rhs(rhs)
     {
     }
 
@@ -160,8 +166,8 @@ struct BinaryExpr final : public Expr
 
 struct PostfixExpr final : public Expr
 {
-    explicit PostfixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), operation(std::move(operation)), variable(variable)
+    explicit PostfixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), operation(std::move(operation)), variable(variable)
     {
     }
 
@@ -178,8 +184,8 @@ struct PostfixExpr final : public Expr
 
 struct PrefixExpr final : public Expr
 {
-    explicit PrefixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), operation(std::move(operation)), variable(variable)
+    explicit PrefixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), operation(std::move(operation)), variable(variable)
     {
     }
 
@@ -196,8 +202,8 @@ struct PrefixExpr final : public Expr
 
 struct UnaryExpr final : public Expr
 {
-    explicit UnaryExpr(std::string operation, Expr* operand, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), operation(std::move(operation)), operand(operand)
+    explicit UnaryExpr(std::string operation, Expr* operand, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), operation(std::move(operation)), operand(operand)
     {
     }
 
@@ -214,8 +220,8 @@ struct UnaryExpr final : public Expr
 
 struct CastExpr final : public Expr
 {
-    explicit CastExpr(Type cast, Expr* operand, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), cast(cast), operand(operand)
+    explicit CastExpr(Type cast, Expr* operand, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), cast(cast), operand(operand)
     {
     }
 
@@ -232,8 +238,8 @@ struct CastExpr final : public Expr
 
 struct Assignment final : public Expr
 {
-    explicit Assignment(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table)
-        : Expr(std::move(table)), variable(variable), expr(expr)
+    explicit Assignment(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Expr(std::move(table), column, line), variable(variable), expr(expr)
     {
     }
 
@@ -250,8 +256,8 @@ struct Assignment final : public Expr
 
 struct Declaration final : public Statement
 {
-    explicit Declaration(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table)
-        : Statement(std::move(table)), variable(variable), expr(expr)
+    explicit Declaration(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Statement(std::move(table), column, line), variable(variable), expr(expr)
     {
     }
 
@@ -267,8 +273,8 @@ struct Declaration final : public Statement
 
 struct PrintfStatement final : public Statement
 {
-    explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table)
-        : Statement(std::move(table)), expr(expr)
+    explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t column, size_t line)
+        : Statement(std::move(table), column, line), expr(expr)
     {
     }
 

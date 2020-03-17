@@ -43,11 +43,11 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 
 Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Type* visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Type* visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Type* visitPointerType(antlr4::tree::ParseTree* context, Type* type, std::shared_ptr<SymbolTable>& table);
+Type visitPointerType(antlr4::tree::ParseTree* context, Type type, std::shared_ptr<SymbolTable>& table);
 
 Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
