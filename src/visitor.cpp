@@ -29,7 +29,11 @@ namespace {
 
 		Ret* result()
 		{
-			if (res==nullptr) throw SemanticError("could not find visitor for "+name);
+			if (res==nullptr)
+			{
+			    std::cout << context->children.size();
+                throw WhoopsiePoopsieError("could not find visitor for "+name);
+			}
 			else return res;
 		}
 
@@ -161,7 +165,8 @@ Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Symb
 	{
 		const auto type = visitTypeName(context->children[1], table);
 		const auto rhs = visitUnaryExpr(context->children[3], table);
-		return new Ast::CastExpr(type, rhs, table);
+		if(type == nullptr) throw WhoopsiePoopsieError("type is nullptr");
+		return new Ast::CastExpr(*type, rhs, table);
 	});
 	return visitor.result();
 }
@@ -347,8 +352,10 @@ Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
 	Type* type = visitTypeName(context->children[0], table);
+	if(type == nullptr) throw WhoopsiePoopsieError("type is nullptr");
+
 	const auto name = context->children[1]->getText();
-    const auto entry = table->insert(name, type);
+    const auto entry = table->insert(name, *type);
 	auto* var = new Ast::Variable(entry, table);
 
 	VisitorHelper<Ast::Statement> visitor(context, "statement");

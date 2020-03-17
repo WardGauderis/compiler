@@ -99,8 +99,6 @@ namespace {
 			return new Ast::Literal((int) operand, std::move(table));
 		else if (operation=="long")
 			return new Ast::Literal((long) operand, std::move(table));
-		else if (operation.find('*')!=std::string::npos)
-			return new Ast::Literal((ptr_type) operand, std::move(table));
 		else throw WhoopsiePoopsieError("unknown type for conversion: "+operation);
 	}
 }
@@ -238,6 +236,11 @@ namespace Ast {
 	{
 	}
 
+    Type Literal::type() const
+    {
+	    return Type(true, static_cast<BaseType>(literal.index()));
+    }
+
 	std::string Variable::name() const
 	{
 		return entry->first;
@@ -245,7 +248,7 @@ namespace Ast {
 
 	std::string Variable::value() const
 	{
-		return entry->second.type->print();
+		return entry->second.type.print();
 	}
 
 	std::vector<Node*> Variable::children() const
@@ -271,6 +274,10 @@ namespace Ast {
 	void Variable::check(std::ostream& error, std::ostream& warning) const
 	{
 	}
+    Type Variable::type() const
+    {
+        return entry->second.type;
+    }
 
 	std::string BinaryExpr::name() const
 	{
@@ -318,8 +325,22 @@ namespace Ast {
 
 	void BinaryExpr::check(std::ostream& error, std::ostream& warning) const
 	{
-		// TODO: check modulo on floating point
+	    const auto rtype = rhs->type();
+	    const auto ltype = lhs->type();
+	    if(not rtype.isBaseType() or not ltype.isBaseType())
+	        error << "pointer arithmetic not yet supported\n";
+
+	    if(operation == "%" and
+	    (rtype.getBaseType() == BaseType::Float
+	    or ltype.getBaseType() == BaseType::Float))
+            error << "modulo on floating point types not possible\n";
 	}
+
+    Type BinaryExpr::type() const
+    {
+	    const auto base = Type::combine(lhs->type(), rhs->type());
+        return Type(false, base);
+    }
 
 	std::string PostfixExpr::name() const
 	{
@@ -343,7 +364,15 @@ namespace Ast {
 
 	void PostfixExpr::check(std::ostream& error, std::ostream& warning) const
 	{
+        if(table->lookup_const(variable->name()))
+        {
+            throw SemanticError("postfix expression of read-only variable '" + variable->name() + "'");
+        }
 	}
+    Type PostfixExpr::type() const
+    {
+        return variable->type();
+    }
 
 	std::string PrefixExpr::name() const
 	{
@@ -367,7 +396,15 @@ namespace Ast {
 
 	void PrefixExpr::check(std::ostream& error, std::ostream& warning) const
 	{
+        if(table->lookup_const(variable->name()))
+        {
+            throw SemanticError("prefix expression of read-only variable '" + variable->name() + "'");
+        }
 	}
+    Type PrefixExpr::type() const
+    {
+        return variable->type();
+    }
 
 	std::string UnaryExpr::name() const
 	{
@@ -401,6 +438,11 @@ namespace Ast {
 	{
 	}
 
+    Type UnaryExpr::type() const
+    {
+        return operand->type();
+    }
+
 	std::string CastExpr::name() const
 	{
 		return "cast expression";
@@ -408,7 +450,7 @@ namespace Ast {
 
 	std::string CastExpr::value() const
 	{
-		return '('+type->print()+')';
+		return '('+cast.print()+')';
 	}
 
 	std::vector<Node*> CastExpr::children() const
@@ -421,7 +463,7 @@ namespace Ast {
 		auto* new_operand = operand->fold();
 		const auto lambda = [&](const auto& val)
 		{
-			return fold_cast(val, type->print(), table);
+			return fold_cast(val, cast.print(), table);
 		};
 
 		if (new_operand) return std::visit(lambda, new_operand->literal);
@@ -432,6 +474,11 @@ namespace Ast {
 	{
 		// TODO: give warning when casting to incompatible types
 	}
+
+    Type CastExpr::type() const
+    {
+        return cast;
+    }
 
 	std::string Assignment::name() const
 	{
@@ -456,11 +503,23 @@ namespace Ast {
 
 	void Assignment::check(std::ostream& error, std::ostream& warning) const
 	{
-		if (table->lookup(variable->name()).value()->second.type->isConst)
-		{
-			throw SemanticError("assignment of read-only variable '" + variable->name() + "'");
-		}
+	    const auto rtype = expr->type().getBaseType();
+	    const auto ltype = variable->type().getBaseType();
+
+	    if(rtype > ltype)
+	    {
+	        warning << "assigning " << Type::toString(rtype) <<
+	        " to variable with less precision " << Type::toString(ltype) << '\n';
+	    }
+	    if(table->lookup_const(variable->name()))
+	    {
+            throw SemanticError("assignment of read-only variable '" + variable->name() + "'");
+	    }
 	}
+    Type Assignment::type() const
+    {
+        return variable->type();
+    }
 
 	std::string Declaration::name() const
 	{
@@ -484,7 +543,7 @@ namespace Ast {
 
 		if (auto* res = expr->fold())
 		{
-			if (variable->entry->second.type->isConst)
+			if (variable->entry->second.type.isConst())
 			{
 				table->set_literal(variable->name(), res->literal);
 			}

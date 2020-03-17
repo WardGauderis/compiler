@@ -62,6 +62,7 @@ struct Expr : public Statement
     : Statement(std::move(table)) {}
 
     [[nodiscard]] std::string color() const override;
+    [[nodiscard]] virtual Type type() const = 0;
 };
 
 struct Comment final : public Node
@@ -111,8 +112,9 @@ struct Literal final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
-    base_type literal;
+    TypeVariant literal;
 };
 
 struct Variable final : public Expr
@@ -128,9 +130,9 @@ struct Variable final : public Expr
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     SymbolTable::Entry entry;
-//    Literal* literal; // can be nullptr, represents the compile time value if one exists
 };
 
 struct BinaryExpr final : public Expr
@@ -145,6 +147,7 @@ struct BinaryExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const override;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     std::string operation;
 
@@ -164,6 +167,7 @@ struct PostfixExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     std::string operation;
     Variable* variable;
@@ -181,6 +185,7 @@ struct PrefixExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     std::string operation;
     Variable* variable;
@@ -198,6 +203,7 @@ struct UnaryExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     std::string operation;
     Expr* operand;
@@ -205,8 +211,8 @@ struct UnaryExpr final : public Expr
 
 struct CastExpr final : public Expr
 {
-    explicit CastExpr(Type* type, Expr* operand, std::shared_ptr<SymbolTable> table)
-    : Expr(std::move(table)), type(type), operand(operand)
+    explicit CastExpr(Type cast, Expr* operand, std::shared_ptr<SymbolTable> table)
+    : Expr(std::move(table)), cast(cast), operand(operand)
     {
     }
 
@@ -215,8 +221,9 @@ struct CastExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
-    Type* type;
+    Type cast;
     Expr* operand;
 };
 
@@ -232,6 +239,7 @@ struct Assignment final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check(std::ostream& error, std::ostream& warning) const final;
+    [[nodiscard]] Type type() const final;
 
     Variable* variable;
     Expr* expr;
