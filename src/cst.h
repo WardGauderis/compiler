@@ -41,7 +41,6 @@ struct Root
           block(parser.block()),
           rulenames(parser.getRuleNames())
     {
-        antlr4::BaseErrorListener
     }
 
     friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& root);
