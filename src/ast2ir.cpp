@@ -56,7 +56,7 @@ namespace Ast {
 		case 4:
 			return llvm::ConstantFP::get(builder.getFloatTy(), std::get<float>(literal));
 		default:
-			throw InternalError("literal type is not supported yet in IR");
+			throw InternalError("literal type is not supported in IR");
 		}
 	}
 
@@ -68,20 +68,49 @@ namespace Ast {
 
 	llvm::Value* BinaryExpr::codegen() const
 	{
-//		auto l = lhs->codegen();
-//		auto r = rhs->codegen();
-//		if (operation == "*") return builder.CreateBinOp()
-//		if (operation == "/")
-//		if (operation == "%")
-//		if (operation == "+")
-//		if (operation == "<")
-//		if (operation == "<=")
-//		if (operation == ">")
-//		if (operation == ">=")
-//		if (operation == "==")
-//		if (operation == "!=")
-//		if (operation == "&&")
-//		if (operation == "||")
+		auto l = lhs->codegen();
+		auto r = rhs->codegen();
+		bool floatOperation = type().isFloatingType();
+
+		if (floatOperation)
+		{
+			if(!lhs->type().isFloatingType());
+			if(!rhs->type().isFloatingType());
+		}
+		else
+		{
+//			if(!lhs->type().isFloatingType())
+		}
+
+
+		using namespace llvm;
+		if (operation=="*") return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r);
+		if (operation=="/") return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r);
+		if (operation=="%") return builder.CreateBinOp(Instruction::SRem, l, r);
+		if (operation=="+") return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r);
+		if (operation=="-") return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r);
+		if (operation=="<")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLT, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_SLT, l, r);
+		if (operation=="<=")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLE, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_SLE, l, r);
+		if (operation==">")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGT, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_SGT, l, r);
+		if (operation==">=")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGE, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_SGE, l, r);
+		if (operation=="==")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OEQ, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_EQ, l, r);
+		if (operation=="!=")
+			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, l, r) :
+			       builder.CreateICmp(CmpInst::ICMP_NE, l, r);
+		if (operation=="&&") return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r);
+		if (operation=="||") return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r);
+		//TODO or and float pointer
+		throw InternalError("Operand type is not supported in IR");
 	}
 
 	llvm::Value* PostfixExpr::codegen() const

@@ -57,6 +57,11 @@ bool Type::isIntegralType() const
     getBaseType() == BaseType::Long);
 }
 
+bool Type::isCharacterType() const
+{
+	return isBaseType() and getBaseType() == BaseType::Char;
+}
+
 bool Type::isFloatingType() const
 {
     return isBaseType() and (getBaseType() == BaseType::Float or

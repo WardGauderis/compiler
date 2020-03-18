@@ -70,7 +70,9 @@ public:
 
     [[nodiscard]] bool isIntegralType() const;
 
-    [[nodiscard]] bool isFloatingType() const;
+	[[nodiscard]] bool isCharacterType() const;
+
+	[[nodiscard]] bool isFloatingType() const;
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);
