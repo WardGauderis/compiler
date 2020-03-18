@@ -430,6 +430,6 @@ std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root,
     auto vec   = visitBlock(root->block, table);
 
     auto res = std::make_unique<Ast::Block>(std::move(vec), std::move(table), 0, 0);
-    res->complete(true, true, true);
+    res->complete(true, fold, true);
     return res;
 }

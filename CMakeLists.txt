@@ -13,7 +13,7 @@ add_executable(compiler ${HDRS} ${SRCS} ${GEN_HDRS} ${GEN_SRCS})
 
 set(CMAKE_CXX_FLAGS "-O0")
 
-target_link_libraries(compiler antlr4-runtime)
+target_link_libraries(compiler antlr4-runtime LLVM)
 
 target_include_directories(
         compiler
@@ -27,3 +27,7 @@ get_property(dirs GLOBAL PROPERTY INCLUDE_DIRECTORIES)
 foreach(dir ${dirs})
     message(WARNING "dir='${dir}'")
 endforeach()
+
+add_executable(llvm_test llvm_test/main.cpp)
+
+target_link_libraries(llvm_test LLVM)

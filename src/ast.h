@@ -5,6 +5,8 @@
 //============================================================================
 #pragma once
 
+#include <llvm/IR/Value.h>
+
 #include <array>
 #include <iostream>
 #include <memory>
@@ -44,6 +46,8 @@ struct Node
     virtual Literal* fold() = 0;
 
     virtual void check() const = 0;
+
+    virtual llvm::Value * codegen() const = 0;
 
     //    virtual void llvm(std::ofstream& stream) = 0;
 
@@ -88,7 +92,9 @@ struct Comment final : public Node
     Literal* fold() final;
     void check() const final;
 
-    std::string comment;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::string comment;
 };
 
 struct Block final : public Node
@@ -105,7 +111,9 @@ struct Block final : public Node
     Literal* fold() final;
     void check() const final;
 
-    std::vector<Node*> nodes;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::vector<Node*> nodes;
 };
 
 struct Literal final : public Expr
@@ -123,7 +131,9 @@ struct Literal final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    TypeVariant literal;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	TypeVariant literal;
 };
 
 struct Variable final : public Expr
@@ -141,7 +151,9 @@ struct Variable final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    SymbolTable::Entry entry;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	SymbolTable::Entry entry;
 };
 
 struct BinaryExpr final : public Expr
@@ -158,7 +170,9 @@ struct BinaryExpr final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    std::string operation;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::string operation;
 
     Expr* lhs;
     Expr* rhs;
@@ -178,7 +192,9 @@ struct PostfixExpr final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    std::string operation;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::string operation;
     Variable* variable;
 };
 
@@ -196,7 +212,9 @@ struct PrefixExpr final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    std::string operation;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::string operation;
     Variable* variable;
 };
 
@@ -214,7 +232,9 @@ struct UnaryExpr final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    std::string operation;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	std::string operation;
     Expr* operand;
 };
 
@@ -232,7 +252,9 @@ struct CastExpr final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    Type cast;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	Type cast;
     Expr* operand;
 };
 
@@ -250,7 +272,9 @@ struct Assignment final : public Expr
     void check() const final;
     [[nodiscard]] Type type() const final;
 
-    Variable* variable;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	Variable* variable;
     Expr* expr;
 };
 
@@ -267,7 +291,9 @@ struct Declaration final : public Statement
     Literal* fold() final;
     void check() const final;
 
-    Variable* variable;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	Variable* variable;
     Expr* expr; // can be nullptr
 };
 
@@ -284,7 +310,9 @@ struct PrintfStatement final : public Statement
     Literal* fold() final;
     void check() const final;
 
-    Expr* expr;
+	[[nodiscard]] llvm::Value* codegen() const final;
+
+	Expr* expr;
 };
 
 } // namespace Ast
