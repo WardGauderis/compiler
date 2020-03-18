@@ -62,10 +62,10 @@ PrefixOperation PrefixOperation::fromString(const std::string& str)
 {
     if (str == "+") return PrefixOperation::Plus;
     else if (str == "-") return PrefixOperation::Neg;
-    else if (str == "*") return PrefixOperation::Not;
+    else if (str == "!") return PrefixOperation::Not;
     else if(str == "++") return PrefixOperation::Incr;
     else if(str == "--") return PrefixOperation::Decr;
-    else throw InternalError("unknown unary operation");
+    else throw InternalError("unknown prefix operation string: " + str);
 }
 
 std::string PrefixOperation::string() const
@@ -75,19 +75,19 @@ std::string PrefixOperation::string() const
     else if (type == PrefixOperation::Not) return "!";
     else if (type == PrefixOperation::Incr) return "++";
     else if (type == PrefixOperation::Decr) return "--";
-    else throw InternalError("unknown unary operation");
+    else throw InternalError("unknown prefix operation");
 }
 
 PostfixOperation PostfixOperation::fromString(const std::string& str)
 {
     if(str == "++") return PostfixOperation::Incr;
     else if(str == "--") return PostfixOperation::Decr;
-    else throw InternalError("unknown unary operation");
+    else throw InternalError("unknown postfix operation string: " + str);
 }
 
 std::string PostfixOperation::string() const
 {
     if (type == PostfixOperation::Incr) return "++";
     else if (type == PostfixOperation::Decr) return "--";
-    else throw InternalError("unknown unary operation");
+    else throw InternalError("unknown postfix operation");
 }

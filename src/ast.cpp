@@ -452,10 +452,8 @@ Literal* CastExpr::fold()
 
 void CastExpr::check() const
 {
-    if(cast.isPointerType())
-    {
-        std::cout << InternalError("casting to pointers is not yet supported", line, column);
-    }
+    const auto error = Type::convert(operand->type(), cast, true, line, column);
+    if(error.has_value()) std::cout << *error;
 }
 
 Type CastExpr::type() const
@@ -486,23 +484,8 @@ Literal* Assignment::fold()
 
 void Assignment::check() const
 {
-    const auto rtype = expr->type();
-    const auto ltype = variable->type();
-
-    if(rtype.isPointerType())
-    {
-        if(ltype.isFloatingType())
-            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
-        else if(ltype.isIntegralType())
-            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
-    }
-    if(ltype.isPointerType())
-    {
-        if(rtype.isFloatingType())
-            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
-        else if(rtype.isIntegralType())
-            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
-    }
+    const auto error = Type::convert(expr->type(), variable->type(), false, line, column);
+    if(error.has_value()) std::cout << *error;
 
     if (table->lookup_const(variable->name()))
     {

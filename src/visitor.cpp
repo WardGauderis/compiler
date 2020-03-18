@@ -147,15 +147,16 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 
 Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
+    const auto [line, column] = getColumnAndLine(context);
     VisitorHelper<Ast::Expr*> visitor(context, "prefix expression");
+
     visitor(1, [&](auto* context) {
       return visitPostfixExpr(context->children[0], table);
     });
     visitor(2, [&](auto* context){
-      const auto [line, column] = getColumnAndLine(context);
         if(typeid(*context) == typeid(CParser::PrefixExprContext))
         {
-            auto* rhs = visitPrefixExpr(context, table);
+            auto* rhs = visitPrefixExpr(context->children[1], table);
             return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
         }
         else
@@ -166,6 +167,12 @@ Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 
             return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
         }
+    });
+    visitor(4, [&](auto* context) {
+      const auto type = visitTypeName(context->children[1], table);
+      const auto rhs  = visitPrefixExpr(context->children[3], table);
+
+      return new Ast::CastExpr(type, rhs, table, line, column);
     });
     return visitor.result();
 }

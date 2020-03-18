@@ -136,3 +136,31 @@ Type Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, s
     }
     throw InvalidOperands(operation.string(), lhs.string(), rhs.string(), line, column);
 }
+
+std::optional<SemanticError> Type::convert(Type from, Type to, bool cast, size_t line, size_t column)
+{
+    std::string operation = cast ? "casting" : "assigning";
+    if(from.isPointerType())
+    {
+        if(to.isFloatingType())
+        {
+            return ConversionError(operation, from.string(), to.string(), line, column);
+        }
+        else if(to.isIntegralType() and not cast)
+        {
+            return PointerConversionWarning(operation, "from", from.string(), to.string(), line, column);
+        }
+    }
+    if(to.isPointerType())
+    {
+        if(from.isFloatingType())
+        {
+            return ConversionError(operation, from.string(), to.string(), line, column);
+        }
+        else if(from.isIntegralType() and not cast)
+        {
+            return PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
+        }
+    }
+    return {};
+}

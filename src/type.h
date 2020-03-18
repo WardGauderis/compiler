@@ -79,7 +79,9 @@ public:
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);
+
     static Type combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0);
+    static std::optional<SemanticError> convert(Type from, Type to, bool cast, size_t line = 0, size_t column = 0);
 
 private:
     bool isTypeConst;

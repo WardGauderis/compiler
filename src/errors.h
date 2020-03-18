@@ -47,63 +47,56 @@ private:
     std::string message;
 };
 
-class SyntaxError : public CompilationError
+struct SyntaxError : public CompilationError
 {
-public:
     explicit SyntaxError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)
         : CompilationError(message, line, column, warning, "syntax")
     {
     }
 };
 
-class SemanticError : public CompilationError
+struct SemanticError : public CompilationError
 {
-public:
     explicit SemanticError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)
         : CompilationError(message, line, column, warning, "semantic")
     {
     }
 };
 
-class UndeclaredError : public SemanticError
+struct UndeclaredError : public SemanticError
 {
-public:
     explicit UndeclaredError(const std::string& symbol, unsigned int line = 0, unsigned int column = 0)
         : SemanticError("'" + symbol + "' not yet declared", line, column)
     {
     }
 };
 
-class RedefinitionError : public SemanticError
+struct RedefinitionError : public SemanticError
 {
-public:
     explicit RedefinitionError(const std::string& symbol, unsigned int line = 0, unsigned int column = 0)
         : SemanticError("'" + symbol + "' already defined", line, column)
     {
     }
 };
 
-class ConstError : public SemanticError
+struct ConstError : public SemanticError
 {
-public:
     explicit ConstError(const std::string& operation, const std::string& name, unsigned int line = 0, unsigned int column = 0)
         : SemanticError(operation + " of const variable '" + name + "' is not allowed", line, column)
     {
     }
 };
 
-class InternalError : public CompilationError
+struct InternalError : public CompilationError
 {
-public:
     explicit InternalError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)
         : CompilationError(message, line, column, warning, "internal")
     {
     }
 };
 
-class UnexpectedContextType : public InternalError
+struct UnexpectedContextType : public InternalError
 {
-public:
     explicit UnexpectedContextType(
         antlr4::tree::ParseTree* context, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)
         : InternalError(std::string("unexpected context type: ") + typeid(*context).name(), line, column, warning)
@@ -111,9 +104,8 @@ public:
     }
 };
 
-class LiteralOutOfRange : public SemanticError
+struct LiteralOutOfRange : public SemanticError
 {
-public:
     explicit LiteralOutOfRange(
         const std::string& literal, const unsigned int line = 0, const unsigned int column = 0., bool warning = true)
         : SemanticError("literal: " + literal + " out of range", line, column, warning)
@@ -121,9 +113,8 @@ public:
     }
 };
 
-class InvalidOperands : public SemanticError
+struct InvalidOperands : public SemanticError
 {
-public:
     explicit InvalidOperands(
         const std::string& operation,
         const std::string& lhs,
@@ -143,32 +134,14 @@ public:
     }
 };
 
-class ImpossibleConversion : public SemanticError
+struct ConversionError : public SemanticError
 {
-public:
-    explicit ImpossibleConversion(
-        const std::string& operation,
-        const std::string& from,
-        const std::string& to,
-        const unsigned int line   = 0,
-        const unsigned int column = 0.)
-        : SemanticError(
-        operation + " to incompatible type (has'" + from + " ' to '" +  to + "')" ,line, column, false)
-    {
-    }
+    explicit ConversionError(const std::string& operation, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
+    : SemanticError(operation + " to incompatible type (from '" + from + "' to '" + to + "')", line, column, false) {}
 };
 
-class NarrowingConversion : public SemanticError
+struct PointerConversionWarning : public SemanticError
 {
-public:
-    explicit NarrowingConversion(
-        const std::string& operation,
-        const std::string& from,
-        const std::string& to,
-        const unsigned int line   = 0,
-        const unsigned int column = 0.)
-        : SemanticError(
-        operation + " to narrowing type (has'" + from + " ' to '" +  to + "')" ,line, column, true)
-    {
-    }
+    explicit PointerConversionWarning(const std::string& operation, const std::string& whence, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
+        : SemanticError(operation + " " + whence + " pointer type without cast (from '" + from + "' to '" + to + "')", line, column, true) {}
 };
