@@ -17,7 +17,6 @@ namespace Ast {
 	static LLVMContext context;
 	static Module module("temp", context);
 	static IRBuilder builder(context);
-	static std::map<std::string, AllocaInst*> variables;
 
 	void ast2ir(const std::unique_ptr<Ast::Node>& root, std::filesystem::path& path)
 	{
@@ -33,6 +32,7 @@ namespace Ast {
 		root->codegen();
 
 		builder.CreateRet(ConstantInt::get(builder.getInt32Ty(), 0));
+
 		verifyFunction(*main, &errs());
 		verifyModule(module, &errs());
 		module.print(outs(), nullptr, false, true);
@@ -63,7 +63,7 @@ namespace Ast {
 		case 4:
 			return ConstantFP::get(builder.getFloatTy(), std::get<float>(literal));
 		default:
-			throw InternalError("literal type is not supported in IR");
+			throw InternalError("type is not supported in IR");
 		}
 	}
 
@@ -116,7 +116,7 @@ namespace Ast {
 		if (operation=="&&") return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r);
 		if (operation=="||") return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r);
 		//TODO or and float pointer
-		throw InternalError("Operand type is not supported in IR");
+		throw InternalError("type is not supported in IR");
 	}
 
 	Value* PostfixExpr::codegen() const
@@ -147,6 +147,30 @@ namespace Ast {
 	Value* PrintfStatement::codegen() const
 	{
 		Value* result = expr->codegen();
-		return builder.CreateCall(result);
+		std::string format;
+		std::string name;
+		if (expr->type().isPointerType())
+		{
+			format = "%p\n";
+			name = "ptrFormat";
+		}
+		else if (expr->type().isFloatingType())
+		{
+			format = "%f\n";
+			name = "floatFormat";
+		}
+		else if (expr->type().isCharacterType())
+		{
+			format = "%c\n";
+			name = "charFormat";
+		}
+		else if (expr->type().isIntegerType())
+		{
+			format = "%d\n";
+			name = "intFormat";
+		}
+		else throw InternalError("ype is not supported in IR");
+		return builder.CreateCall(module.getFunction("printf"),
+				{builder.CreateGlobalStringPtr(format, name), result});
 	}
 }
