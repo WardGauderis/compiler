@@ -68,21 +68,20 @@ namespace Ast {
 
 	llvm::Value* BinaryExpr::codegen() const
 	{
-		auto l = lhs->codegen();
-		auto r = rhs->codegen();
-		if (lhs->type().i
-		if (operation == "*") return builder.CreateBinOp()
-		if (operation == "/")
-		if (operation == "%")
-		if (operation == "+")
-		if (operation == "<")
-		if (operation == "<=")
-		if (operation == ">")
-		if (operation == ">=")
-		if (operation == "==")
-		if (operation == "!=")
-		if (operation == "&&")
-		if (operation == "||")
+//		auto l = lhs->codegen();
+//		auto r = rhs->codegen();
+//		if (operation == "*") return builder.CreateBinOp()
+//		if (operation == "/")
+//		if (operation == "%")
+//		if (operation == "+")
+//		if (operation == "<")
+//		if (operation == "<=")
+//		if (operation == ">")
+//		if (operation == ">=")
+//		if (operation == "==")
+//		if (operation == "!=")
+//		if (operation == "&&")
+//		if (operation == "||")
 	}
 
 	llvm::Value* PostfixExpr::codegen() const

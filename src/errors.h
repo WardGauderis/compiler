@@ -121,6 +121,22 @@ public:
     }
 };
 
+class ImpossibleConversion : public SemanticError
+{
+public:
+    explicit ImpossibleConversion(
+        const std::string& operation,
+        const std::string& fromType,
+        const std::string& toType,
+        const unsigned int line   = 0,
+        const unsigned int column = 0.,
+        bool warning              = false)
+        : SemanticError(
+        operation + " " + fromType + " to incompatible type " + toType, line, column, warning)
+    {
+    }
+};
+
 class NarrowingConversion : public SemanticError
 {
 public:

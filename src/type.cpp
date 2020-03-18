@@ -17,12 +17,15 @@ template<class... Ts>
 overloaded(Ts...)->overloaded<Ts...>;
 } // namespace
 
-[[nodiscard]] std::string Type::print() const
+[[nodiscard]] std::string Type::string() const
 {
     return std::visit(
-        overloaded {
-            [&](const Type* ptr) { return ptr->print() + "*" + (isTypeConst ? " const" : ""); },
-            [&](BaseType base) { return (isTypeConst ? "const " : "") + toString(base); }},
+        overloaded {[&](const Type* ptr) {
+                        return ptr->string() + "*" + (isTypeConst ? " const" : "");
+                    },
+                    [&](BaseType base) {
+                        return (isTypeConst ? "const " : "") + toString(base);
+                    }},
         type);
 }
 
@@ -44,6 +47,20 @@ bool Type::isBaseType() const
 bool Type::isPointerType() const
 {
     return type.index() == 0;
+}
+
+bool Type::isIntegralType() const
+{
+    return isBaseType() and (getBaseType() == BaseType::Char or
+    getBaseType() == BaseType::Short or
+    getBaseType() == BaseType::Int or
+    getBaseType() == BaseType::Long);
+}
+
+bool Type::isFloatingType() const
+{
+    return isBaseType() and (getBaseType() == BaseType::Float or
+                             getBaseType() == BaseType::Double);
 }
 
 std::string Type::toString(BaseType type)
@@ -80,6 +97,7 @@ BaseType Type::fromString(const std::string& str)
         return BaseType::Float;
     else if (str == "double")
         return BaseType::Double;
+    else throw InternalError("string cannot convert to base type");
 }
 
 BaseType Type::combine(Type lhs, Type rhs)
