@@ -72,6 +72,8 @@ public:
 
 	[[nodiscard]] bool isCharacterType() const;
 
+	[[nodiscard]] bool isIntegerType() const;
+
 	[[nodiscard]] bool isFloatingType() const;
 
     static std::string toString(BaseType type);

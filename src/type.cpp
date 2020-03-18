@@ -62,6 +62,11 @@ bool Type::isCharacterType() const
 	return isBaseType() and getBaseType() == BaseType::Char;
 }
 
+bool Type::isIntegerType() const
+{
+	return isBaseType() and getBaseType() == BaseType::Int;
+}
+
 bool Type::isFloatingType() const
 {
     return isBaseType() and (getBaseType() == BaseType::Float or
