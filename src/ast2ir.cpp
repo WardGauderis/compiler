@@ -10,33 +10,40 @@
 #include <llvm/IR/Verifier.h>
 #include <filesystem>
 
+using namespace llvm;
+
 namespace Ast {
 
-	static llvm::LLVMContext context;
-	static llvm::IRBuilder builder(context);
-	static std::map<std::string, llvm::AllocaInst*> variables;
+	static LLVMContext context;
+	static Module module("temp", context);
+	static IRBuilder builder(context);
+	static std::map<std::string, AllocaInst*> variables;
 
 	void ast2ir(const std::unique_ptr<Ast::Node>& root, std::filesystem::path& path)
 	{
-		llvm::Module module(path.string(), context);
-		llvm::FunctionCallee callee = module.getOrInsertFunction("main", llvm::Type::getInt32Ty(context));
-		auto function = llvm::cast<llvm::Function>(callee.getCallee());
-		function->setCallingConv(llvm::CallingConv::C);
-		auto block = llvm::BasicBlock::Create(context, "entry", function);
+		module.getOrInsertFunction("printf",
+				llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true));
+
+		FunctionCallee tmp = module.getOrInsertFunction("main", builder.getInt32Ty());
+		auto main = cast<Function>(tmp.getCallee());
+
+		auto block = BasicBlock::Create(context, "entry", main);
 		builder.SetInsertPoint(block);
 
-		builder.CreateRet(llvm::ConstantInt::get(builder.getInt32Ty(), 0));
-		llvm::verifyFunction(*function, &llvm::errs());
-		llvm::verifyModule(module, &llvm::errs());
-		module.print(llvm::outs(), nullptr, false, true);
+		root->codegen();
+
+		builder.CreateRet(ConstantInt::get(builder.getInt32Ty(), 0));
+		verifyFunction(*main, &errs());
+		verifyModule(module, &errs());
+		module.print(outs(), nullptr, false, true);
 	}
 
-	llvm::Value* Comment::codegen() const
+	Value* Comment::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* Block::codegen() const
+	Value* Block::codegen() const
 	{
 		for (const auto& node: nodes)
 		{
@@ -45,28 +52,28 @@ namespace Ast {
 		return nullptr;
 	}
 
-	llvm::Value* Literal::codegen() const
+	Value* Literal::codegen() const
 	{
 		switch (literal.index())
 		{
 		case 0:
-			return llvm::ConstantInt::get(builder.getInt8Ty(), std::get<char>(literal));
+			return ConstantInt::get(builder.getInt8Ty(), std::get<char>(literal));
 		case 2:
-			return llvm::ConstantInt::get(builder.getInt32Ty(), std::get<int>(literal));
+			return ConstantInt::get(builder.getInt32Ty(), std::get<int>(literal));
 		case 4:
-			return llvm::ConstantFP::get(builder.getFloatTy(), std::get<float>(literal));
+			return ConstantFP::get(builder.getFloatTy(), std::get<float>(literal));
 		default:
 			throw InternalError("literal type is not supported in IR");
 		}
 	}
 
 	//TODO alloca
-	llvm::Value* Variable::codegen() const
+	Value* Variable::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* BinaryExpr::codegen() const
+	Value* BinaryExpr::codegen() const
 	{
 		auto l = lhs->codegen();
 		auto r = rhs->codegen();
@@ -74,16 +81,15 @@ namespace Ast {
 
 		if (floatOperation)
 		{
-			if(!lhs->type().isFloatingType());
-			if(!rhs->type().isFloatingType());
+			if (!lhs->type().isFloatingType()) l = builder.CreateSIToFP(l, builder.getFloatTy());
+			if (!rhs->type().isFloatingType()) r = builder.CreateSIToFP(r, builder.getFloatTy());
 		}
 		else
 		{
-//			if(!lhs->type().isFloatingType())
+			if (lhs->type().isCharacterType()) l = builder.CreateSExt(l, builder.getInt32Ty());
+			if (rhs->type().isCharacterType()) r = builder.CreateSExt(l, builder.getInt32Ty());
 		}
 
-
-		using namespace llvm;
 		if (operation=="*") return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r);
 		if (operation=="/") return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r);
 		if (operation=="%") return builder.CreateBinOp(Instruction::SRem, l, r);
@@ -113,38 +119,39 @@ namespace Ast {
 		throw InternalError("Operand type is not supported in IR");
 	}
 
-	llvm::Value* PostfixExpr::codegen() const
+	Value* PostfixExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* PrefixExpr::codegen() const
+	Value* PrefixExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* UnaryExpr::codegen() const
+	Value* UnaryExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* CastExpr::codegen() const
+	Value* CastExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* Assignment::codegen() const
+	Value* Assignment::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* Declaration::codegen() const
+	Value* Declaration::codegen() const
 	{
 		return nullptr;
 	}
 
-	llvm::Value* PrintfStatement::codegen() const
+	Value* PrintfStatement::codegen() const
 	{
-		return nullptr;
+		Value* result = expr->codegen();
+		return builder.CreateCall(result);
 	}
 }

@@ -49,20 +49,17 @@ postfixExpr:
 prefixExpr:
     postfixExpr|
     '++' IDENTIFIER|
-    '--' IDENTIFIER;
-
-unaryExpr:
-    prefixExpr|
-    '+' unaryExpr|
-    '-' unaryExpr|
-    '!' unaryExpr|
-    '(' typeName ')' unaryExpr;
+    '--' IDENTIFIER|
+    '+' prefixExpr|
+    '-' prefixExpr|
+    '!' prefixExpr|
+    '(' typeName ')' prefixExpr;
 
 multiplicativeExpr:
-    unaryExpr|
-    multiplicativeExpr '*' unaryExpr|
-    multiplicativeExpr '/' unaryExpr|
-    multiplicativeExpr '%' unaryExpr;
+    prefixExpr|
+    multiplicativeExpr '*' prefixExpr|
+    multiplicativeExpr '/' prefixExpr|
+    multiplicativeExpr '%' prefixExpr;
 
 additiveExpr:
     multiplicativeExpr|
