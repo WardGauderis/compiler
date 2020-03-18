@@ -121,18 +121,39 @@ public:
     }
 };
 
+class InvalidOperands : public SemanticError
+{
+public:
+    explicit InvalidOperands(
+        const std::string& operation,
+        const std::string& lhs,
+        const std::string& rhs,
+        const unsigned int line   = 0,
+        const unsigned int column = 0.)
+        : SemanticError("invalid operands to binary " + operation + "(has '" + lhs + " and " + rhs + "')", line, column, true)
+    {
+    }
+    explicit InvalidOperands(
+        const std::string& operation,
+        const std::string& operand,
+        const unsigned int line   = 0,
+        const unsigned int column = 0.)
+        : SemanticError("invalid operands to unary " + operation + "(has '" + operand + "')", line, column, true)
+    {
+    }
+};
+
 class ImpossibleConversion : public SemanticError
 {
 public:
     explicit ImpossibleConversion(
         const std::string& operation,
-        const std::string& fromType,
-        const std::string& toType,
+        const std::string& from,
+        const std::string& to,
         const unsigned int line   = 0,
-        const unsigned int column = 0.,
-        bool warning              = false)
+        const unsigned int column = 0.)
         : SemanticError(
-        operation + " " + fromType + " to incompatible type " + toType, line, column, warning)
+        operation + " to incompatible type (has'" + from + " ' to '" +  to + "')" ,line, column, false)
     {
     }
 };
@@ -142,13 +163,12 @@ class NarrowingConversion : public SemanticError
 public:
     explicit NarrowingConversion(
         const std::string& operation,
-        const std::string& fromType,
-        const std::string& toType,
+        const std::string& from,
+        const std::string& to,
         const unsigned int line   = 0,
-        const unsigned int column = 0.,
-        bool warning              = true)
+        const unsigned int column = 0.)
         : SemanticError(
-            operation + " " + fromType + " to a variable with less precision than " + toType, line, column, warning)
+        operation + " to narrowing type (has'" + from + " ' to '" +  to + "')" ,line, column, true)
     {
     }
 };

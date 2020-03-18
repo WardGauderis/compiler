@@ -91,7 +91,8 @@ std::string Type::toString(BaseType type)
 
 BaseType Type::fromString(const std::string& str)
 {
-    if (str == "char") return BaseType::Char;
+    if (str == "char")
+        return BaseType::Char;
     else if (str == "short")
         return BaseType::Short;
     else if (str == "int")
@@ -105,14 +106,28 @@ BaseType Type::fromString(const std::string& str)
     else throw InternalError("string cannot convert to base type");
 }
 
-BaseType Type::combine(Type lhs, Type rhs)
+Type Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column)
 {
-    if (lhs.isBaseType() and rhs.isBaseType())
+    if(operation.isLogicalOperator())
     {
-        return std::max(lhs.getBaseType(), rhs.getBaseType());
+        return Type(false, BaseType::Int);  // TODO: make this a bool
     }
-    else
+
+    if (lhs.isBaseType() and rhs.isBaseType() and not lhs.isFloatingType() and not rhs.isFloatingType())
     {
-        throw InternalError("pointer cast stuff not yet defined");
+        return Type(false, std::max(lhs.getBaseType(), rhs.getBaseType()));
     }
+    else if(lhs.isPointerType() and rhs.isPointerType())
+    {
+        // empty statement, just go to throw
+    }
+    else if(lhs.isPointerType() and rhs.isIntegralType() and operation.isLogicalOperator())
+    {
+        return lhs;
+    }
+    else if(rhs.isPointerType() and lhs.isIntegralType() and operation.isLogicalOperator())
+    {
+        return rhs;
+    }
+    throw InvalidOperands(operation.string(), lhs.string(), rhs.string(), line, column);
 }

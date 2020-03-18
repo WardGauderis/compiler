@@ -145,55 +145,42 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
     return visitor.result();
 }
 
-Ast::Expr* visitprefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     VisitorHelper<Ast::Expr*> visitor(context, "prefix expression");
     visitor(1, [&](auto* context) {
       return visitPostfixExpr(context->children[0], table);
     });
-    visitor(2, [&](auto* context) {
-      const auto entry = table->lookup(context->children[1]->getText());
-      if (not entry.has_value()) throw UndeclaredError(context->getText());
-
+    visitor(2, [&](auto* context){
       const auto [line, column] = getColumnAndLine(context);
-      const auto rhs = new Ast::Variable(entry.value(), table, line, column);
+        if(typeid(*context) == typeid(CParser::PrefixExprContext))
+        {
+            auto* rhs = visitPrefixExpr(context, table);
+            return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
+        }
+        else
+        {
+            const auto entry = table->lookup(context->children[1]->getText());
+            if (not entry.has_value()) throw UndeclaredError(context->getText());
+            const auto rhs = new Ast::Variable(entry.value(), table, line, column);
 
-      return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
+            return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
+        }
     });
     return visitor.result();
 }
 
-Ast::Expr* visitUnaryExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    const auto [line, column] = getColumnAndLine(context);
-    VisitorHelper<Ast::Expr*> visitor(context, "unary expression");
-
-    visitor(1, [&](auto* context) {
-      return visitprefixExpr(context->children[0], table);
-    });
-    visitor(2, [&](auto* context) {
-      const auto rhs = visitUnaryExpr(context->children[1], table);
-      return new Ast::UnaryExpr(context->children[0]->getText(), rhs, table, line, column);
-    });
-    visitor(4, [&](auto* context) {
-      const auto type = visitTypeName(context->children[1], table);
-      const auto rhs  = visitUnaryExpr(context->children[3], table);
-
-      return new Ast::CastExpr(type, rhs, table, line, column);
-    });
-    return visitor.result();
-}
 
 Ast::Expr* visitMultiplicativeExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     VisitorHelper<Ast::Expr*> visitor(context, "multiplicative expression");
     visitor(1, [&](auto* context) {
-      return visitUnaryExpr(context->children[0], table);
+      return visitPrefixExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
       const auto [line, column] = getColumnAndLine(context);
       const auto lhs = visitMultiplicativeExpr(context->children[0], table);
-      const auto rhs = visitUnaryExpr(context->children[2], table);
+      const auto rhs = visitPrefixExpr(context->children[2], table);
       return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
     });
     return visitor.result();

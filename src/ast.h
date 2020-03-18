@@ -5,8 +5,6 @@
 //============================================================================
 #pragma once
 
-#include <llvm/IR/Value.h>
-
 #include <array>
 #include <iostream>
 #include <memory>
@@ -23,6 +21,7 @@ namespace Ast
 {
 // pre declare literal for virtual function
 struct Literal;
+struct Value;
 
 struct Node
 {
@@ -47,9 +46,7 @@ struct Node
 
     virtual void check() const = 0;
 
-    virtual llvm::Value * codegen() const = 0;
-
-    //    virtual void llvm(std::ofstream& stream) = 0;
+    virtual Value* codegen() const = 0;
 
     size_t column;
     size_t line;
@@ -91,10 +88,9 @@ struct Comment final : public Node
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
     void check() const final;
+    Value* codegen() const;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::string comment;
+    std::string comment;
 };
 
 struct Block final : public Node
@@ -110,10 +106,9 @@ struct Block final : public Node
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
     void check() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::vector<Node*> nodes;
+    std::vector<Node*> nodes;
 };
 
 struct Literal final : public Expr
@@ -130,10 +125,9 @@ struct Literal final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	TypeVariant literal;
+    TypeVariant literal;
 };
 
 struct Variable final : public Expr
@@ -150,16 +144,15 @@ struct Variable final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	SymbolTable::Entry entry;
+    SymbolTable::Entry entry;
 };
 
 struct BinaryExpr final : public Expr
 {
-    explicit BinaryExpr(std::string operation, Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Expr(std::move(table), line, column), operation(std::move(operation)), lhs(lhs), rhs(rhs)
+    explicit BinaryExpr(const std::string& operation, Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+        : Expr(std::move(table), line, column), operation(operation), lhs(lhs), rhs(rhs)
     {
     }
 
@@ -169,10 +162,9 @@ struct BinaryExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::string operation;
+    BinaryOperation operation;
 
     Expr* lhs;
     Expr* rhs;
@@ -180,8 +172,8 @@ struct BinaryExpr final : public Expr
 
 struct PostfixExpr final : public Expr
 {
-    explicit PostfixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Expr(std::move(table), line, column), operation(std::move(operation)), variable(variable)
+    explicit PostfixExpr(const std::string& operation, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+        : Expr(std::move(table), line, column), operation(operation), operand(operand)
     {
     }
 
@@ -191,17 +183,16 @@ struct PostfixExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::string operation;
-    Variable* variable;
+    PostfixOperation operation;
+    Expr* operand;
 };
 
 struct PrefixExpr final : public Expr
 {
-    explicit PrefixExpr(std::string operation, Variable* variable, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Expr(std::move(table), line, column), operation(std::move(operation)), variable(variable)
+    explicit PrefixExpr(const std::string& operation, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+        : Expr(std::move(table), line, column), operation(operation), operand(operand)
     {
     }
 
@@ -211,32 +202,12 @@ struct PrefixExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::string operation;
-    Variable* variable;
-};
-
-struct UnaryExpr final : public Expr
-{
-    explicit UnaryExpr(std::string operation, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Expr(std::move(table), line, column), operation(std::move(operation)), operand(operand)
-    {
-    }
-
-    [[nodiscard]] std::string name() const final;
-    [[nodiscard]] std::string value() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
-    Literal* fold() final;
-    void check() const final;
-    [[nodiscard]] Type type() const final;
-
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	std::string operation;
+    PrefixOperation operation;
     Expr* operand;
 };
+
 
 struct CastExpr final : public Expr
 {
@@ -251,10 +222,9 @@ struct CastExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	Type cast;
+    Type cast;
     Expr* operand;
 };
 
@@ -271,10 +241,9 @@ struct Assignment final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	Variable* variable;
+    Variable* variable;
     Expr* expr;
 };
 
@@ -290,10 +259,9 @@ struct Declaration final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	Variable* variable;
+    Variable* variable;
     Expr* expr; // can be nullptr
 };
 
@@ -309,10 +277,9 @@ struct PrintfStatement final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check() const final;
+    Value* codegen() const final;
 
-	[[nodiscard]] llvm::Value* codegen() const final;
-
-	Expr* expr;
+    Expr* expr;
 };
 
 } // namespace Ast

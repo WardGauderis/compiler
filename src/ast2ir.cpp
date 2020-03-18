@@ -129,11 +129,6 @@ namespace Ast {
 		return nullptr;
 	}
 
-	Value* UnaryExpr::codegen() const
-	{
-		return nullptr;
-	}
-
 	Value* CastExpr::codegen() const
 	{
 		return nullptr;

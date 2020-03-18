@@ -7,6 +7,7 @@
 #pragma once
 
 #include "errors.h"
+#include "operation.h"
 #include <memory>
 #include <string>
 #include <variant>
@@ -76,7 +77,7 @@ public:
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);
-    static BaseType combine(Type lhs, Type rhs);
+    static Type combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0);
 
 private:
     bool isTypeConst;
