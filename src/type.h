@@ -58,7 +58,7 @@ public:
     {
     }
 
-    [[nodiscard]] std::string print() const;
+    [[nodiscard]] std::string string() const;
 
     [[nodiscard]] BaseType getBaseType() const;
 
@@ -67,6 +67,10 @@ public:
     [[nodiscard]] bool isBaseType() const;
 
     [[nodiscard]] bool isPointerType() const;
+
+    [[nodiscard]] bool isIntegralType() const;
+
+    [[nodiscard]] bool isFloatingType() const;
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);

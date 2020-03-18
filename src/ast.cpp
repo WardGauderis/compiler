@@ -243,7 +243,7 @@ std::string Variable::name() const
 
 std::string Variable::value() const
 {
-    return entry->second.type.print();
+    return entry->second.type.string();
 }
 
 std::vector<Node*> Variable::children() const
@@ -446,7 +446,7 @@ std::string CastExpr::name() const
 
 std::string CastExpr::value() const
 {
-    return '('+cast.print()+')';
+    return '('+ cast.string()+')';
 }
 
 std::vector<Node*> CastExpr::children() const
@@ -458,7 +458,7 @@ Literal* CastExpr::fold()
 {
     auto* new_operand = operand->fold();
     const auto lambda = [&](const auto& val)
-    { return fold_cast(val, cast.print(), table, line, column); };
+    { return fold_cast(val, cast.string(), table, line, column); };
 
     if (new_operand) return std::visit(lambda, new_operand->literal);
     else
@@ -501,13 +501,24 @@ Literal* Assignment::fold()
 
 void Assignment::check() const
 {
-    const auto rtype = expr->type().getBaseType();
-    const auto ltype = variable->type().getBaseType();
+    const auto rtype = expr->type();
+    const auto ltype = variable->type();
 
-    if (rtype>ltype)
+    if(rtype.isPointerType())
     {
-        std::cout << NarrowingConversion("assigning", Type::toString(rtype), Type::toString(ltype), line, column);
+        if(ltype.isFloatingType())
+            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
+        else if(ltype.isIntegralType())
+            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
     }
+    if(ltype.isPointerType())
+    {
+        if(rtype.isFloatingType())
+            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
+        else if(rtype.isIntegralType())
+            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
+    }
+
     if (table->lookup_const(variable->name()))
     {
         std::cout << ConstError("assignment", variable->name(), line, column);
