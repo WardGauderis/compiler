@@ -121,14 +121,12 @@ struct InvalidOperands : public SemanticError
         const std::string& rhs,
         const unsigned int line   = 0,
         const unsigned int column = 0.)
-        : SemanticError("invalid operands to binary " + operation + "(has '" + lhs + " and " + rhs + "')", line, column, true)
+        : SemanticError(
+            "invalid operands to binary " + operation + "(has '" + lhs + " and " + rhs + "')", line, column, true)
     {
     }
     explicit InvalidOperands(
-        const std::string& operation,
-        const std::string& operand,
-        const unsigned int line   = 0,
-        const unsigned int column = 0.)
+        const std::string& operation, const std::string& operand, const unsigned int line = 0, const unsigned int column = 0.)
         : SemanticError("invalid operands to unary " + operation + "(has '" + operand + "')", line, column, true)
     {
     }
@@ -136,12 +134,28 @@ struct InvalidOperands : public SemanticError
 
 struct ConversionError : public SemanticError
 {
-    explicit ConversionError(const std::string& operation, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
-    : SemanticError(operation + " to incompatible type (from '" + from + "' to '" + to + "')", line, column, false) {}
+    explicit ConversionError(
+        const std::string& operation, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
+        : SemanticError(operation + " to incompatible type (from '" + from + "' to '" + to + "')", line, column, false)
+    {
+    }
 };
 
 struct PointerConversionWarning : public SemanticError
 {
-    explicit PointerConversionWarning(const std::string& operation, const std::string& whence, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
-        : SemanticError(operation + " " + whence + " pointer type without cast (from '" + from + "' to '" + to + "')", line, column, true) {}
+    explicit PointerConversionWarning(
+        const std::string& operation,
+        const std::string& whence,
+        const std::string& from,
+        const std::string& to,
+        size_t line   = 0,
+        size_t column = 0)
+        : SemanticError(
+            operation + " " + whence + " pointer type without cast (from '" + from + "' to '" + to
+                + "')",
+            line,
+            column,
+            true)
+    {
+    }
 };

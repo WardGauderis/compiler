@@ -34,7 +34,8 @@ struct VisitorHelper
     Ret result()
     {
         if (res.has_value()) return *res;
-        else throw InternalError("could not find visitor for " + name);
+        else
+            throw InternalError("could not find visitor for " + name);
     }
 
     std::optional<Ret> res = std::nullopt;
@@ -52,7 +53,8 @@ std::pair<size_t, size_t> getColumnAndLine(antlr4::tree::ParseTree* context)
     {
         return std::make_pair(res->symbol->getLine(), res->symbol->getCharPositionInLine());
     }
-    else return {};
+    else
+        return {};
 }
 } // namespace
 
@@ -106,23 +108,24 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
     }
     else if (typeid(*context) == typeid(antlr4::tree::TerminalNodeImpl))
     {
-        const auto entry = table->lookup(context->getText());
+        const auto entry          = table->lookup(context->getText());
         const auto [line, column] = getColumnAndLine(context);
 
         if (not entry.has_value()) throw UndeclaredError(context->getText(), line, column);
         return new Ast::Variable(entry.value(), table, line, column);
     }
-    else throw UnexpectedContextType(context);
+    else
+        throw UnexpectedContextType(context);
 }
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     VisitorHelper<Ast::Expr*> visitor(context, "basic expression");
     visitor(1, [&](auto* context) -> Ast::Expr* {
-      return visitLiteralOrVariable(context->children[0], table);
+        return visitLiteralOrVariable(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      return visitExpr(context->children[1], table);
+        return visitExpr(context->children[1], table);
     });
     return visitor.result();
 }
@@ -131,16 +134,16 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 {
     VisitorHelper<Ast::Expr*> visitor(context, "postfix expression");
     visitor(1, [&](auto* context) {
-      return visitBasicExpr(context->children[0], table);
+        return visitBasicExpr(context->children[0], table);
     });
     visitor(2, [&](auto* context) {
-      const auto entry = table->lookup(context->children[0]->getText());
-      if (not entry.has_value()) throw UndeclaredError(context->getText());
+        const auto entry = table->lookup(context->children[0]->getText());
+        if (not entry.has_value()) throw UndeclaredError(context->getText());
 
-      const auto [line, column] = getColumnAndLine(context);
-      const auto lhs            = new Ast::Variable(entry.value(), table, line, column);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto lhs            = new Ast::Variable(entry.value(), table, line, column);
 
-      return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
+        return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
     });
     return visitor.result();
 }
@@ -151,10 +154,10 @@ Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
     VisitorHelper<Ast::Expr*> visitor(context, "prefix expression");
 
     visitor(1, [&](auto* context) {
-      return visitPostfixExpr(context->children[0], table);
+        return visitPostfixExpr(context->children[0], table);
     });
-    visitor(2, [&](auto* context){
-        if(typeid(*context) == typeid(CParser::PrefixExprContext))
+    visitor(2, [&](auto* context) {
+        if (typeid(*context) == typeid(CParser::PrefixExprContext))
         {
             auto* rhs = visitPrefixExpr(context->children[1], table);
             return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
@@ -169,26 +172,25 @@ Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         }
     });
     visitor(4, [&](auto* context) {
-      const auto type = visitTypeName(context->children[1], table);
-      const auto rhs  = visitPrefixExpr(context->children[3], table);
+        const auto type = visitTypeName(context->children[1], table);
+        const auto rhs  = visitPrefixExpr(context->children[3], table);
 
-      return new Ast::CastExpr(type, rhs, table, line, column);
+        return new Ast::CastExpr(type, rhs, table, line, column);
     });
     return visitor.result();
 }
-
 
 Ast::Expr* visitMultiplicativeExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     VisitorHelper<Ast::Expr*> visitor(context, "multiplicative expression");
     visitor(1, [&](auto* context) {
-      return visitPrefixExpr(context->children[0], table);
+        return visitPrefixExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto [line, column] = getColumnAndLine(context);
-      const auto lhs = visitMultiplicativeExpr(context->children[0], table);
-      const auto rhs = visitPrefixExpr(context->children[2], table);
-      return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto lhs            = visitMultiplicativeExpr(context->children[0], table);
+        const auto rhs            = visitPrefixExpr(context->children[2], table);
+        return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -198,12 +200,12 @@ Ast::Expr* visitAdditiveExpr(antlr4::tree::ParseTree* context, std::shared_ptr<S
     const auto [line, column] = getColumnAndLine(context);
     VisitorHelper<Ast::Expr*> visitor(context, "additive expression");
     visitor(1, [&](auto* context) {
-      return visitMultiplicativeExpr(context->children[0], table);
+        return visitMultiplicativeExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto lhs = visitAdditiveExpr(context->children[0], table);
-      const auto rhs = visitMultiplicativeExpr(context->children[2], table);
-      return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
+        const auto lhs = visitAdditiveExpr(context->children[0], table);
+        const auto rhs = visitMultiplicativeExpr(context->children[2], table);
+        return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -212,14 +214,14 @@ Ast::Expr* visitRelationalExpr(antlr4::tree::ParseTree* context, std::shared_ptr
 {
     VisitorHelper<Ast::Expr*> visitor(context, "relational expression");
     visitor(1, [&](auto* context) {
-      return visitAdditiveExpr(context->children[0], table);
+        return visitAdditiveExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto [line, column] = getColumnAndLine(context);
-      const auto lhs = visitRelationalExpr(context->children[0], table);
-      const auto rhs = visitAdditiveExpr(context->children[2], table);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto lhs            = visitRelationalExpr(context->children[0], table);
+        const auto rhs            = visitAdditiveExpr(context->children[2], table);
 
-      return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
+        return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -228,14 +230,14 @@ Ast::Expr* visitEqualityExpr(antlr4::tree::ParseTree* context, std::shared_ptr<S
 {
     VisitorHelper<Ast::Expr*> visitor(context, "equality expression");
     visitor(1, [&](auto* context) {
-      return visitRelationalExpr(context->children[0], table);
+        return visitRelationalExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto [line, column] = getColumnAndLine(context);
-      const auto lhs = visitEqualityExpr(context->children[0], table);
-      const auto rhs = visitRelationalExpr(context->children[2], table);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto lhs            = visitEqualityExpr(context->children[0], table);
+        const auto rhs            = visitRelationalExpr(context->children[2], table);
 
-      return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
+        return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -244,14 +246,14 @@ Ast::Expr* visitAndExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
 {
     VisitorHelper<Ast::Expr*> visitor(context, "and expression");
     visitor(1, [&](auto* context) {
-      return visitEqualityExpr(context->children[0], table);
+        return visitEqualityExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto [line, column] = getColumnAndLine(context);
-      const auto lhs = visitAndExpr(context->children[0], table);
-      const auto rhs = visitEqualityExpr(context->children[2], table);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto lhs            = visitAndExpr(context->children[0], table);
+        const auto rhs            = visitEqualityExpr(context->children[2], table);
 
-      return new Ast::BinaryExpr("&&", lhs, rhs, table, line, column);
+        return new Ast::BinaryExpr("&&", lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -261,12 +263,12 @@ Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolT
     const auto [line, column] = getColumnAndLine(context);
     VisitorHelper<Ast::Expr*> visitor(context, "or expression");
     visitor(1, [&](auto* context) {
-      return visitAndExpr(context->children[0], table);
+        return visitAndExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto lhs = visitOrExpr(context->children[0], table);
-      const auto rhs = visitAndExpr(context->children[2], table);
-      return new Ast::BinaryExpr("||", lhs, rhs, table, line, column);
+        const auto lhs = visitOrExpr(context->children[0], table);
+        const auto rhs = visitAndExpr(context->children[2], table);
+        return new Ast::BinaryExpr("||", lhs, rhs, table, line, column);
     });
     return visitor.result();
 }
@@ -275,17 +277,17 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 {
     VisitorHelper<Ast::Expr*> visitor(context, "assign expression");
     visitor(1, [&](auto* context) {
-      return visitOrExpr(context->children[0], table);
+        return visitOrExpr(context->children[0], table);
     });
     visitor(3, [&](auto* context) {
-      const auto [line, column] = getColumnAndLine(context);
-      const auto identifier = context->children[0]->getText();
-      const auto expr       = visitAssignExpr(context->children[2], table);
-      const auto entry      = table->lookup(identifier);
+        const auto [line, column] = getColumnAndLine(context);
+        const auto identifier     = context->children[0]->getText();
+        const auto expr           = visitAssignExpr(context->children[2], table);
+        const auto entry          = table->lookup(identifier);
 
-      if (not entry.has_value()) throw UndeclaredError(identifier, line, column);
-      auto* var = new Ast::Variable(entry.value(), table, line, column);
-      return new Ast::Assignment(var, expr, table, line, column);
+        if (not entry.has_value()) throw UndeclaredError(identifier, line, column);
+        auto* var = new Ast::Variable(entry.value(), table, line, column);
+        return new Ast::Assignment(var, expr, table, line, column);
     });
     return visitor.result();
 }
@@ -294,7 +296,7 @@ Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTab
 {
     VisitorHelper<Ast::Expr*> visitor(context, "expression");
     visitor(1, [&](auto* context) {
-      return visitAssignExpr(context->children[0], table);
+        return visitAssignExpr(context->children[0], table);
     });
     return visitor.result();
 }
@@ -302,14 +304,14 @@ Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTab
 Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitBasicType(context->children[0], table);
+    const Type type           = visitBasicType(context->children[0], table);
 
     VisitorHelper<Type> visitor(context, "expression");
     visitor(1, [&](auto* context) {
-      return type;
+        return type;
     });
     visitor(2, [&](auto* context) {
-      return visitPointerType(context->children[1], type, table);
+        return visitPointerType(context->children[1], type, table);
     });
     return visitor.result();
 }
@@ -320,8 +322,8 @@ Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTabl
 
     antlr4::tree::ParseTree* specifier
         = *std::find_if(context->children.begin(), context->children.end(), [](const auto& context) {
-          return typeid(*context) == typeid(CParser::SpecifierContext);
-        });
+              return typeid(*context) == typeid(CParser::SpecifierContext);
+          });
     return Type(isConst, specifier->getText());
 }
 
@@ -353,21 +355,21 @@ Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitTypeName(context->children[0], table);
-    const auto name  = context->children[1]->getText();
+    const auto [line, column]    = getColumnAndLine(context);
+    const Type type              = visitTypeName(context->children[0], table);
+    const auto name              = context->children[1]->getText();
     const auto [entry, inserted] = table->insert(name, type);
-    auto* var        = new Ast::Variable(entry, table, line, column);
+    auto* var                    = new Ast::Variable(entry, table, line, column);
 
-    if(not inserted) throw RedefinitionError(entry->first, line, column);
+    if (not inserted) throw RedefinitionError(entry->first, line, column);
 
     VisitorHelper<Ast::Statement*> visitor(context, "statement");
     visitor(2, [&](auto* context) {
-      return new Ast::Declaration(var, nullptr, table, line, column);
+        return new Ast::Declaration(var, nullptr, table, line, column);
     });
     visitor(4, [&](auto* context) {
-      auto* expr = visitExpr(context->children[3]->children[0], table);
-      return new Ast::Declaration(var, expr, table, line, column);
+        auto* expr = visitExpr(context->children[3]->children[0], table);
+        return new Ast::Declaration(var, expr, table, line, column);
     });
     return visitor.result();
 }
@@ -375,7 +377,7 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
 Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    auto* expr = visitExpr(context->children[2], table);
+    auto* expr                = visitExpr(context->children[2], table);
     return new Ast::PrintfStatement(expr, table, line, column);
 }
 
@@ -396,7 +398,8 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
     {
         return visitPrintf(child, table);
     }
-    else throw UnexpectedContextType(context);
+    else
+        throw UnexpectedContextType(context);
 }
 
 std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -413,7 +416,8 @@ std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared
         {
             nodes.emplace_back(visitStatement(child, table));
         }
-        else throw UnexpectedContextType(context);
+        else
+            throw UnexpectedContextType(context);
     }
     return nodes;
 }

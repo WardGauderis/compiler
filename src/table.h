@@ -12,8 +12,6 @@
 #include <unordered_map>
 #include <variant>
 
-
-
 struct TableElement
 {
     Type type;
@@ -26,8 +24,7 @@ public:
     using Table = std::unordered_map<std::string, TableElement>;
     using Entry = Table::const_iterator;
 
-    explicit SymbolTable(std::shared_ptr<SymbolTable> parent = nullptr)
-    : parent(std::move(parent))
+    explicit SymbolTable(std::shared_ptr<SymbolTable> parent = nullptr) : parent(std::move(parent))
     {
     }
 

@@ -51,26 +51,23 @@ bool Type::isPointerType() const
 
 bool Type::isIntegralType() const
 {
-    return isBaseType() and (getBaseType() == BaseType::Char or
-    getBaseType() == BaseType::Short or
-    getBaseType() == BaseType::Int or
-    getBaseType() == BaseType::Long);
+    return isBaseType()
+           and (getBaseType() == BaseType::Char or getBaseType() == BaseType::Short or getBaseType() == BaseType::Int or getBaseType() == BaseType::Long);
 }
 
 bool Type::isCharacterType() const
 {
-	return isBaseType() and getBaseType() == BaseType::Char;
+    return isBaseType() and getBaseType() == BaseType::Char;
 }
 
 bool Type::isIntegerType() const
 {
-	return isBaseType() and getBaseType() == BaseType::Int;
+    return isBaseType() and getBaseType() == BaseType::Int;
 }
 
 bool Type::isFloatingType() const
 {
-    return isBaseType() and (getBaseType() == BaseType::Float or
-                             getBaseType() == BaseType::Double);
+    return isBaseType() and (getBaseType() == BaseType::Float or getBaseType() == BaseType::Double);
 }
 
 std::string Type::toString(BaseType type)
@@ -96,8 +93,7 @@ std::string Type::toString(BaseType type)
 
 BaseType Type::fromString(const std::string& str)
 {
-    if (str == "char")
-        return BaseType::Char;
+    if (str == "char") return BaseType::Char;
     else if (str == "short")
         return BaseType::Short;
     else if (str == "int")
@@ -108,29 +104,30 @@ BaseType Type::fromString(const std::string& str)
         return BaseType::Float;
     else if (str == "double")
         return BaseType::Double;
-    else throw InternalError("string cannot convert to base type");
+    else
+        throw InternalError("string cannot convert to base type");
 }
 
 Type Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column)
 {
-    if(operation.isLogicalOperator())
+    if (operation.isLogicalOperator())
     {
-        return Type(false, BaseType::Int);  // TODO: make this a bool
+        return Type(false, BaseType::Int); // TODO: make this a bool
     }
 
     if (lhs.isBaseType() and rhs.isBaseType() and not lhs.isFloatingType() and not rhs.isFloatingType())
     {
         return Type(false, std::max(lhs.getBaseType(), rhs.getBaseType()));
     }
-    else if(lhs.isPointerType() and rhs.isPointerType())
+    else if (lhs.isPointerType() and rhs.isPointerType())
     {
         // empty statement, just go to throw
     }
-    else if(lhs.isPointerType() and rhs.isIntegralType() and operation.isLogicalOperator())
+    else if (lhs.isPointerType() and rhs.isIntegralType() and operation.isLogicalOperator())
     {
         return lhs;
     }
-    else if(rhs.isPointerType() and lhs.isIntegralType() and operation.isLogicalOperator())
+    else if (rhs.isPointerType() and lhs.isIntegralType() and operation.isLogicalOperator())
     {
         return rhs;
     }
@@ -140,24 +137,24 @@ Type Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, s
 std::optional<SemanticError> Type::convert(Type from, Type to, bool cast, size_t line, size_t column)
 {
     std::string operation = cast ? "casting" : "assigning";
-    if(from.isPointerType())
+    if (from.isPointerType())
     {
-        if(to.isFloatingType())
+        if (to.isFloatingType())
         {
             return ConversionError(operation, from.string(), to.string(), line, column);
         }
-        else if(to.isIntegralType() and not cast)
+        else if (to.isIntegralType() and not cast)
         {
             return PointerConversionWarning(operation, "from", from.string(), to.string(), line, column);
         }
     }
-    if(to.isPointerType())
+    if (to.isPointerType())
     {
-        if(from.isFloatingType())
+        if (from.isFloatingType())
         {
             return ConversionError(operation, from.string(), to.string(), line, column);
         }
-        else if(from.isIntegralType() and not cast)
+        else if (from.isIntegralType() and not cast)
         {
             return PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
         }

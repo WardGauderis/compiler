@@ -7,7 +7,6 @@
 #pragma once
 #include <string>
 
-
 struct BinaryOperation
 {
     enum Type
@@ -27,10 +26,17 @@ struct BinaryOperation
         Or
     } type;
 
-    BinaryOperation(Type operation) : type(operation) {}
-    BinaryOperation(const std::string& str) : type(fromString(str).type) {}
+    BinaryOperation(Type operation) : type(operation)
+    {
+    }
+    BinaryOperation(const std::string& str) : type(fromString(str).type)
+    {
+    }
 
-    operator Type() { return type; }
+    operator Type()
+    {
+        return type;
+    }
     static BinaryOperation fromString(const std::string& str);
 
     std::string string() const;
@@ -51,10 +57,17 @@ struct PrefixOperation
         Decr,
     } type;
 
-    PrefixOperation(Type operation) : type(operation) {}
-    PrefixOperation(const std::string& str) : type(fromString(str).type) {}
+    PrefixOperation(Type operation) : type(operation)
+    {
+    }
+    PrefixOperation(const std::string& str) : type(fromString(str).type)
+    {
+    }
 
-    operator Type() { return type; }
+    operator Type()
+    {
+        return type;
+    }
     static PrefixOperation fromString(const std::string& str);
 
     std::string string() const;
@@ -68,12 +81,18 @@ struct PostfixOperation
         Decr,
     } type;
 
-    PostfixOperation(Type operation) : type(operation) {}
-    PostfixOperation(const std::string& str) : type(fromString(str).type) {}
+    PostfixOperation(Type operation) : type(operation)
+    {
+    }
+    PostfixOperation(const std::string& str) : type(fromString(str).type)
+    {
+    }
 
-    operator Type() { return type; }
+    operator Type()
+    {
+        return type;
+    }
     PostfixOperation fromString(const std::string& str);
 
     std::string string() const;
 };
-
