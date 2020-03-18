@@ -348,13 +348,11 @@ Type BinaryExpr::type() const
 {
     try
     {
-        // this shouldn't throw anymore, if properly checked
         return Type::combine(operation, lhs->type(), rhs->type());
     }
     catch (...)
     {
-        // but we catch it anyways just to be sure
-        throw InternalError("something went horribly wrong while folding");
+        throw InternalError("something went horribly wrong while folding binary expressions");
     }
 }
 
@@ -387,11 +385,19 @@ Literal* PrefixExpr::fold()
 
 void PrefixExpr::check() const
 {
+    Type::unary(operation, operand->type(), line, column);
 }
 
 Type PrefixExpr::type() const
 {
-    return operand->type();
+    try
+    {
+        return Type::unary(operation, operand->type());
+    }
+    catch(...)
+    {
+        throw InternalError("something went terribly wrong while folding in prefix expressions");
+    }
 }
 
 std::string PostfixExpr::name() const

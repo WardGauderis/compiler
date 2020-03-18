@@ -108,6 +108,19 @@ BaseType Type::fromString(const std::string& str)
         throw InternalError("string cannot convert to base type");
 }
 
+Type Type::unary(PrefixOperation operation, Type operand, size_t line, size_t column)
+{
+    if(operation == PrefixOperation::Not)
+    {
+        return Type(false, BaseType::Int);
+    }
+    else if(operand.isPointerType())
+    {
+        throw InvalidOperands("prefix operator", operand.string(), line, column);
+    }
+    return operand;
+}
+
 Type Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column)
 {
     if (operation.isLogicalOperator())
