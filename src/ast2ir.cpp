@@ -38,12 +38,12 @@ namespace Ast {
 		module.print(outs(), nullptr, false, true);
 	}
 
-	Value* Comment::codegen() const
+	llvm::Value* Comment::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* Block::codegen() const
+	llvm::Value* Block::codegen() const
 	{
 		for (const auto& node: nodes)
 		{
@@ -52,7 +52,7 @@ namespace Ast {
 		return nullptr;
 	}
 
-	Value* Literal::codegen() const
+	llvm::Value* Literal::codegen() const
 	{
 		switch (literal.index())
 		{
@@ -68,12 +68,12 @@ namespace Ast {
 	}
 
 	//TODO alloca
-	Value* Variable::codegen() const
+	llvm::Value* Variable::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* BinaryExpr::codegen() const
+	llvm::Value* BinaryExpr::codegen() const
 	{
 		auto l = lhs->codegen();
 		auto r = rhs->codegen();
@@ -90,63 +90,69 @@ namespace Ast {
 			if (rhs->type().isCharacterType()) r = builder.CreateSExt(l, builder.getInt32Ty());
 		}
 
-		if (operation=="*") return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r);
-		if (operation=="/") return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r);
-		if (operation=="%") return builder.CreateBinOp(Instruction::SRem, l, r);
-		if (operation=="+") return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r);
-		if (operation=="-") return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r);
-		if (operation=="<")
+		if (operation.type==BinaryOperation::Mul)
+			return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r);
+		if (operation.type==BinaryOperation::Div)
+			return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r);
+		if (operation.type==BinaryOperation::Mod) return builder.CreateBinOp(Instruction::SRem, l, r);
+		if (operation.type==BinaryOperation::Add)
+			return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r);
+		if (operation.type==BinaryOperation::Sub)
+			return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r);
+		if (operation.type==BinaryOperation::Lt)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLT, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_SLT, l, r);
-		if (operation=="<=")
+		if (operation.type==BinaryOperation::Le)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLE, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_SLE, l, r);
-		if (operation==">")
+		if (operation.type==BinaryOperation::Gt)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGT, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_SGT, l, r);
-		if (operation==">=")
+		if (operation.type==BinaryOperation::Ge)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGE, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_SGE, l, r);
-		if (operation=="==")
+		if (operation.type==BinaryOperation::Eq)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OEQ, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_EQ, l, r);
-		if (operation=="!=")
+		if (operation.type==BinaryOperation::Neq)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, l, r) :
 			       builder.CreateICmp(CmpInst::ICMP_NE, l, r);
-		if (operation=="&&") return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r);
-		if (operation=="||") return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r);
+		if (operation.type==BinaryOperation::And)//TODO logical
+			return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r);
+		if (operation.type==BinaryOperation::Or)
+			return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r);
 		//TODO or and float pointer
 		throw InternalError("type is not supported in IR");
 	}
 
-	Value* PostfixExpr::codegen() const
+	llvm::Value* PostfixExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* PrefixExpr::codegen() const
+	llvm::Value* PrefixExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* CastExpr::codegen() const
+	llvm::Value* CastExpr::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* Assignment::codegen() const
+	llvm::Value* Assignment::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* Declaration::codegen() const
+	llvm::Value* Declaration::codegen() const
 	{
 		return nullptr;
 	}
 
-	Value* PrintfStatement::codegen() const
+	llvm::Value* PrintfStatement::codegen() const
 	{
-		Value* result = expr->codegen();
+		auto result = expr->codegen();
 		std::string format;
 		std::string name;
 		if (expr->type().isPointerType())

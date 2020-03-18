@@ -5,6 +5,8 @@
 //============================================================================
 #pragma once
 
+#include <llvm/IR/Value.h>
+
 #include <array>
 #include <iostream>
 #include <memory>
@@ -46,7 +48,7 @@ struct Node
 
     virtual void check() const = 0;
 
-    virtual Value* codegen() const = 0;
+    [[nodiscard]] virtual llvm::Value* codegen() const = 0;
 
     size_t column;
     size_t line;
@@ -88,7 +90,7 @@ struct Comment final : public Node
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
     void check() const final;
-    Value* codegen() const;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     std::string comment;
 };
@@ -106,7 +108,7 @@ struct Block final : public Node
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
     void check() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     std::vector<Node*> nodes;
 };
@@ -125,7 +127,7 @@ struct Literal final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     TypeVariant literal;
 };
@@ -144,7 +146,7 @@ struct Variable final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     SymbolTable::Entry entry;
 };
@@ -162,7 +164,7 @@ struct BinaryExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     BinaryOperation operation;
 
@@ -183,7 +185,7 @@ struct PostfixExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     PostfixOperation operation;
     Expr* operand;
@@ -202,7 +204,7 @@ struct PrefixExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     PrefixOperation operation;
     Expr* operand;
@@ -222,7 +224,7 @@ struct CastExpr final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     Type cast;
     Expr* operand;
@@ -241,7 +243,7 @@ struct Assignment final : public Expr
     Literal* fold() final;
     void check() const final;
     [[nodiscard]] Type type() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     Variable* variable;
     Expr* expr;
@@ -259,7 +261,7 @@ struct Declaration final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     Variable* variable;
     Expr* expr; // can be nullptr
@@ -277,7 +279,7 @@ struct PrintfStatement final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
     void check() const final;
-    Value* codegen() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
     Expr* expr;
 };
