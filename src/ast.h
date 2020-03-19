@@ -48,7 +48,7 @@ struct Node
 
     virtual void check() const = 0;
 
-    [[nodiscard]] virtual llvm::Value* codegen() const = 0;
+    virtual llvm::Value* codegen() const = 0;
 
     size_t column;
     size_t line;

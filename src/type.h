@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <llvm/IR/Type.h>
 
 namespace
 {
@@ -76,6 +77,8 @@ public:
 	[[nodiscard]] bool isIntegerType() const;
 
 	[[nodiscard]] bool isFloatingType() const;
+
+	[[nodiscard]] llvm::Type * convertToIR() const;
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);

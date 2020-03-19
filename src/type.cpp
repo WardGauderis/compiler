@@ -31,7 +31,7 @@ overloaded(Ts...)->overloaded<Ts...>;
 
 BaseType Type::getBaseType() const
 {
-    if (isBaseType()) return std::get<BaseType>(type);
+    return std::get<BaseType>(type);
 }
 
 bool Type::isConst() const
