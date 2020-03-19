@@ -28,6 +28,6 @@ foreach(dir ${dirs})
     message(WARNING "dir='${dir}'")
 endforeach()
 
-add_executable(llvm_test llvm_test/main.cpp)
-
-target_link_libraries(llvm_test LLVM)
+#add_executable(llvm_test llvm_test/main.cpp)
+#
+#target_link_libraries(llvm_test LLVM)
