@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <filesystem>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -282,5 +283,7 @@ struct PrintfStatement final : public Statement
 
     Expr* expr;
 };
+
+	void ast2ir(const std::unique_ptr<Ast::Node>& root, const std::filesystem::path& path);
 
 } // namespace Ast
