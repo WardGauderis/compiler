@@ -41,7 +41,7 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 
 void output_all_tests(bool redo_existing)
 {
-	for (const auto& entry : std::filesystem::recursive_directory_iterator("tests"))
+	for (const auto& entry : std::filesystem::recursive_directory_iterator("tests/cases"))
 	{
 		try
 		{
@@ -80,6 +80,7 @@ void output_all_tests(bool redo_existing)
 				make_dot(ast, ast_path);
 
 				Ast::ast2ir(ast, input, ll_path);
+				std::cout << input<< std::endl;
 			}
 		}
 		catch (const SyntaxError& ex)

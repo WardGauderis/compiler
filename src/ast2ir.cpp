@@ -92,7 +92,6 @@ namespace Ast {
 
 	llvm::Value* Comment::codegen() const
 	{
-		//TODO attach metadata
 		MDNode* m = MDNode::get(context, MDString::get(context, comment));
 		return nullptr;
 	}
@@ -186,10 +185,10 @@ namespace Ast {
 		else if (operation.type==BinaryOperation::Neq)
 			tmp = floatOperation ? builder->CreateFCmp(CmpInst::FCMP_UNE, l, r, "neq") :
 			      builder->CreateICmp(CmpInst::ICMP_NE, l, r, "nq");
-		else if (operation.type==BinaryOperation::And)//TODO logical
-			tmp = builder->CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r, "and");
-		else if (operation.type==BinaryOperation::Or)
-			tmp = builder->CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r, "or");
+		else if (operation.type==BinaryOperation::And || operation.type==BinaryOperation::Or)
+		{
+			throw InternalError("logical operators are not yet supported in IR");
+		}
 
 		if (tmp) return builder->CreateZExt(tmp, builder->getInt32Ty());
 
@@ -255,7 +254,7 @@ namespace Ast {
 		}
 		else if (operation.type==PrefixOperation::Not)
 		{
-			return builder->CreateNot(result, "not"); //TODO float?
+			throw InternalError("logical operators are not yet supported in IR");
 		}
 		else throw InternalError("type is not supported in IR");
 	}
