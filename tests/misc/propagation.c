@@ -9,4 +9,4 @@ int e = 6;
 int f = d + e;
 
 (4 + 6) / 2;
-(3 + 5) / 0; //! will not fold
+(3 + 5) / 0; //! will not fold because of 0
