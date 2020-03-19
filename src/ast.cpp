@@ -116,6 +116,26 @@ Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_
     else
         throw InternalError("unknown type for conversion: " + operation, line, column);
 }
+
+bool check_const(const std::shared_ptr<SymbolTable>& table, const std::string& identifier, const std::string& operation, size_t line, size_t column)
+{
+    if (table->lookup_const(identifier))
+    {
+        std::cout << ConstError(operation, identifier, line, column);
+        return false;
+    }
+    return true;
+}
+bool check_uninit(const std::shared_ptr<SymbolTable>& table, const std::string& identifier, size_t line, size_t column)
+{
+    if(not table->lookup_initialized(identifier))
+    {
+        std::cout << UninitializedWarning(identifier, line, column);
+        table->set_initialized(identifier); // this is used so no other warnings are given
+    }
+    return true;
+}
+
 } // namespace
 
 namespace Ast
@@ -156,7 +176,7 @@ void Node::complete(bool check, bool fold, bool output)
     }
     if (not result)
     {
-        throw CompilationError("could not complete compilation due to above errors\n");
+        throw CompilationError("could not complete compilation due to above errors");
     }
     if (fold)
     {
@@ -287,6 +307,7 @@ Literal* Variable::fold()
 
 bool Variable::check() const
 {
+    check_uninit(table, identifier, line, column);
     if(not table->lookup(identifier).has_value())
     {
         std::cout << UndeclaredError(identifier, line, column);
@@ -392,16 +413,13 @@ Literal* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    if(operand.index() == 0)
+    if(operand.index() == 0 and operation.isIncrDecr())
     {
         auto* variable = std::get<Variable*>(operand);
-        if (table->lookup_const(variable->name()))
-        {
-            std::cout << ConstError(operation.string(), variable->name(), line, column);
-            return false;
-        }
+        const auto error = check_const(table, variable->name(), operation.string(), line, column);
+        if (not error) return false;
     }
-    else if(operation.isIncrDecr())
+    if(operand.index() == 1 and operation.isIncrDecr())
     {
         throw SemanticError("assigning to an r-value in prefix expression", line, column);
     }
@@ -452,11 +470,7 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    if (table->lookup_const(variable->name()))
-    {
-        std::cout << ConstError(operation.string(), variable->name(), line, column);
-        return false;
-    }
+    return check_const(table, variable->name(), operation.string(), line, column);
 }
 
 Type PostfixExpr::type() const
@@ -529,6 +543,7 @@ bool Assignment::check() const
         std::cout << ConstError("assignment", variable->name(), line, column);
         return false;
     }
+    table->set_initialized(variable->name());
     return Type::convert(expr->type(), variable->type(), false, line, column);
 }
 
@@ -570,7 +585,7 @@ Literal* Declaration::fold()
 
 bool Declaration::check() const
 {
-    const auto [iter, inserted] = table->insert(variable->name(), vartype);
+    const auto [iter, inserted] = table->insert(variable->name(), vartype, expr);
     if(not inserted)
     {
         std::cout <<  RedefinitionError(variable->name(), line, column);

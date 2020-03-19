@@ -16,6 +16,7 @@ struct TableElement
 {
     Type type;
     std::optional<TypeVariant> literal;
+    bool initialized;
 };
 
 class SymbolTable
@@ -30,11 +31,15 @@ public:
 
     std::optional<Entry> lookup(const std::string& id) const;
 
-    std::pair<Entry, bool> insert(const std::string& id, Type type);
+    std::pair<Entry, bool> insert(const std::string& id, Type type, bool initialized);
+
+    void set_initialized(const std::string& id);
 
     void set_literal(const std::string& id, std::optional<TypeVariant> type);
 
     std::optional<TypeVariant> get_literal(const std::string& id);
+
+    bool lookup_initialized(const std::string& id);
 
     bool lookup_const(const std::string& id);
 

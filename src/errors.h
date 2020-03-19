@@ -87,6 +87,14 @@ struct ConstError : public SemanticError
     }
 };
 
+struct UninitializedWarning : public SemanticError
+{
+    explicit UninitializedWarning(const std::string& name, unsigned int line, unsigned int column)
+            : SemanticError("variable '" + name + "' is uninitialized when used", line, column, true)
+    {
+    }
+};
+
 struct InternalError : public CompilationError
 {
     explicit InternalError(const std::string& message, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)

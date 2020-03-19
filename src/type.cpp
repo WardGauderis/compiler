@@ -206,7 +206,6 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column)
     if(not cast and from.isPointerType() and to.isPointerType() and from != to)
     {
         std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
-        return false;
     }
     if(from.isPointerType() and to.isBaseType() and to.getBaseType() != BaseType::Long)
     {

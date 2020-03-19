@@ -71,6 +71,8 @@ void output_all_tests(bool redo_existing)
                 std::string warning = buffer.str();
                 if (!warning.empty()) throw SyntaxError(warning.substr(0, warning.size() - 1));
 
+                std::cout << '\n';
+
 	            make_dot(cst, cst_path);
 
 	            const auto ast = Ast::from_cst(cst, true);
