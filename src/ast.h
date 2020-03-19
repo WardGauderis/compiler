@@ -98,7 +98,7 @@ struct Comment final : public Node
 struct Block final : public Node
 {
     explicit Block(std::vector<Node*> nodes, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        :Node(std::move(table), line, column), nodes(std::move(nodes))
+        : Node(std::move(table), line, column), nodes(std::move(nodes))
     {
     }
 
@@ -209,7 +209,6 @@ struct PrefixExpr final : public Expr
     PrefixOperation operation;
     Expr* operand;
 };
-
 
 struct CastExpr final : public Expr
 {

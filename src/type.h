@@ -72,17 +72,20 @@ public:
 
     [[nodiscard]] bool isIntegralType() const;
 
-	[[nodiscard]] bool isCharacterType() const;
+    [[nodiscard]] bool isCharacterType() const;
 
-	[[nodiscard]] bool isIntegerType() const;
+    [[nodiscard]] bool isIntegerType() const;
 
-	[[nodiscard]] bool isFloatingType() const;
+    [[nodiscard]] bool isFloatingType() const;
 
 	[[nodiscard]] llvm::Type * convertToIR() const;
 
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);
+
+    static Type unary(PrefixOperation operation, Type operand, size_t line = 0, size_t column = 0);
     static Type combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0);
+    static std::optional<SemanticError> convert(Type from, Type to, bool cast, size_t line = 0, size_t column = 0);
 
 private:
     bool isTypeConst;

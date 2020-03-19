@@ -40,7 +40,8 @@ Ast::Literal* fold_binary(Type0 lhs, Type1 rhs, BinaryOperation operation, std::
 {
     if (operation.isDivisionModulo() and rhs == 0) return nullptr;
 
-    if (operation == BinaryOperation::Add) return new Ast::Literal(lhs + rhs, std::move(table), line, column);
+    if (operation == BinaryOperation::Add)
+        return new Ast::Literal(lhs + rhs, std::move(table), line, column);
     else if (operation == BinaryOperation::Sub)
         return new Ast::Literal(lhs - rhs, std::move(table), line, column);
     else if (operation == BinaryOperation::Mul)
@@ -82,7 +83,8 @@ Ast::Literal* fold_prefix(Type operand, PrefixOperation operation, std::shared_p
         return new Ast::Literal(operand + 1, std::move(table), line, column);
     else if (operation == PrefixOperation::Decr)
         return new Ast::Literal(operand - 1, std::move(table), line, column);
-    else throw InternalError("unknown prefix expression", line, column);
+    else
+        throw InternalError("unknown prefix expression", line, column);
 }
 
 template<typename Type>
@@ -92,13 +94,15 @@ Ast::Literal* fold_postfix(Type operand, PostfixOperation operation, std::shared
         return new Ast::Literal(operand + 1, std::move(table), line, column);
     else if (operation == PostfixOperation::Decr)
         return new Ast::Literal(operand - 1, std::move(table), line, column);
-    else throw InternalError("unknown postfix expression", line, column);
+    else
+        throw InternalError("unknown postfix expression", line, column);
 }
 
 template<typename Type>
 Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
 {
-    if (operation == "float") return new Ast::Literal((float)operand, std::move(table), line, column);
+    if (operation == "float")
+        return new Ast::Literal((float)operand, std::move(table), line, column);
     else if (operation == "double")
         return new Ast::Literal((double)operand, std::move(table), line, column);
     else if (operation == "char")
@@ -114,22 +118,22 @@ Ast::Literal* fold_cast(Type operand, const std::string& operation, std::shared_
 }
 } // namespace
 
-namespace Ast {
+namespace Ast
+{
 std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root)
 {
     stream << "digraph G\n";
     stream << "{\n";
 
-    std::function<void(Node*)> recursion = [&](Node* node)
-    {
-      stream << '"' << node << "\"[label=\"" << node->name() << "\\n"
-             << node->value() << "\", shape=box, style=filled, color=\"" << node->color() << "\"];\n";
+    std::function<void(Node*)> recursion = [&](Node* node) {
+        stream << '"' << node << "\"[label=\"" << node->name() << "\\n"
+               << node->value() << "\", shape=box, style=filled, color=\"" << node->color() << "\"];\n";
 
-      for (const auto child : node->children())
-      {
-          stream << '"' << node << "\" -> \"" << child << "\";\n";
-          recursion(child);
-      }
+        for (const auto child : node->children())
+        {
+            stream << '"' << node << "\" -> \"" << child << "\";\n";
+            recursion(child);
+        }
     };
     recursion(root.get());
     stream << "}\n";
@@ -138,13 +142,12 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
 
 void Node::complete(bool check, bool fold, bool output)
 {
-    std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root)
-    {
-      if (check) root->check();
-      for (const auto child : root->children())
-      {
-          recursion(child);
-      }
+    std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root) {
+        if (check) root->check();
+        for (const auto child : root->children())
+        {
+            recursion(child);
+        }
     };
     recursion(this);
 
@@ -227,8 +230,11 @@ std::string Literal::name() const
 
 std::string Literal::value() const
 {
-    return std::visit([&](const auto& val)
-                      { return std::to_string(val); }, literal);
+    return std::visit(
+        [&](const auto& val) {
+            return std::to_string(val);
+        },
+        literal);
 }
 
 std::vector<Node*> Literal::children() const
@@ -275,7 +281,7 @@ Literal* Variable::fold()
     const auto& literal = table->get_literal(name());
     if (literal.has_value())
     {
-        return new Ast::Literal(literal.value(), table, column , line);
+        return new Ast::Literal(literal.value(), table, column, line);
     }
     else
         return nullptr;
@@ -310,21 +316,19 @@ Literal* BinaryExpr::fold()
     auto* new_lhs = lhs->fold();
     auto* new_rhs = rhs->fold();
 
-    const auto set_folded = [&]() -> Ast::Literal*
-    {
-      if (new_lhs) lhs = new_lhs;
-      if (new_rhs) rhs = new_rhs;
-      return nullptr;
+    const auto set_folded = [&]() -> Ast::Literal* {
+        if (new_lhs) lhs = new_lhs;
+        if (new_rhs) rhs = new_rhs;
+        return nullptr;
     };
 
     if (new_lhs and new_rhs)
     {
-        const auto lambda = [&](const auto& lhs, const auto& rhs)
-        {
-          auto* res = fold_binary(lhs, rhs, operation, table, line, column);
-          if (res) return res;
-          else
-              return set_folded();
+        const auto lambda = [&](const auto& lhs, const auto& rhs) {
+            auto* res = fold_binary(lhs, rhs, operation, table, line, column);
+            if (res) return res;
+            else
+                return set_folded();
         };
         // TODO: deletus feetus, memory leakus
         return std::visit(lambda, new_lhs->literal, new_rhs->literal);
@@ -344,13 +348,11 @@ Type BinaryExpr::type() const
 {
     try
     {
-        // this shouldn't throw anymore, if properly checked
         return Type::combine(operation, lhs->type(), rhs->type());
     }
-    catch(...)
+    catch (...)
     {
-        // but we catch it anyways just to be sure
-        throw InternalError("something went horribly wrong while folding");
+        throw InternalError("something went horribly wrong while folding binary expressions");
     }
 }
 
@@ -372,8 +374,9 @@ std::vector<Node*> PrefixExpr::children() const
 Literal* PrefixExpr::fold()
 {
     auto* new_operand = operand->fold();
-    const auto lambda = [&](const auto& val)
-    { return fold_prefix(val, operation, table, line, column); };
+    const auto lambda = [&](const auto& val) {
+        return fold_prefix(val, operation, table, line, column);
+    };
 
     // TODO: deletus feetus, memory leakus
     if (new_operand) return std::visit(lambda, new_operand->literal);
@@ -382,11 +385,19 @@ Literal* PrefixExpr::fold()
 
 void PrefixExpr::check() const
 {
+    Type::unary(operation, operand->type(), line, column);
 }
 
 Type PrefixExpr::type() const
 {
-    return operand->type();
+    try
+    {
+        return Type::unary(operation, operand->type());
+    }
+    catch(...)
+    {
+        throw InternalError("something went terribly wrong while folding in prefix expressions");
+    }
 }
 
 std::string PostfixExpr::name() const
@@ -407,8 +418,9 @@ std::vector<Node*> PostfixExpr::children() const
 Literal* PostfixExpr::fold()
 {
     auto* new_operand = operand->fold();
-    const auto lambda = [&](const auto& val)
-    { return fold_postfix(val, operation, table, line, column); };
+    const auto lambda = [&](const auto& val) {
+        return fold_postfix(val, operation, table, line, column);
+    };
 
     // TODO: deletus feetus, memory leakus
     if (new_operand) return std::visit(lambda, new_operand->literal);
@@ -431,7 +443,7 @@ std::string CastExpr::name() const
 
 std::string CastExpr::value() const
 {
-    return '('+ cast.string()+')';
+    return '(' + cast.string() + ')';
 }
 
 std::vector<Node*> CastExpr::children() const
@@ -442,8 +454,9 @@ std::vector<Node*> CastExpr::children() const
 Literal* CastExpr::fold()
 {
     auto* new_operand = operand->fold();
-    const auto lambda = [&](const auto& val)
-    { return fold_cast(val, cast.string(), table, line, column); };
+    const auto lambda = [&](const auto& val) {
+        return fold_cast(val, cast.string(), table, line, column);
+    };
 
     if (new_operand) return std::visit(lambda, new_operand->literal);
     else
@@ -452,10 +465,8 @@ Literal* CastExpr::fold()
 
 void CastExpr::check() const
 {
-    if(cast.isPointerType())
-    {
-        std::cout << InternalError("casting to pointers is not yet supported", line, column);
-    }
+    const auto error = Type::convert(operand->type(), cast, true, line, column);
+    if (error.has_value()) std::cout << *error;
 }
 
 Type CastExpr::type() const
@@ -486,23 +497,8 @@ Literal* Assignment::fold()
 
 void Assignment::check() const
 {
-    const auto rtype = expr->type();
-    const auto ltype = variable->type();
-
-    if(rtype.isPointerType())
-    {
-        if(ltype.isFloatingType())
-            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
-        else if(ltype.isIntegralType())
-            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
-    }
-    if(ltype.isPointerType())
-    {
-        if(rtype.isFloatingType())
-            std::cout << ImpossibleConversion("assigning", rtype.string(), ltype.string(), line, column);
-        else if(rtype.isIntegralType())
-            std::cout << NarrowingConversion("assigning", rtype.string(), ltype.string(), line, column);
-    }
+    const auto error = Type::convert(expr->type(), variable->type(), false, line, column);
+    if (error.has_value()) std::cout << *error;
 
     if (table->lookup_const(variable->name()))
     {

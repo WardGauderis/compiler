@@ -6,8 +6,8 @@
 #include "errors.h"
 #include "type.h"
 #include <llvm/IR/BasicBlock.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 #include <filesystem>
 #include <unordered_map>
@@ -200,15 +200,16 @@ namespace Ast {
 		else throw InternalError("type is not supported in IR");
 	}
 
-	llvm::Value* cast(llvm::Value* value, llvm::Type* to){
+	llvm::Value* cast(llvm::Value* value, llvm::Type* to)
+	{
 		auto from = value->getType();
-		if(from == to) return value;
-		if(from->isIntegerTy() && to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
-		if(from->isIntegerTy() && to->isFloatTy()) return builder.CreateSIToFP(value, to);
-		if(from->isFloatTy() && to->isIntegerTy()) return builder.CreateFPToSI(value, to);
-		if(from->isPointerTy() && to->isPointerTy()) return builder.CreatePointerCast(value, to);
-		if(from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
-		if(from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
+		if (from==to) return value;
+		if (from->isIntegerTy() && to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
+		if (from->isIntegerTy() && to->isFloatTy()) return builder.CreateSIToFP(value, to);
+		if (from->isFloatTy() && to->isIntegerTy()) return builder.CreateFPToSI(value, to);
+		if (from->isPointerTy() && to->isPointerTy()) return builder.CreatePointerCast(value, to);
+		if (from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
+		if (from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
 	}
 
 	llvm::Value* CastExpr::codegen() const
