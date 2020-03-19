@@ -9,4 +9,5 @@ a * 5; // error
 a / 2; // error
 a % 2; // error
 a - 6; // no error
+6 - a; // error
 

@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <variant>
+#include <llvm/IR/Type.h>
 
 namespace
 {
@@ -78,6 +79,8 @@ public:
     [[nodiscard]] bool isIntegerType() const;
 
     [[nodiscard]] bool isFloatingType() const;
+
+    [[nodiscard]] llvm::Type * convertToIR() const;
 
     friend bool operator==(Type lhs, Type rhs);
     friend bool operator!=(Type lhs, Type rhs);

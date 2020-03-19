@@ -96,7 +96,7 @@ namespace Ast {
 
 	llvm::Value* Variable::codegen() const
 	{
-		return builder.CreateLoad(variables[(*entry).first], (*entry).first);
+		return builder.CreateLoad(variables[(*getEntry()).first], (*getEntry()).first);
 	}
 
 	llvm::Value* BinaryExpr::codegen() const

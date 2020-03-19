@@ -158,11 +158,11 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
     {
         // empty statement, just go to throw
     }
-    else if (lhs.isPointerType() and rhs.isIntegralType() and operation.isLogicalOperator())
+    else if (lhs.isPointerType() and rhs.isIntegralType() and operation == BinaryOperation::Add)
     {
         return lhs;
     }
-    else if (rhs.isPointerType() and lhs.isIntegralType() and operation.isLogicalOperator())
+    else if (lhs.isIntegralType() and rhs.isPointerType() and operation.isAdditiveOperator())
     {
         return rhs;
     }
