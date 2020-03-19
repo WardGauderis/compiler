@@ -72,6 +72,8 @@ struct PrefixOperation
     static PrefixOperation fromString(const std::string& str);
 
     std::string string() const;
+
+    bool isIncrDecr() const;
 };
 
 struct PostfixOperation

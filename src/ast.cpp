@@ -142,7 +142,7 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
 
 void Node::complete(bool check, bool fold, bool output)
 {
-    bool result                               = true;
+    bool result = true;
     std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root) {
         result &= root->check();
         for (const auto child : root->children())
@@ -199,11 +199,6 @@ Literal* Comment::fold()
     return nullptr;
 }
 
-bool Comment::check() const
-{
-    return true;
-}
-
 std::string Block::name() const
 {
     return "block";
@@ -230,11 +225,6 @@ Literal* Block::fold()
     return nullptr;
 }
 
-bool Block::check() const
-{
-    return true;
-}
-
 std::string Literal::name() const
 {
     return "literal";
@@ -259,11 +249,6 @@ Literal* Literal::fold()
     return this;
 }
 
-bool Literal::check() const
-{
-    return true;
-}
-
 Type Literal::type() const
 {
     return Type(true, static_cast<BaseType>(literal.index()));
@@ -271,16 +256,12 @@ Type Literal::type() const
 
 std::string Variable::name() const
 {
-    const auto temp = table->lookup(identifier);
-    if (not temp.has_value())
-        throw InternalError("variable " + identifier + " not found in symbol table");
-
-    return (*temp)->first;
+    return identifier;
 }
 
 std::string Variable::value() const
 {
-    return getEntry()->second.type.string();
+    return (*table->lookup(identifier))->second.type.string();
 }
 
 std::vector<Node*> Variable::children() const
@@ -316,33 +297,9 @@ bool Variable::check() const
 
 Type Variable::type() const
 {
-    return getEntry()->second.type;
-}
-
-SymbolTable::Entry Variable::getEntry() const
-{
     const auto temp = table->lookup(identifier);
-    if (not temp.has_value())
-    {
-        throw InternalError("variable" + identifier + " not found in symbol table");
-    }
-    return *temp;
-}
-
-bool Variable::isConst() const
-{
-    return table->lookup_const(identifier);
-}
-
-bool Variable::declare(Type type) const
-{
-    const auto [iter, inserted] = table->insert(identifier, type);
-    if(not inserted)
-    {
-        std::cout << RedefinitionError(identifier, line, column);
-        return false;
-    }
-    return true;
+    if(temp.has_value()) return (*temp)->second.type;
+    else return Type();
 }
 
 std::string BinaryExpr::name() const
@@ -390,7 +347,7 @@ Literal* BinaryExpr::fold()
 
 bool BinaryExpr::check() const
 {
-    return Type::combine(operation, rhs->type(), lhs->type(), line, column).has_value();
+    return Type::combine(operation, lhs->type(), rhs->type(), line, column).has_value();
 }
 
 Type BinaryExpr::type() const
@@ -412,17 +369,18 @@ std::string PrefixExpr::name() const
 
 std::string PrefixExpr::value() const
 {
-    return operation.string() + operand->value();
+    return operation.string() + std::visit([&](auto val){ return val->value(); }, operand);
 }
 
 std::vector<Node*> PrefixExpr::children() const
 {
-    return {operand};
+    const auto node = std::visit([&](auto val){ return static_cast<Node*>(val); }, operand);
+    return {node};
 }
 
 Literal* PrefixExpr::fold()
 {
-    auto* new_operand = operand->fold();
+    auto* new_operand = std::visit([&](auto val){ return val->fold(); }, operand);
     const auto lambda = [&](const auto& val) {
         return fold_prefix(val, operation, table, line, column);
     };
@@ -434,14 +392,30 @@ Literal* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    return Type::unary(operation, operand->type(), line, column).has_value();
+    if(operand.index() == 0)
+    {
+        auto* variable = std::get<Variable*>(operand);
+        if (table->lookup_const(variable->name()))
+        {
+            std::cout << ConstError(operation.string(), variable->name(), line, column);
+            return false;
+        }
+    }
+    else if(operation.isIncrDecr())
+    {
+        throw SemanticError("assigning to an r-value in prefix expression", line, column);
+    }
+
+    const auto type = std::visit([&](auto val){ return val->type(); }, operand);
+    return Type::unary(operation, type, line, column).has_value();
 }
 
 Type PrefixExpr::type() const
 {
     try
     {
-        return Type::unary(operation, operand->type()).value();
+        const auto type = std::visit([&](auto val){ return val->type(); }, operand);
+        return Type::unary(operation, type).value();
     }
     catch (...)
     {
@@ -456,17 +430,17 @@ std::string PostfixExpr::name() const
 
 std::string PostfixExpr::value() const
 {
-    return operation.string() + operand->value();
+    return operation.string() + variable->value();
 }
 
 std::vector<Node*> PostfixExpr::children() const
 {
-    return {operand};
+    return {variable};
 }
 
 Literal* PostfixExpr::fold()
 {
-    auto* new_operand = operand->fold();
+    auto* new_operand = variable->fold();
     const auto lambda = [&](const auto& val) {
         return fold_postfix(val, operation, table, line, column);
     };
@@ -478,12 +452,16 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    return true;
+    if (table->lookup_const(variable->name()))
+    {
+        std::cout << ConstError(operation.string(), variable->name(), line, column);
+        return false;
+    }
 }
 
 Type PostfixExpr::type() const
 {
-    return operand->type();
+    return variable->type();
 }
 
 std::string CastExpr::name() const
@@ -546,7 +524,7 @@ Literal* Assignment::fold()
 
 bool Assignment::check() const
 {
-    if (variable->isConst())
+    if (table->lookup_const(variable->name()))
     {
         std::cout << ConstError("assignment", variable->name(), line, column);
         return false;
@@ -572,8 +550,7 @@ std::string Declaration::value() const
 std::vector<Node*> Declaration::children() const
 {
     if (expr) return {variable, expr};
-    else
-        return {variable};
+    else return {variable};
 }
 
 Literal* Declaration::fold()
@@ -582,7 +559,7 @@ Literal* Declaration::fold()
 
     if (auto* res = expr->fold())
     {
-        if (variable->isConst())
+        if (table->lookup_const(variable->name()))
         {
             table->set_literal(variable->name(), res->literal);
         }
@@ -593,10 +570,17 @@ Literal* Declaration::fold()
 
 bool Declaration::check() const
 {
-    if(not variable->declare(vartype)) return false;
+    const auto [iter, inserted] = table->insert(variable->name(), vartype);
+    if(not inserted)
+    {
+        std::cout <<  RedefinitionError(variable->name(), line, column);
+        return false;
+    }
+
     if (expr) return Type::convert(expr->type(), variable->type(), false, line, column);
     else return true;
 }
+
 
 std::string PrintfStatement::name() const
 {
@@ -619,8 +603,4 @@ Literal* PrintfStatement::fold()
     return nullptr;
 }
 
-bool PrintfStatement::check() const
-{
-    return true;
-}
 } // namespace Ast

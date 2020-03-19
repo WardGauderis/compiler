@@ -42,5 +42,7 @@ std::optional<TypeVariant> SymbolTable::get_literal(const std::string& id)
 
 bool SymbolTable::lookup_const(const std::string& id)
 {
-    return lookup(id).value()->second.type.isConst();
+    const auto temp = lookup(id);
+    if(temp.has_value()) return (*temp)->second.type.isConst();
+    else return false;
 }

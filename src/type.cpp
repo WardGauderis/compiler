@@ -20,7 +20,11 @@ overloaded(Ts...)->overloaded<Ts...>;
 [[nodiscard]] std::string Type::string() const
 {
     return std::visit(
-        overloaded {[&](const Type* ptr) {
+        overloaded {
+                    [&](std::monostate empty) {
+                        return std::string("undefined");
+                    },
+                    [&](const Type* ptr) {
                         return ptr->string() + "*" + (isTypeConst ? " const" : "");
                     },
                     [&](BaseType base) {
@@ -47,12 +51,12 @@ bool Type::isConst() const
 
 bool Type::isBaseType() const
 {
-    return type.index() == 1;
+    return type.index() == 2;
 }
 
 bool Type::isPointerType() const
 {
-    return type.index() == 0;
+    return type.index() == 1;
 }
 
 bool Type::isIntegralType() const
@@ -158,11 +162,11 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
     {
         // empty statement, just go to throw
     }
-    else if (lhs.isPointerType() and rhs.isIntegralType() and operation == BinaryOperation::Add)
+    else if (lhs.isPointerType() and rhs.isIntegralType() and operation.isAdditiveOperator())
     {
         return lhs;
     }
-    else if (lhs.isIntegralType() and rhs.isPointerType() and operation.isAdditiveOperator())
+    else if (lhs.isIntegralType() and rhs.isPointerType() and operation == BinaryOperation::Add)
     {
         return rhs;
     }

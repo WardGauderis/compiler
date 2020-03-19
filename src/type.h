@@ -47,7 +47,8 @@ enum class BaseType
 class Type
 {
 public:
-    explicit Type(bool isConst, Type* ptr) : isTypeConst(isConst), type(ptr)
+    explicit Type(bool isConst, Type* ptr)
+    : isTypeConst(isConst), type(ptr)
     {
     }
 
@@ -56,9 +57,12 @@ public:
     {
     }
 
-    explicit Type(bool isConst, BaseType baseType) : isTypeConst(isConst), type(baseType)
+    explicit Type(bool isConst, BaseType baseType)
+    : isTypeConst(isConst), type(baseType)
     {
     }
+
+    explicit Type() = default;
 
     [[nodiscard]] std::string string() const;
 
@@ -95,5 +99,5 @@ public:
 private:
     bool isTypeConst;
     // do not change the order of this variant
-    std::variant<Type*, BaseType> type;
+    std::variant<std::monostate, Type*, BaseType> type;
 };

@@ -119,6 +119,11 @@ std::string PrefixOperation::string() const
         throw InternalError("unknown prefix operation");
 }
 
+bool PrefixOperation::isIncrDecr() const
+{
+    return type == Incr or type == Decr;
+}
+
 PostfixOperation PostfixOperation::fromString(const std::string& str)
 {
     if (str == "++") return PostfixOperation::Incr;
