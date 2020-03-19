@@ -42,6 +42,7 @@ struct BinaryOperation
     std::string string() const;
 
     bool isLogicalOperator() const;
+    bool isComparisonOperator() const;
     bool isAdditiveOperator() const;
     bool isDivisionModulo() const;
 };

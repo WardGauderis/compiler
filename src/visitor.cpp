@@ -34,8 +34,8 @@ struct VisitorHelper
     Ret result()
     {
         if (res.has_value()) return *res;
-        else
-            throw InternalError("could not find visitor for " + name);
+        else throw InternalError("could not find visitor with " +
+        std::to_string(context->children.size()) +  " for "  + name);
     }
 
     std::optional<Ret> res = std::nullopt;
@@ -108,11 +108,8 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
     }
     else if (typeid(*context) == typeid(antlr4::tree::TerminalNodeImpl))
     {
-        const auto entry          = table->lookup(context->getText());
         const auto [line, column] = getColumnAndLine(context);
-
-        if (not entry.has_value()) throw UndeclaredError(context->getText(), line, column);
-        return new Ast::Variable(entry.value(), table, line, column);
+        return new Ast::Variable(context->getText(), table, line, column);
     }
     else
         throw UnexpectedContextType(context);
@@ -137,11 +134,9 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
         return visitBasicExpr(context->children[0], table);
     });
     visitor(2, [&](auto* context) {
-        const auto entry = table->lookup(context->children[0]->getText());
-        if (not entry.has_value()) throw UndeclaredError(context->getText());
-
+        const auto identifier = context->children[0]->getText();
         const auto [line, column] = getColumnAndLine(context);
-        const auto lhs            = new Ast::Variable(entry.value(), table, line, column);
+        const auto lhs            = new Ast::Variable(identifier, table, line, column);
 
         return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
     });
@@ -157,16 +152,15 @@ Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         return visitPostfixExpr(context->children[0], table);
     });
     visitor(2, [&](auto* context) {
-        if (typeid(*context) == typeid(CParser::PrefixExprContext))
+        if (typeid(*context->children[1]) == typeid(CParser::PrefixExprContext))
         {
             auto* rhs = visitPrefixExpr(context->children[1], table);
             return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
         }
         else
         {
-            const auto entry = table->lookup(context->children[1]->getText());
-            if (not entry.has_value()) throw UndeclaredError(context->getText());
-            const auto rhs = new Ast::Variable(entry.value(), table, line, column);
+            const auto identifier = context->children[1]->getText();
+            const auto rhs = new Ast::Variable(identifier, table, line, column);
 
             return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
         }
@@ -285,8 +279,7 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         const auto expr           = visitAssignExpr(context->children[2], table);
         const auto entry          = table->lookup(identifier);
 
-        if (not entry.has_value()) throw UndeclaredError(identifier, line, column);
-        auto* var = new Ast::Variable(entry.value(), table, line, column);
+        auto* var = new Ast::Variable(identifier, table, line, column);
         return new Ast::Assignment(var, expr, table, line, column);
     });
     return visitor.result();
@@ -358,18 +351,15 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
     const auto [line, column]    = getColumnAndLine(context);
     const Type type              = visitTypeName(context->children[0], table);
     const auto name              = context->children[1]->getText();
-    const auto [entry, inserted] = table->insert(name, type);
-    auto* var                    = new Ast::Variable(entry, table, line, column);
-
-    if (not inserted) throw RedefinitionError(entry->first, line, column);
+    auto* var                    = new Ast::Variable(name, table, line, column);
 
     VisitorHelper<Ast::Statement*> visitor(context, "statement");
     visitor(2, [&](auto* context) {
-        return new Ast::Declaration(var, nullptr, table, line, column);
+        return new Ast::Declaration(type, var, nullptr, table, line, column);
     });
     visitor(4, [&](auto* context) {
         auto* expr = visitExpr(context->children[3]->children[0], table);
-        return new Ast::Declaration(var, expr, table, line, column);
+        return new Ast::Declaration(type, var, expr, table, line, column);
     });
     return visitor.result();
 }

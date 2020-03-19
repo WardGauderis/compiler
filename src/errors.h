@@ -18,7 +18,7 @@ public:
 
     explicit CompilationError(
         const std::string& message, const unsigned int line = 0, const unsigned int column = 0, bool warning = false)
-        : CompilationError(message, line, column, warning, "error")
+        : CompilationError(message, line, column, warning, "compilation")
     {
     }
 
@@ -98,7 +98,7 @@ struct InternalError : public CompilationError
 struct UnexpectedContextType : public InternalError
 {
     explicit UnexpectedContextType(
-        antlr4::tree::ParseTree* context, const unsigned int line = 0, const unsigned int column = 0., bool warning = false)
+        antlr4::tree::ParseTree* context, const unsigned int line = 0, const unsigned int column = 0, bool warning = false)
         : InternalError(std::string("unexpected context type: ") + typeid(*context).name(), line, column, warning)
     {
     }
@@ -107,7 +107,7 @@ struct UnexpectedContextType : public InternalError
 struct LiteralOutOfRange : public SemanticError
 {
     explicit LiteralOutOfRange(
-        const std::string& literal, const unsigned int line = 0, const unsigned int column = 0., bool warning = true)
+        const std::string& literal, const unsigned int line, const unsigned int column, bool warning = true)
         : SemanticError("literal: " + literal + " out of range", line, column, warning)
     {
     }
@@ -116,18 +116,14 @@ struct LiteralOutOfRange : public SemanticError
 struct InvalidOperands : public SemanticError
 {
     explicit InvalidOperands(
-        const std::string& operation,
-        const std::string& lhs,
-        const std::string& rhs,
-        const unsigned int line   = 0,
-        const unsigned int column = 0.)
+        const std::string& operation, const std::string& lhs, const std::string& rhs, const unsigned int line, const unsigned int column)
         : SemanticError(
-            "invalid operands to binary " + operation + "(has '" + lhs + " and " + rhs + "')", line, column, true)
+            "invalid operands to binary " + operation + "(have '" + lhs + "' and '" + rhs + "')", line, column, false)
     {
     }
     explicit InvalidOperands(
         const std::string& operation, const std::string& operand, const unsigned int line = 0, const unsigned int column = 0.)
-        : SemanticError("invalid operands to unary " + operation + "(has '" + operand + "')", line, column, true)
+        : SemanticError("invalid operands to unary " + operation + "(have '" + operand + "')", line, column, false)
     {
     }
 };
@@ -135,8 +131,17 @@ struct InvalidOperands : public SemanticError
 struct ConversionError : public SemanticError
 {
     explicit ConversionError(
-        const std::string& operation, const std::string& from, const std::string& to, size_t line = 0, size_t column = 0)
+        const std::string& operation, const std::string& from, const std::string& to, const unsigned int line, const unsigned int column)
         : SemanticError(operation + " to incompatible type (from '" + from + "' to '" + to + "')", line, column, false)
+    {
+    }
+};
+
+struct NarrowingConversion : public SemanticError
+{
+    explicit NarrowingConversion(
+        const std::string& operation, const std::string& from, const std::string& to, const unsigned int line, const unsigned int column)
+        : SemanticError(operation + " to narrower type (from '" + from + "' to '" + to + "')", line, column, true)
     {
     }
 };
@@ -148,8 +153,8 @@ struct PointerConversionWarning : public SemanticError
         const std::string& whence,
         const std::string& from,
         const std::string& to,
-        size_t line   = 0,
-        size_t column = 0)
+        const unsigned int line,
+        const unsigned int column)
         : SemanticError(
             operation + " " + whence + " pointer type without cast (from '" + from + "' to '" + to
                 + "')",

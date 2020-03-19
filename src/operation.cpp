@@ -74,6 +74,11 @@ bool BinaryOperation::isLogicalOperator() const
     return type == And or type == Or;
 }
 
+bool BinaryOperation::isComparisonOperator() const
+{
+    return type == Lt or type == Gt or type == Le or type == Ge or type == Eq or type == Neq;
+}
+
 bool BinaryOperation::isAdditiveOperator() const
 {
     return type == Add or type == Sub;

@@ -142,16 +142,26 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& ro
 
 void Node::complete(bool check, bool fold, bool output)
 {
+    bool result                               = true;
     std::function<void(Ast::Node*)> recursion = [&](Ast::Node* root) {
-        if (check) root->check();
+        result &= root->check();
         for (const auto child : root->children())
         {
             recursion(child);
         }
     };
-    recursion(this);
-
-    if (fold) this->fold();
+    if (check)
+    {
+        recursion(this);
+    }
+    if (not result)
+    {
+        throw CompilationError("could not complete compilation due to above errors\n");
+    }
+    if (fold)
+    {
+        [[maybe_unused]] auto _ = this->fold();
+    }
 }
 
 std::string Expr::color() const
@@ -189,8 +199,9 @@ Literal* Comment::fold()
     return nullptr;
 }
 
-void Comment::check() const
+bool Comment::check() const
 {
+    return true;
 }
 
 std::string Block::name() const
@@ -219,8 +230,9 @@ Literal* Block::fold()
     return nullptr;
 }
 
-void Block::check() const
+bool Block::check() const
 {
+    return true;
 }
 
 std::string Literal::name() const
@@ -247,8 +259,9 @@ Literal* Literal::fold()
     return this;
 }
 
-void Literal::check() const
+bool Literal::check() const
 {
+    return true;
 }
 
 Type Literal::type() const
@@ -258,12 +271,16 @@ Type Literal::type() const
 
 std::string Variable::name() const
 {
-    return entry->first;
+    const auto temp = table->lookup(identifier);
+    if (not temp.has_value())
+        throw InternalError("variable " + identifier + " not found in symbol table");
+
+    return (*temp)->first;
 }
 
 std::string Variable::value() const
 {
-    return entry->second.type.string();
+    return getEntry()->second.type.string();
 }
 
 std::vector<Node*> Variable::children() const
@@ -281,19 +298,51 @@ Literal* Variable::fold()
     const auto& literal = table->get_literal(name());
     if (literal.has_value())
     {
-        return new Ast::Literal(literal.value(), table, column, line);
+        return new Ast::Literal(literal.value(), table, line, column);
     }
     else
         return nullptr;
 }
 
-void Variable::check() const
+bool Variable::check() const
 {
+    if(not table->lookup(identifier).has_value())
+    {
+        std::cout << UndeclaredError(identifier, line, column);
+        return false;
+    }
+    return true;
 }
 
 Type Variable::type() const
 {
-    return entry->second.type;
+    return getEntry()->second.type;
+}
+
+SymbolTable::Entry Variable::getEntry() const
+{
+    const auto temp = table->lookup(identifier);
+    if (not temp.has_value())
+    {
+        throw InternalError("variable" + identifier + " not found in symbol table");
+    }
+    return *temp;
+}
+
+bool Variable::isConst() const
+{
+    return table->lookup_const(identifier);
+}
+
+bool Variable::declare(Type type) const
+{
+    const auto [iter, inserted] = table->insert(identifier, type);
+    if(not inserted)
+    {
+        std::cout << RedefinitionError(identifier, line, column);
+        return false;
+    }
+    return true;
 }
 
 std::string BinaryExpr::name() const
@@ -339,16 +388,16 @@ Literal* BinaryExpr::fold()
     }
 }
 
-void BinaryExpr::check() const
+bool BinaryExpr::check() const
 {
-    Type::combine(operation, rhs->type(), lhs->type(), line, column);
+    return Type::combine(operation, rhs->type(), lhs->type(), line, column).has_value();
 }
 
 Type BinaryExpr::type() const
 {
     try
     {
-        return Type::combine(operation, lhs->type(), rhs->type());
+        return Type::combine(operation, lhs->type(), rhs->type()).value();
     }
     catch (...)
     {
@@ -383,18 +432,18 @@ Literal* PrefixExpr::fold()
     return nullptr;
 }
 
-void PrefixExpr::check() const
+bool PrefixExpr::check() const
 {
-    Type::unary(operation, operand->type(), line, column);
+    return Type::unary(operation, operand->type(), line, column).has_value();
 }
 
 Type PrefixExpr::type() const
 {
     try
     {
-        return Type::unary(operation, operand->type());
+        return Type::unary(operation, operand->type()).value();
     }
-    catch(...)
+    catch (...)
     {
         throw InternalError("something went terribly wrong while folding in prefix expressions");
     }
@@ -427,8 +476,9 @@ Literal* PostfixExpr::fold()
     return nullptr;
 }
 
-void PostfixExpr::check() const
+bool PostfixExpr::check() const
 {
+    return true;
 }
 
 Type PostfixExpr::type() const
@@ -463,10 +513,9 @@ Literal* CastExpr::fold()
         return nullptr;
 }
 
-void CastExpr::check() const
+bool CastExpr::check() const
 {
-    const auto error = Type::convert(operand->type(), cast, true, line, column);
-    if (error.has_value()) std::cout << *error;
+    return Type::convert(operand->type(), cast, true, line, column);
 }
 
 Type CastExpr::type() const
@@ -495,15 +544,14 @@ Literal* Assignment::fold()
     return nullptr;
 }
 
-void Assignment::check() const
+bool Assignment::check() const
 {
-    const auto error = Type::convert(expr->type(), variable->type(), false, line, column);
-    if (error.has_value()) std::cout << *error;
-
-    if (table->lookup_const(variable->name()))
+    if (variable->isConst())
     {
         std::cout << ConstError("assignment", variable->name(), line, column);
+        return false;
     }
+    return Type::convert(expr->type(), variable->type(), false, line, column);
 }
 
 Type Assignment::type() const
@@ -534,7 +582,7 @@ Literal* Declaration::fold()
 
     if (auto* res = expr->fold())
     {
-        if (variable->entry->second.type.isConst())
+        if (variable->isConst())
         {
             table->set_literal(variable->name(), res->literal);
         }
@@ -543,8 +591,11 @@ Literal* Declaration::fold()
     return nullptr;
 }
 
-void Declaration::check() const
+bool Declaration::check() const
 {
+    if(not variable->declare(vartype)) return false;
+    if (expr) return Type::convert(expr->type(), variable->type(), false, line, column);
+    else return true;
 }
 
 std::string PrintfStatement::name() const
@@ -568,7 +619,8 @@ Literal* PrintfStatement::fold()
     return nullptr;
 }
 
-void PrintfStatement::check() const
+bool PrintfStatement::check() const
 {
+    return true;
 }
 } // namespace Ast

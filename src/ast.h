@@ -44,9 +44,9 @@ struct Node
 
     [[nodiscard]] virtual std::string color() const = 0;
 
-    virtual Literal* fold() = 0;
+    [[nodiscard]] virtual Literal* fold() = 0;
 
-    virtual void check() const = 0;
+    [[nodiscard]] virtual bool check() const = 0;
 
     [[nodiscard]] virtual llvm::Value* codegen() const = 0;
 
@@ -89,7 +89,7 @@ struct Comment final : public Node
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
     std::string comment;
@@ -107,7 +107,7 @@ struct Block final : public Node
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
     std::vector<Node*> nodes;
@@ -125,7 +125,7 @@ struct Literal final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -134,8 +134,8 @@ struct Literal final : public Expr
 
 struct Variable final : public Expr
 {
-    explicit Variable(SymbolTable::Entry entry, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Expr(std::move(table), line, column), entry(entry)
+    explicit Variable(std::string identifier, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+        : Expr(std::move(table), line, column), identifier(std::move(identifier))
     {
     }
 
@@ -144,11 +144,15 @@ struct Variable final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
-    SymbolTable::Entry entry;
+    [[nodiscard]] SymbolTable::Entry getEntry() const;
+    [[nodiscard]] bool isConst() const;
+    [[nodiscard]] bool declare(Type type) const;
+
+    std::string identifier;
 };
 
 struct BinaryExpr final : public Expr
@@ -162,7 +166,7 @@ struct BinaryExpr final : public Expr
     [[nodiscard]] std::string value() const override;
     [[nodiscard]] std::vector<Node*> children() const override;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -183,7 +187,7 @@ struct PostfixExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -202,7 +206,7 @@ struct PrefixExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -221,7 +225,7 @@ struct CastExpr final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -240,7 +244,7 @@ struct Assignment final : public Expr
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] Type type() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
@@ -250,8 +254,8 @@ struct Assignment final : public Expr
 
 struct Declaration final : public Statement
 {
-    explicit Declaration(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-        : Statement(std::move(table), line, column), variable(variable), expr(expr)
+    explicit Declaration(Type vartype, Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+        : Statement(std::move(table), line, column), vartype(vartype), variable(variable), expr(expr)
     {
     }
 
@@ -259,9 +263,10 @@ struct Declaration final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
+    Type vartype;
     Variable* variable;
     Expr* expr; // can be nullptr
 };
@@ -277,7 +282,7 @@ struct PrintfStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     Literal* fold() final;
-    void check() const final;
+    bool check() const final;
     [[nodiscard]] llvm::Value* codegen() const final;
 
     Expr* expr;
