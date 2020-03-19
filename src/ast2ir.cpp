@@ -4,13 +4,8 @@
 
 #include "ast.h"
 #include "errors.h"
-#include "type.h"
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
-#include <filesystem>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -43,8 +38,11 @@ llvm::Type* ::Type::convertToIR() const
 
 namespace Ast {
 
-	void ast2ir(const std::unique_ptr<Ast::Node>& root, std::filesystem::path& path)
+	void ast2ir(const std::unique_ptr<Ast::Node>& root, const std::filesystem::path& path)
 	{
+		module.setSourceFileName(path.string());
+		module.setModuleIdentifier(path.string());
+
 		module.getOrInsertFunction("printf",
 				llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true));
 
@@ -60,7 +58,34 @@ namespace Ast {
 
 		verifyFunction(*main, &errs());
 		verifyModule(module, &errs());
-		module.print(outs(), nullptr, false, true);
+		std::error_code ec;
+		raw_fd_ostream out("llvm_test/test.ll", ec);
+		module.print(out, nullptr, false, true);
+
+	}
+
+	llvm::Value* cast(llvm::Value* value, llvm::Type* to)
+	{
+		auto from = value->getType();
+		if (from==to) return value;
+		if (from->isIntegerTy())
+		{
+			if (to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
+			else if (to->isFloatTy()) return builder.CreateSIToFP(value, to);
+			else if (to->isPointerTy()) return builder.CreateIntToPtr(value, to);
+			else throw InternalError("type is not supported in IR");
+		}
+		else if (from->isFloatTy())
+		{
+			if (to->isIntegerTy()) return builder.CreateFPToSI(value, to);
+			else throw InternalError("type is not supported in IR");
+		}
+		else if (from->isPointerTy())
+		{
+			if (to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
+			if (to->isPointerTy()) return builder.CreatePointerCast(value, to);
+			else throw InternalError("type is not supported in IR");
+		}
 	}
 
 	llvm::Value* Comment::codegen() const
@@ -96,58 +121,85 @@ namespace Ast {
 
 	llvm::Value* Variable::codegen() const
 	{
-		return builder.CreateLoad(variables[(*getEntry()).first], (*getEntry()).first);
+		return builder.CreateLoad(variables[(*entry).first]);
 	}
 
 	llvm::Value* BinaryExpr::codegen() const
 	{
 		auto l = lhs->codegen();
 		auto r = rhs->codegen();
-		bool floatOperation = type().isFloatingType();
+		auto resultType = type().convertToIR();
+		bool floatOperation = resultType->isFloatTy();
 
-		if (floatOperation)
+		if (operation.type==BinaryOperation::Add && l->getType()->isPointerTy())
+			return builder.CreateInBoundsGEP(l->getType(), l, r);
+		else if (operation.type==BinaryOperation::Add && r->getType()->isPointerTy())
+			return builder.CreateInBoundsGEP(r->getType(), r, l);
+		else if (operation.type==BinaryOperation::Sub && l->getType()->isPointerTy())
 		{
-			if (!lhs->type().isFloatingType()) l = builder.CreateSIToFP(l, builder.getFloatTy());
-			if (!rhs->type().isFloatingType()) r = builder.CreateSIToFP(r, builder.getFloatTy());
-		}
-		else
-		{
-			if (lhs->type().isCharacterType()) l = builder.CreateSExt(l, builder.getInt32Ty());
-			if (rhs->type().isCharacterType()) r = builder.CreateSExt(l, builder.getInt32Ty());
+			auto temp = builder.CreateSub(ConstantInt::get(r->getType(), 0), r);
+			return builder.CreateInBoundsGEP(l->getType(), l, temp);
 		}
 
-		if (operation.type==BinaryOperation::Mul)
-			return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r, "mul");
-		if (operation.type==BinaryOperation::Div)
-			return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r, "div");
-		if (operation.type==BinaryOperation::Mod) return builder.CreateBinOp(Instruction::SRem, l, r, "mod");
-		if (operation.type==BinaryOperation::Add)
-			return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r, "add");
-		if (operation.type==BinaryOperation::Sub)
-			return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r, "sub");
+		if (l->getType()->isFloatTy() || r->getType()->isFloatTy())
+		{
+			l = cast(l, builder.getFloatTy());
+			r = cast(r, resultType);
+		}
+		else if (l->getType()->isIntegerTy() || r->getType()->isIntegerTy())
+		{
+			l = cast(l, builder.getInt32Ty());
+			r = cast(r, builder.getInt32Ty());
+		}
+		else if (l->getType()->isPointerTy())
+		{
+			l = cast(l, l->getType());
+			r = cast(r, l->getType());
+		}
+		else if (r->getType()->isPointerTy())
+		{
+			l = cast(l, r->getType());
+			r = cast(r, r->getType());
+		}
+
 		if (operation.type==BinaryOperation::Lt)
+		{
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLT, l, r, "lt") :
 			       builder.CreateICmp(CmpInst::ICMP_SLT, l, r, "lt");
-		if (operation.type==BinaryOperation::Le)
+		}
+		else if (operation.type==BinaryOperation::Le)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLE, l, r, "le") :
 			       builder.CreateICmp(CmpInst::ICMP_SLE, l, r, "le");
-		if (operation.type==BinaryOperation::Gt)
+		else if (operation.type==BinaryOperation::Gt)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGT, l, r, "gt") :
 			       builder.CreateICmp(CmpInst::ICMP_SGT, l, r, "gt");
-		if (operation.type==BinaryOperation::Ge)
+		else if (operation.type==BinaryOperation::Ge)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGE, l, r, "ge") :
 			       builder.CreateICmp(CmpInst::ICMP_SGE, l, r, "ge");
-		if (operation.type==BinaryOperation::Eq)
+		else if (operation.type==BinaryOperation::Eq)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OEQ, l, r, "eq") :
 			       builder.CreateICmp(CmpInst::ICMP_EQ, l, r, "eq");
-		if (operation.type==BinaryOperation::Neq)
+		else if (operation.type==BinaryOperation::Neq)
 			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, l, r, "neq") :
 			       builder.CreateICmp(CmpInst::ICMP_NE, l, r, "nq");
+
+		l = cast(l, resultType);
+		r = cast(r, resultType);
+		if (operation.type==BinaryOperation::Mul)
+			return builder.CreateBinOp(floatOperation ? Instruction::FMul : Instruction::Mul, l, r, "mul");
+		else if (operation.type==BinaryOperation::Div)
+			return builder.CreateBinOp(floatOperation ? Instruction::FDiv : Instruction::SDiv, l, r, "div");
+		else if (operation.type==BinaryOperation::Mod) return builder.CreateBinOp(Instruction::SRem, l, r, "mod");
+		else if (operation.type==BinaryOperation::Add)
+			return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r, "add");
+		else if (operation.type==BinaryOperation::Sub)
+			return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r, "sub");
+
 		if (operation.type==BinaryOperation::And)//TODO logical
 			return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r, "and");
 		if (operation.type==BinaryOperation::Or)
 			return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r, "or");
-		//TODO or and, float pointer
+
 		throw InternalError("type is not supported in IR");
 	}
 
@@ -200,38 +252,31 @@ namespace Ast {
 		else throw InternalError("type is not supported in IR");
 	}
 
-	llvm::Value* cast(llvm::Value* value, llvm::Type* to)
-	{
-		auto from = value->getType();
-		if (from==to) return value;
-		if (from->isIntegerTy() && to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
-		if (from->isIntegerTy() && to->isFloatTy()) return builder.CreateSIToFP(value, to);
-		if (from->isFloatTy() && to->isIntegerTy()) return builder.CreateFPToSI(value, to);
-		if (from->isPointerTy() && to->isPointerTy()) return builder.CreatePointerCast(value, to);
-		if (from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
-		if (from->isPointerTy() && to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
-	}
-
 	llvm::Value* CastExpr::codegen() const
 	{
 		auto toCast = operand->codegen();
-		auto from = toCast->getType();
 		auto to = type().convertToIR();
-		return nullptr;
+		return Ast::cast(toCast, to);
 	}
 
 	llvm::Value* Assignment::codegen() const
 	{
 		auto result = expr->codegen();
-		builder.CreateStore(result, variables[variable->name()]);
-		return result;
+		auto tmp = cast(result, variable->type().convertToIR());
+		builder.CreateStore(tmp, variables[variable->name()]);
+		return tmp;
 	}
 
 	llvm::Value* Declaration::codegen() const
 	{
-		auto result = builder.CreateAlloca(variable->type().convertToIR(), nullptr, variable->name());
+		auto type = variable->type().convertToIR();
+		auto result = builder.CreateAlloca(type, nullptr, variable->name());
 		variables[variable->name()] = result;
-		if (expr) builder.CreateStore(expr->codegen(), result);
+		if (expr)
+		{
+			auto tmp = cast(expr->codegen(), type);
+			builder.CreateStore(tmp, variables[variable->name()]);
+		}
 		return result;
 	}
 
@@ -247,6 +292,7 @@ namespace Ast {
 		}
 		else if (expr->type().isFloatingType())
 		{
+			result = builder.CreateFPExt(result, builder.getDoubleTy());
 			format = "%f\n";
 			name = "floatFormat";
 		}
