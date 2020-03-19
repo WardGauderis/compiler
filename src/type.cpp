@@ -130,7 +130,7 @@ BaseType Type::fromString(const std::string& str)
         throw InternalError("string cannot convert to base type");
 }
 
-std::optional<Type> Type::unary(PrefixOperation operation, Type operand, size_t line, size_t column)
+std::optional<Type> Type::unary(PrefixOperation operation, Type operand, size_t line, size_t column, bool print)
 {
     if(operation == PrefixOperation::Not)
     {
@@ -138,13 +138,13 @@ std::optional<Type> Type::unary(PrefixOperation operation, Type operand, size_t 
     }
     else if((operation == PrefixOperation::Plus or operation == PrefixOperation::Neg) and operand.isPointerType())
     {
-        std::cout << InvalidOperands(operation.string(), operand.string(), line, column);
+        if(print) std::cout << InvalidOperands(operation.string(), operand.string(), line, column);
         return std::nullopt;
     }
     return operand;
 }
 
-std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column)
+std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column, bool print)
 {
     if (operation.isLogicalOperator())
     {
@@ -174,11 +174,11 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
     {
         return rhs;
     }
-    std::cout << InvalidOperands(operation.string(), lhs.string(), rhs.string(), line, column);
+    if(print) std::cout << InvalidOperands(operation.string(), lhs.string(), rhs.string(), line, column);
     return std::nullopt;
 }
 
-bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column)
+bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column, bool print)
 {
     std::string operation = cast ? "casting" : "assigning";
 
@@ -186,24 +186,24 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column)
     {
         if (to.isFloatingType())
         {
-            std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+            if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
             return false;
         }
         else if (to.isIntegralType() and not cast)
         {
-            std::cout << PointerConversionWarning(operation, "from", from.string(), to.string(), line, column);
+            if(print) std::cout << PointerConversionWarning(operation, "from", from.string(), to.string(), line, column);
         }
     }
     if (to.isPointerType())
     {
         if (from.isFloatingType())
         {
-            std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+            if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
             return false;
         }
         else if (from.isIntegralType() and not cast)
         {
-            std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
+            if(print) std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
         }
     }
 

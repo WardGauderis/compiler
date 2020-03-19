@@ -375,11 +375,11 @@ Type BinaryExpr::type() const
 {
     try
     {
-        return Type::combine(operation, lhs->type(), rhs->type()).value();
+        return Type::combine(operation, lhs->type(), rhs->type(), 0, 0, false).value();
     }
     catch (...)
     {
-        throw InternalError("something went horribly wrong while folding binary expressions");
+        return Type();
     }
 }
 
@@ -433,11 +433,11 @@ Type PrefixExpr::type() const
     try
     {
         const auto type = std::visit([&](auto val){ return val->type(); }, operand);
-        return Type::unary(operation, type).value();
+        return Type::unary(operation, type, 0, 0, false).value();
     }
     catch (...)
     {
-        throw InternalError("something went terribly wrong while folding in prefix expressions");
+        return Type();
     }
 }
 

@@ -92,9 +92,9 @@ public:
     static std::string toString(BaseType type);
     static BaseType fromString(const std::string& str);
 
-    static std::optional<Type> unary(PrefixOperation operation, Type operand, size_t line = 0, size_t column = 0);
-    static std::optional<Type> combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0);
-    static bool convert(Type from, Type to, bool cast, size_t line = 0, size_t column = 0);
+    static std::optional<Type> unary(PrefixOperation operation, Type operand, size_t line = 0, size_t column = 0, bool print = true);
+    static std::optional<Type> combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0, bool print = true);
+    static bool convert(Type from, Type to, bool cast, size_t line = 0, size_t column = 0, bool print = true);
 
 private:
     bool isTypeConst;
