@@ -13,6 +13,7 @@ static LLVMContext context;
 static std::unique_ptr<Module> module;
 static std::unique_ptr<IRBuilder<>> builder;
 static std::unique_ptr<std::unordered_map<std::string, AllocaInst*>> variables;
+//static BasicBlock::iterator
 
 llvm::Type* ::Type::convertToIR() const
 {

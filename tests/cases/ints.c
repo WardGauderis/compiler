@@ -15,9 +15,9 @@ int l = -+1+!!!4;
 
 int m = --l;
 int n = l--;
-int o = b && c;
-int p = ++b && --c;
-int q = d || e;
+int o = b != c;
+int p = ++b < --c;
+int q = d * e;
 int r = g < h;
 int s = n > m;
 int t = (g = h);
