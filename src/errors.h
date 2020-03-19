@@ -82,7 +82,7 @@ struct RedefinitionError : public SemanticError
 struct ConstError : public SemanticError
 {
     explicit ConstError(const std::string& operation, const std::string& name, unsigned int line = 0, unsigned int column = 0)
-        : SemanticError(operation + " of const variable '" + name + "' is not allowed", line, column)
+        : SemanticError("operation "+operation + " on const variable '" + name + "' is not allowed", line, column)
     {
     }
 };
@@ -126,12 +126,12 @@ struct InvalidOperands : public SemanticError
     explicit InvalidOperands(
         const std::string& operation, const std::string& lhs, const std::string& rhs, const unsigned int line, const unsigned int column)
         : SemanticError(
-            "invalid operands to binary " + operation + "(have '" + lhs + "' and '" + rhs + "')", line, column, false)
+            "invalid operands to binary operation '" + operation + "' (have '" + lhs + "' and '" + rhs + "')", line, column, false)
     {
     }
     explicit InvalidOperands(
         const std::string& operation, const std::string& operand, const unsigned int line = 0, const unsigned int column = 0.)
-        : SemanticError("invalid operands to unary " + operation + "(have '" + operand + "')", line, column, false)
+        : SemanticError("invalid operands to unary operation '" + operation + "' (have '" + operand + "')", line, column, false)
     {
     }
 };
