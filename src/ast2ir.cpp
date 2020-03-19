@@ -59,9 +59,8 @@ namespace Ast {
 		verifyFunction(*main, &errs());
 		verifyModule(module, &errs());
 		std::error_code ec;
-		raw_fd_ostream out("llvm_test/test.ll", ec);
+		raw_fd_ostream out("test.ll", ec);
 		module.print(out, nullptr, false, true);
-
 	}
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to)
@@ -86,6 +85,7 @@ namespace Ast {
 			if (to->isPointerTy()) return builder.CreatePointerCast(value, to);
 			else throw InternalError("type is not supported in IR");
 		}
+		throw InternalError("cast is not supported in IR");
 	}
 
 	llvm::Value* Comment::codegen() const
@@ -121,7 +121,7 @@ namespace Ast {
 
 	llvm::Value* Variable::codegen() const
 	{
-		return builder.CreateLoad(variables[(*entry).first]);
+		return builder.CreateLoad(variables[identifier]);
 	}
 
 	llvm::Value* BinaryExpr::codegen() const
@@ -129,7 +129,6 @@ namespace Ast {
 		auto l = lhs->codegen();
 		auto r = rhs->codegen();
 		auto resultType = type().convertToIR();
-		bool floatOperation = resultType->isFloatTy();
 
 		if (operation.type==BinaryOperation::Add && l->getType()->isPointerTy())
 			return builder.CreateInBoundsGEP(l->getType(), l, r);
@@ -141,10 +140,12 @@ namespace Ast {
 			return builder.CreateInBoundsGEP(l->getType(), l, temp);
 		}
 
+		bool floatOperation = false;
 		if (l->getType()->isFloatTy() || r->getType()->isFloatTy())
 		{
 			l = cast(l, builder.getFloatTy());
-			r = cast(r, resultType);
+			r = cast(r, builder.getFloatTy());
+			floatOperation = true;
 		}
 		else if (l->getType()->isIntegerTy() || r->getType()->isIntegerTy())
 		{
@@ -162,27 +163,37 @@ namespace Ast {
 			r = cast(r, r->getType());
 		}
 
+		Value* tmp;
 		if (operation.type==BinaryOperation::Lt)
 		{
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLT, l, r, "lt") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLT, l, r, "lt") :
 			       builder.CreateICmp(CmpInst::ICMP_SLT, l, r, "lt");
 		}
 		else if (operation.type==BinaryOperation::Le)
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLE, l, r, "le") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OLE, l, r, "le") :
 			       builder.CreateICmp(CmpInst::ICMP_SLE, l, r, "le");
 		else if (operation.type==BinaryOperation::Gt)
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGT, l, r, "gt") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGT, l, r, "gt") :
 			       builder.CreateICmp(CmpInst::ICMP_SGT, l, r, "gt");
 		else if (operation.type==BinaryOperation::Ge)
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGE, l, r, "ge") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OGE, l, r, "ge") :
 			       builder.CreateICmp(CmpInst::ICMP_SGE, l, r, "ge");
 		else if (operation.type==BinaryOperation::Eq)
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OEQ, l, r, "eq") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_OEQ, l, r, "eq") :
 			       builder.CreateICmp(CmpInst::ICMP_EQ, l, r, "eq");
 		else if (operation.type==BinaryOperation::Neq)
-			return floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, l, r, "neq") :
+			tmp = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, l, r, "neq") :
 			       builder.CreateICmp(CmpInst::ICMP_NE, l, r, "nq");
 
+		if (operation.type==BinaryOperation::And)//TODO logical
+			return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r, "and");
+		if (operation.type==BinaryOperation::Or)
+			return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r, "or");
+
+		if (tmp) return builder.CreateZExt(tmp, builder.getInt32Ty());
+
+
+		floatOperation = type().isFloatingType();
 		l = cast(l, resultType);
 		r = cast(r, resultType);
 		if (operation.type==BinaryOperation::Mul)
@@ -194,12 +205,6 @@ namespace Ast {
 			return builder.CreateBinOp(floatOperation ? Instruction::FAdd : Instruction::Add, l, r, "add");
 		else if (operation.type==BinaryOperation::Sub)
 			return builder.CreateBinOp(floatOperation ? Instruction::FSub : Instruction::Sub, l, r, "sub");
-
-		if (operation.type==BinaryOperation::And)//TODO logical
-			return builder.CreateBinOp(floatOperation ? Instruction::And : Instruction::Mul, l, r, "and");
-		if (operation.type==BinaryOperation::Or)
-			return builder.CreateBinOp(floatOperation ? Instruction::Or : Instruction::Mul, l, r, "or");
-
 		throw InternalError("type is not supported in IR");
 	}
 
@@ -219,22 +224,25 @@ namespace Ast {
 		else if (type.isPointerType())
 			temp = builder.CreateInBoundsGEP(input->getType(), input, builder.getInt32(inc*2-1), opName);
 		else throw InternalError("type is not supported in IR");
-		return builder.CreateStore(temp, variables[name]);
+		builder.CreateStore(temp, variables[name]);
+		return temp;
 	}
 
 	llvm::Value* PostfixExpr::codegen() const
 	{
-		auto result = operand->codegen();
+		auto result = variable->codegen();
 		bool inc = operation.type==PostfixOperation::Incr;
-		increaseOrDecrease(inc, type(), result, name());
+		increaseOrDecrease(inc, type(), result, variable->name());
 		return result;
 	}
 
 	llvm::Value* PrefixExpr::codegen() const
 	{
-		auto result = operand->codegen();
-		if (operation.type==PrefixOperation::Incr) return increaseOrDecrease(true, type(), result, name());
-		else if (operation.type==PrefixOperation::Decr) return increaseOrDecrease(false, type(), result, name());
+		auto result = children()[0]->codegen();
+		if (operation.type==PrefixOperation::Incr)
+			return increaseOrDecrease(true, type(), result, children()[0]->name());
+		else if (operation.type==PrefixOperation::Decr)
+			return increaseOrDecrease(false, type(), result, children()[0]->name());
 		else if (operation.type==PrefixOperation::Plus) return result;
 		else if (operation.type==PrefixOperation::Neg)
 		{
@@ -272,6 +280,7 @@ namespace Ast {
 		auto type = variable->type().convertToIR();
 		auto result = builder.CreateAlloca(type, nullptr, variable->name());
 		variables[variable->name()] = result;
+
 		if (expr)
 		{
 			auto tmp = cast(expr->codegen(), type);
@@ -306,8 +315,20 @@ namespace Ast {
 			format = "%d\n";
 			name = "intFormat";
 		}
-		else throw InternalError("ype is not supported in IR");
-		return builder.CreateCall(module.getFunction("printf"),
-				{builder.CreateGlobalStringPtr(format, name), result});//TODO multilple calls
+		else throw InternalError("type is not supported in IR");
+
+		auto string = module.getNamedGlobal(name);
+		if (!string)
+		{
+			return builder.CreateCall(module.getFunction("printf"),
+					{builder.CreateGlobalStringPtr(format, name), result});
+		}
+		else
+		{
+			auto ptr = builder.CreateInBoundsGEP(string->getValueType(), string,
+					{builder.getInt32(0), builder.getInt32(0)});
+			return builder.CreateCall(module.getFunction("printf"),
+					{ptr, result});
+		}
 	}
 }
