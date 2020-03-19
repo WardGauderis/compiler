@@ -11,3 +11,7 @@ a % 2; // error
 a - 6; // no error
 6 - a; // error
 
+a <= 5.5; // error
+5.5 > a; // error
+a || 5.5; // no error
+

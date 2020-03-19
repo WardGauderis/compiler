@@ -146,12 +146,16 @@ std::optional<Type> Type::unary(PrefixOperation operation, Type operand, size_t 
 
 std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs, size_t line, size_t column)
 {
-    if (operation.isLogicalOperator() or operation.isComparisonOperator())
+    if (operation.isLogicalOperator())
     {
         return Type(false, BaseType::Int); // TODO: make this a bool
     }
 
-    if (lhs.isBaseType() and rhs.isBaseType())
+    if (operation.isComparisonOperator() and ((rhs.isPointerType() and lhs.isFloatingType()) or (rhs.isFloatingType() and lhs.isPointerType())))
+    {
+        // empty statement, just go to throw
+    }
+    else if (lhs.isBaseType() and rhs.isBaseType())
     {
         if(operation == BinaryOperation::Mod and (lhs.isFloatingType() or rhs.isFloatingType()))
         {
