@@ -70,9 +70,31 @@ void output_all_tests(bool redo_existing)
 				std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
 				const auto cst = std::make_unique<Cst::Root>(stream);
 				std::cerr.rdbuf(old);
-				std::string warning = buffer.str();
-				if (!warning.empty()) throw SyntaxError(warning.substr(0, warning.size()-1));
+				std::string error = buffer.str();
 
+				if(not error.empty())
+				{
+				    const auto index0 = error.find(':');
+				    if(index0 == std::string::npos) break;
+
+				    const auto index1 = error.find(' ', index0);
+                    if(index1 == std::string::npos) break;
+
+                    const auto index2 = error.find('\n', index0);
+                    if(index2 == std::string::npos) break;
+
+				    try
+				    {
+				        const auto line = std::stoi(error.substr(5, index0 - 5));
+				        const auto column = std::stoi(error.substr(index0 + 1, index1 - index0 - 1));
+				        throw SyntaxError(error.substr(index1 + 1, index2 - index1 - 1), line, column);
+				    }
+				    catch(std::invalid_argument& ex)
+				    {
+				        throw InternalError("unexpected outcome of stoi: " + std::string(ex.what()));
+				    }
+				}
+				
 				make_dot(cst, cst_path);
 
 				const auto ast = Ast::from_cst(cst, true);

@@ -115,8 +115,8 @@ struct UnexpectedContextType : public InternalError
 struct LiteralOutOfRange : public SemanticError
 {
     explicit LiteralOutOfRange(
-        const std::string& literal, const unsigned int line, const unsigned int column, bool warning = true)
-        : SemanticError("literal: " + literal + " out of range", line, column, warning)
+        const std::string& literal, const unsigned int line, const unsigned int column)
+        : SemanticError("literal: " + literal + " out of range", line, column, true)
     {
     }
 };

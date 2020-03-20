@@ -82,7 +82,7 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         }
         catch (const std::out_of_range& ex)
         {
-            throw LiteralOutOfRange(terminal->getText(), line, column);
+            std::cout << LiteralOutOfRange(terminal->getText(), line, column);
         }
     case CParser::INT:
         try
