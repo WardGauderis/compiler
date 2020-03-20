@@ -3,10 +3,10 @@
 #### Thomas Dooms - Ward Gauderis - UAntwerpen bachelor 2 Informatica
 
 #### Compilation:
- - ./build
+ - ./build.sh
 
 #### Execution:
  - ./compiler -h
 
 #### Execution of tests:
- - ./test
+ - ./test.sh
