@@ -209,7 +209,10 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column, bo
             if(print) std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
         }
     }
-
+    if(from.isBaseType() and to.isBaseType() and to.getBaseType() < from.getBaseType())
+    {
+        std::cout << NarrowingConversion(operation, from.string(), to.string(), line, column);
+    }
     if(not cast and from.isPointerType() and to.isPointerType() and from != to)
     {
         std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
