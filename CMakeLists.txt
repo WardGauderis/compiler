@@ -18,7 +18,7 @@ target_link_libraries(compiler antlr4-runtime LLVM boost_program_options)
 target_include_directories(
         compiler
         PUBLIC
-        /usr/include/antlr4-runtime
+        /usr/include/antlr4-runtime #antlr4-runtime head directory on the system
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/gen
 )
