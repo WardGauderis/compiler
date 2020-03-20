@@ -72,29 +72,29 @@ void output_all_tests(bool redo_existing)
 				std::cerr.rdbuf(old);
 				std::string error = buffer.str();
 
-				if(not error.empty())
+				if (not error.empty())
 				{
-				    const auto index0 = error.find(':');
-				    if(index0 == std::string::npos) break;
+					const auto index0 = error.find(':');
+					if (index0==std::string::npos) break;
 
-				    const auto index1 = error.find(' ', index0);
-                    if(index1 == std::string::npos) break;
+					const auto index1 = error.find(' ', index0);
+					if (index1==std::string::npos) break;
 
-                    const auto index2 = error.find('\n', index0);
-                    if(index2 == std::string::npos) break;
+					const auto index2 = error.find('\n', index0);
+					if (index2==std::string::npos) break;
 
-				    try
-				    {
-				        const auto line = std::stoi(error.substr(5, index0 - 5));
-				        const auto column = std::stoi(error.substr(index0 + 1, index1 - index0 - 1));
-				        throw SyntaxError(error.substr(index1 + 1, index2 - index1 - 1), line, column);
-				    }
-				    catch(std::invalid_argument& ex)
-				    {
-				        throw InternalError("unexpected outcome of stoi: " + std::string(ex.what()));
-				    }
+					try
+					{
+						const auto line = std::stoi(error.substr(5, index0-5));
+						const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
+						throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
+					}
+					catch (std::invalid_argument& ex)
+					{
+						throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
+					}
 				}
-				
+
 				make_dot(cst, cst_path);
 
 				const auto ast = Ast::from_cst(cst, true);
@@ -102,7 +102,7 @@ void output_all_tests(bool redo_existing)
 				make_dot(ast, ast_path);
 
 				Ast::ast2ir(ast, input, ll_path);
-				std::cout << input<< std::endl;
+				std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 			}
 		}
 		catch (const SyntaxError& ex)

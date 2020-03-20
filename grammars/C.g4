@@ -20,10 +20,10 @@ IDENTIFIER:
     [a-zA-Z_] [a-zA-Z_0-9]*;
 
 LINECOMMENT:
-    '//' ~[\n\r]*;
+    '//' ~[\n\r]* -> skip;
 
 MULTILINECOMMENT:
-    '/*' .*? '*/';
+    '/*' .*? '*/' -> skip;
 
 WS:
     [ \t\n\r]+ -> skip;
