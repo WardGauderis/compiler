@@ -6,11 +6,13 @@
  - antlr4-runtime
  - LLVM
  - boost_program_options
+ - Graphviz Dot
 
 #### Compilation:
  - ./build.sh
 
-#### Execution:
+#### Usage:
+ - ./compiler \<files> 
  - ./compiler -h
 
 #### Execution of tests:

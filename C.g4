@@ -104,7 +104,7 @@ qualifier:
 typeName:
      basicType pointerType?;
 
-basicType: ":" <<
+basicType:
     qualifier? specifier qualifier?;
 
 pointerType:
@@ -123,7 +123,7 @@ statement:
     (declaration | expr | printf) ';';
 
 block:
-    (statement | comment)* EOF;
+    (statement)* EOF;
 
 
 
