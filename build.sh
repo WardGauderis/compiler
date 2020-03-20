@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
-antlr4 -o gen -Dlanguage=Cpp grammars/C.g4
+antlr4 -o gen -Dlanguage=Cpp C.g4
 cmake .
 make
