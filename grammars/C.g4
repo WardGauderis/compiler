@@ -104,7 +104,7 @@ qualifier:
 typeName:
      basicType pointerType?;
 
-basicType:
+basicType: ":" <<
     qualifier? specifier qualifier?;
 
 pointerType:

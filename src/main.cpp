@@ -6,6 +6,7 @@
 
 #include "cst.h"
 #include "visitor.h"
+#include <boost/program_options.hpp>
 
 std::string CompilationError::file;
 
@@ -39,6 +40,56 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 	system(("("+make_png+" ; "+remove_dot+" ) &").c_str());
 }
 
+void compileFile(const std::filesystem::path& input, bool printCst, bool printAst, bool optimised)
+{
+	const auto name = input.stem().string();
+	const auto cstPath = name+"-cst.png";
+	const auto astPath = name+"-ast.png";
+	const auto llPath = name+".ll";
+	CompilationError::file = input;
+
+	std::ifstream stream(input);
+	if (!stream.good()) throw CompilationError("file could not be read");
+
+	std::stringstream buffer;
+	std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
+	const auto cst = std::make_unique<Cst::Root>(stream);
+	std::cerr.rdbuf(old);
+	std::string error = buffer.str();
+
+	if (not error.empty())
+	{
+		const auto index0 = error.find(':');
+		if (index0==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+
+		const auto index1 = error.find(' ', index0);
+		if (index1==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+
+		const auto index2 = error.find('\n', index0);
+		if (index2==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+
+		try
+		{
+			const auto line = std::stoi(error.substr(5, index0-5));
+			const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
+			throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
+		}
+		catch (std::invalid_argument& ex)
+		{
+			throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
+		}
+	}
+
+	if (printCst) make_dot(cst, cstPath);
+
+	const auto ast = Ast::from_cst(cst, true);
+
+	if (printAst) make_dot(ast, astPath);
+
+	Ast::ast2ir(ast, input, llPath);
+	std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
+}
+
 void output_all_tests(bool redo_existing)
 {
 	for (const auto& entry : std::filesystem::recursive_directory_iterator("tests"))
@@ -64,7 +115,7 @@ void output_all_tests(bool redo_existing)
 				std::filesystem::create_directories(base);
 
 				std::ifstream stream(input);
-				if (!stream.good()) throw std::runtime_error("problem opening "+input.string());
+				if (!stream.good()) throw CompilationError("file could not be read");
 
 				std::stringstream buffer;
 				std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
@@ -120,8 +171,79 @@ void output_all_tests(bool redo_existing)
 	}
 }
 
+namespace po = boost::program_options;
+
 int main(int argc, const char** argv)
 {
-	output_all_tests(true);
-	return 0;
+	std::vector<std::filesystem::path> files;
+	po::options_description desc("Compiler usage");
+	desc.add_options()
+			("help,h", "Display this help message")
+			("cst,c", "Print the cst to dot")
+			("ast,a", "Print the ast to dot")
+			("optimised,p", "Run llvm optimisation passes")
+			("test,t", "Run compiler tests ('tests' folder must be in working directory)");
+	po::options_description hidden;
+	hidden.add_options()
+			("files", po::value<std::vector<std::filesystem::path>>(&files), "files to compile");
+
+	po::options_description combined;
+	combined.add(desc).add(hidden);
+
+	po::positional_options_description pos;
+	pos.add("files", -1);
+
+
+	po::variables_map vm;
+	po::store(po::command_line_parser(argc, argv).options(combined).positional(pos).run(), vm);
+	po::notify(vm);
+
+	if (vm.count("help"))
+	{
+		std::cout << desc;
+		return 1;
+	}
+	if (vm.count("test"))
+	{
+		if (!std::filesystem::exists("tests"))
+		{
+			std::cout << desc;
+			return 1;
+		}
+		output_all_tests(true);
+		return 0;
+	}
+	if (!files.empty())
+	{
+		for (const auto& file: files)
+		{
+			if (not std::filesystem::is_regular_file(file))
+			{
+				std::cout << desc;
+				return 1;
+			}
+		}
+		for (const auto& file :files)
+		{
+			try
+			{
+				compileFile(file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
+			}
+			catch (const SyntaxError& ex)
+			{
+				std::cout << ex << CompilationError("could not complete compilation due to above errors") << std::endl;
+			}
+			catch (const InternalError& ex)
+			{
+				std::cout << ex << CompilationError("could not complete compilation due to above errors") << std::endl;
+			}
+			catch (const std::exception& ex)
+			{
+				std::cout << ex.what() << std::endl;
+			}
+		}
+		return 0;
+	}
+	std::cout << desc;
+	return 1;
 }
