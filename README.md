@@ -11,7 +11,7 @@
  - ./build.sh
 
 #### Usage:
- - ./compiler <filename> 
+ - ./compiler \<filename> 
  - ./compiler -h
 
 #### Execution of tests:
