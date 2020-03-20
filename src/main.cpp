@@ -86,7 +86,7 @@ void compileFile(const std::filesystem::path& input, bool printCst, bool printAs
 
 	if (printAst) make_dot(ast, astPath);
 
-	Ast::ast2ir(ast, input, llPath);
+	Ast::ast2ir(ast, input, llPath, optimised);
 	std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 }
 
@@ -152,7 +152,7 @@ void output_all_tests(bool redo_existing)
 
 				make_dot(ast, ast_path);
 
-				Ast::ast2ir(ast, input, ll_path);
+				Ast::ast2ir(ast, input, ll_path, false);
 				std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 			}
 		}
@@ -181,7 +181,7 @@ int main(int argc, const char** argv)
 			("help,h", "Display this help message")
 			("cst,c", "Print the cst to dot")
 			("ast,a", "Print the ast to dot")
-			("optimised,p", "Run llvm optimisation passes")
+			("optimised,o", "Run llvm optimisation passes")
 			("test,t", "Run compiler tests ('tests' folder must be in working directory, new tests may be added there)");
 	po::options_description hidden;
 	hidden.add_options()

@@ -10,7 +10,8 @@
 #### Compilation:
  - ./build.sh
 
-#### Execution:
+#### Usage:
+ - ./compiler <filename> 
  - ./compiler -h
 
 #### Execution of tests:

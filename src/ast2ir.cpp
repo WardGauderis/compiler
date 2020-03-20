@@ -6,6 +6,8 @@
 #include "errors.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
 
 using namespace llvm;
 
@@ -39,7 +41,7 @@ llvm::Type* ::Type::convertToIR() const
 namespace Ast {
 
 	void ast2ir(const std::unique_ptr<Ast::Node>& root, const std::filesystem::path& input,
-			const std::filesystem::path& output)
+			const std::filesystem::path& output, bool optimised)
 	{
 		module = std::make_unique<Module>(input.string(), context);
 		builder = std::make_unique<IRBuilder<>>(context);
@@ -60,6 +62,25 @@ namespace Ast {
 
 		verifyFunction(*main, &errs());
 		verifyModule(*module, &errs());
+
+		if (optimised)
+		{
+			llvm::PassBuilder passBuilder;
+			llvm::LoopAnalysisManager loopAnalysisManager(true);
+			llvm::FunctionAnalysisManager functionAnalysisManager(true);
+			llvm::CGSCCAnalysisManager cGSCCAnalysisManager(true);
+			llvm::ModuleAnalysisManager moduleAnalysisManager(true);
+			passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+			passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+			passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+			passBuilder.registerLoopAnalyses(loopAnalysisManager);
+			passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
+					moduleAnalysisManager);
+			llvm::ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(
+					llvm::PassBuilder::OptimizationLevel::O3);
+			modulePassManager.run(*module, moduleAnalysisManager);
+		}
+
 		std::error_code ec;
 		raw_fd_ostream out(output.string(), ec);
 		module->print(out, nullptr, false, true);
