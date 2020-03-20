@@ -164,7 +164,10 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
     }
     else if (lhs.isPointerType() and rhs.isPointerType())
     {
-        // empty statement, just go to throw
+        if(operation.isComparisonOperator())
+        {
+            return Type(false, BaseType::Int); // must be bool
+        }
     }
     else if (lhs.isPointerType() and rhs.isIntegralType() and operation.isAdditiveOperator())
     {
