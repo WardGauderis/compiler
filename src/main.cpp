@@ -182,7 +182,7 @@ int main(int argc, const char** argv)
 			("cst,c", "Print the cst to dot")
 			("ast,a", "Print the ast to dot")
 			("optimised,p", "Run llvm optimisation passes")
-			("test,t", "Run compiler tests ('tests' folder must be in working directory)");
+			("test,t", "Run compiler tests ('tests' folder must be in working directory, new tests may be added there)");
 	po::options_description hidden;
 	hidden.add_options()
 			("files", po::value<std::vector<std::filesystem::path>>(&files), "files to compile");
