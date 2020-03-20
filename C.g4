@@ -123,7 +123,7 @@ statement:
     (declaration | expr | printf) ';';
 
 block:
-    (statement | comment)* EOF;
+    (statement)* EOF;
 
 
 
