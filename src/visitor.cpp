@@ -83,6 +83,7 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         catch (const std::out_of_range& ex)
         {
             std::cout << LiteralOutOfRange(terminal->getText(), line, column);
+            return new Ast::Literal(std::numeric_limits<float>::infinity(), table, line, column);
         }
     case CParser::INT:
         try
@@ -91,7 +92,8 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         }
         catch (const std::out_of_range& ex)
         {
-            throw LiteralOutOfRange(terminal->getText(), line, column);
+            std::cout << LiteralOutOfRange(terminal->getText(), line, column);
+            return new Ast::Literal(std::numeric_limits<int>::max(), table, line, column);
         }
     case CParser::CHAR:
         return new Ast::Literal(terminal->getText()[1], table, line, column);
