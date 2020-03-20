@@ -160,6 +160,10 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
         if(operation == BinaryOperation::Mod and (lhs.isFloatingType() or rhs.isFloatingType()))
         {
         }
+        else if(operation.isComparisonOperator())
+        {
+          return Type(false, BaseType::Int); // TODO: make this a bool
+        }
         else return Type(false, std::max(lhs.getBaseType(), rhs.getBaseType()));
     }
     else if (lhs.isPointerType() and rhs.isPointerType())
@@ -209,7 +213,7 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column, bo
             if(print) std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
         }
     }
-    if(from.isBaseType() and to.isBaseType() and to.getBaseType() < from.getBaseType())
+    if(from.isBaseType() and to.isBaseType() and to.getBaseType() < from.getBaseType() and not cast)
     {
         std::cout << NarrowingConversion(operation, from.string(), to.string(), line, column);
     }
