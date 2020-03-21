@@ -9,7 +9,10 @@
 #include <memory>
 #include <tree/ParseTree.h>
 
-#include "ast.h"
+#include "ast/node.h"
+#include "ast/expressions.h"
+#include "ast/statements.h"
+
 #include "cst.h"
 #include "errors.h"
 

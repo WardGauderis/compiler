@@ -8,7 +8,6 @@
 #include <tree/ParseTree.h>
 
 #include "CParser.h"
-#include "ast.h"
 #include "errors.h"
 #include "visitor.h"
 

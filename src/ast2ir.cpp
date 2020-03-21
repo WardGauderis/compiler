@@ -2,7 +2,11 @@
 // Created by ward on 3/17/20.
 //
 
-#include "ast.h"
+#include "ast/node.h"
+#include "ast/expressions.h"
+#include "ast/statements.h"
+
+
 #include "errors.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Verifier.h>
