@@ -113,11 +113,11 @@ initizalizer:
 declaration:
     typeName IDENTIFIER ('=' initizalizer)?;
 
-expr:
-    assignExpr;
-
 printf:
     'printf' '(' expr ')';
+
+expr:
+    assignExpr | printf;
 
 scope:
     '{' (statement | declaration? ';')* '}';
@@ -133,7 +133,7 @@ for:
     'for' '(' (declaration | expr)? ';' expr? ';' expr? ')' statement;
 
 statement:
-    (expr | printf | 'break' | 'continue')? ';'|
+    (expr | 'break' | 'continue')? ';'|
     scope|
     if |
     while | for;
