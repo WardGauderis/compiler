@@ -90,9 +90,6 @@ assignExpr:
     orExpr|
     IDENTIFIER '=' assignExpr;
 
-expr:
-    assignExpr;
-
 specifier:
     'char'|
     'int'|
@@ -111,23 +108,38 @@ pointerType:
     '*' qualifier? pointerType?;
 
 initizalizer:
-    expr;
+    assignExpr;
 
 declaration:
     typeName IDENTIFIER ('=' initizalizer)?;
 
+expr:
+    assignExpr;
+
 printf:
     'printf' '(' expr ')';
 
+scope:
+    '{' (statement | declaration? ';')* '}';
+
+if:
+    'if' '(' expr ')' statement ('else' statement)?;
+
+while:
+    'while' '(' expr ')' statement|
+    'do' statement 'while' '(' expr ')' ';';
+
+for:
+    'for' '(' (declaration | expr)? ';' expr? ';' expr? ')' statement;
+
 statement:
-    (declaration | expr | printf) ';';
+    (expr | printf | 'break' | 'continue')? ';'|
+    scope|
+    if |
+    while | for;
 
-block:
-    (statement)* EOF;
-
-
-
-
+file:
+    (declaration? ';' | scope)* EOF;
 
 
 
