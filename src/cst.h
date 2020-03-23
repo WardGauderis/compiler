@@ -38,7 +38,7 @@ struct Root
           lexer(&input),
           tokens(&lexer),
           parser(&tokens),
-          block(parser.block()),
+          file(parser.file()),
           rulenames(parser.getRuleNames())
     {
     }
@@ -50,7 +50,7 @@ struct Root
     antlr4::CommonTokenStream tokens;
     CParser parser;
 
-    CParser::BlockContext* block;
+    CParser::FileContext* file;
     std::vector<std::string> rulenames;
 };
 

@@ -45,7 +45,7 @@ std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Root>& ro
     stream << "{\n";
 
     DotVisitor visitor(stream, root->rulenames);
-    visitor.visit(root->block);
+    visitor.visit(root->file);
 
     stream << "}\n";
     return stream;

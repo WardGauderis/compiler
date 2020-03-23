@@ -140,7 +140,8 @@ statement:
     exprStatement|
     scopeStatement|
     ifStatement |
-    whileStatement | forStatement;
+    whileStatement |
+    forStatement;
 
 file:
     (declaration? ';' | scopeStatement)* EOF;

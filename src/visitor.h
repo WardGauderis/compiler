@@ -9,8 +9,8 @@
 #include <memory>
 #include <tree/ParseTree.h>
 
-#include "ast/node.h"
 #include "ast/expressions.h"
+#include "ast/node.h"
 #include "ast/statements.h"
 
 #include "cst.h"
@@ -54,11 +54,21 @@ Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Statement* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+Ast::Scope* visitScopeStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+Ast::Statement* visitIfStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
+
+Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
+
+Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
+
+Ast::Statement* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-std::vector<Ast::Node*> visitBlock(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Scope* visitFile(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 namespace Ast
 {

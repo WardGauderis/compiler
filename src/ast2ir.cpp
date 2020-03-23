@@ -121,11 +121,11 @@ namespace Ast {
 		return nullptr;
 	}
 
-	llvm::Value* Block::codegen() const
+	llvm::Value* Scope::codegen() const
 	{
-		for (const auto& node: nodes)
+		for (const auto& statement: statements)
 		{
-			node->codegen();
+            statement->codegen();
 		}
 		return nullptr;
 	}

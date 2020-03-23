@@ -6,119 +6,109 @@
 
 #pragma once
 
-#include "node.h"
 #include "expressions.h"
+#include "node.h"
 
 namespace Ast
 {
 
+struct Scope final : public Statement
+{
+    explicit Scope(std::vector<Statement*> statements, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column), statements(std::move(statements))
+    {
+    }
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] std::string color() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] llvm::Value* codegen() const final;
+
+    std::vector<Statement*> statements;
+};
+
 struct Declaration final : public Statement
 {
-  explicit Declaration(Type vartype, Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), vartype(vartype), variable(variable), expr(expr)
-  {
-  }
+    explicit Declaration(Type vartype, Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column), vartype(vartype), variable(variable), expr(expr)
+    {
+    }
 
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] bool check() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] bool check() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
 
-  Type vartype;
-  Variable* variable;
-  Expr* expr; // can be nullptr
+    Type vartype;
+    Variable* variable;
+    Expr* expr; // can be nullptr
 };
 
 struct LoopStatement final : public Statement
 {
-  explicit LoopStatement(Declaration* declaration, Expr* condition, Expr* iteration, Block* body, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), declaration(declaration), condition(condition), iteration(iteration), body(body)
-  {
-  }
+    explicit LoopStatement(Statement* init, // may only be declaration or expr
+                           Expr* condition,
+                           Expr* iteration,
+                           Statement* body,
+                           bool doWhile,
+                           std::shared_ptr<SymbolTable> table,
+                           size_t line,
+                           size_t column)
+    : Statement(std::move(table), line, column), init(init), condition(condition),
+      iteration(iteration), body(body), doWhile(doWhile)
+    {
+    }
 
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] bool check() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
 
-  Declaration* declaration; // can be nullptr
-  Expr* condition; // can be nullptr
-  Expr* iteration; // can be nullptr
-  Block* body;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] llvm::Value* codegen() const final {}
+
+    Statement* init; // can be nullptr
+    Expr* condition; // can be nullptr
+    Expr* iteration; // can be nullptr
+    Statement* body;
+    bool doWhile;
 };
 
 struct IfStatement final : public Statement
 {
-  explicit IfStatement(Expr* condition, Block* body, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), condition(condition), body(body)
-  {
-  }
+    explicit IfStatement(Expr* condition, Statement* ifBody, Statement* elseBody, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column), condition(condition), ifBody(ifBody), elseBody(elseBody)
+    {
+    }
 
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] bool check() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] llvm::Value* codegen() const final {}
 
-  Expr* condition;
-  Block* body;
+    Expr* condition;
+    Statement* ifBody;
+    Statement* elseBody; // can be nullptr
 };
 
-struct CaseStatement final : public Statement
+struct ControlFlowStatement final : public Statement
 {
-  explicit CaseStatement(Literal* literal, Block* body, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), literal(literal), body(body)
-  {
-  }
+    explicit ControlFlowStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column), type(std::move(type))
+    {
+    }
 
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] bool check() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] llvm::Value* codegen() const final {}
 
-  Literal* literal; // nullptr will mean default case
-  Block* body;
+    std::string type;
 };
 
-struct SwitchStatement final : public Statement
-{
-  explicit SwitchStatement(Variable* switchVar, std::vector<CaseStatement*> cases, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), switchVar(switchVar), cases(std::move(cases))
-  {
-  }
-
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] bool check() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
-
-  Variable* switchVar;
-  std::vector<CaseStatement*> cases;
-};
-
-struct PrintfStatement final : public Statement
-{
-  explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Statement(std::move(table), line, column), expr(expr)
-  {
-  }
-
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] llvm::Value* codegen() const final;
-
-  Expr* expr;
-};
-
-}
+} // namespace Ast

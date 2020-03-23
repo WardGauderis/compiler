@@ -64,23 +64,6 @@ struct Comment final : public Node
   std::string comment;
 };
 
-struct Block final : public Node
-{
-  explicit Block(std::vector<Node*> nodes, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-      : Node(std::move(table), line, column), nodes(std::move(nodes))
-  {
-  }
-
-  [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] std::string color() const final;
-  [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] llvm::Value* codegen() const final;
-
-  std::vector<Node*> nodes;
-};
-
 struct Statement : public Node
 {
     explicit Statement(std::shared_ptr<SymbolTable> table, size_t line, size_t column)

@@ -175,32 +175,6 @@ Literal* Comment::fold ()
     return nullptr;
 }
 
-std::string Block::name () const
-{
-    return "block";
-}
-
-std::string Block::value () const
-{
-    return "";
-}
-
-std::vector<Node*> Block::children () const
-{
-    return nodes;
-}
-
-std::string Block::color () const
-{
-    return "#ceebe3"; // light green
-}
-
-Literal* Block::fold ()
-{
-    for (auto& child : nodes) assign_fold (child);
-    return nullptr;
-}
-
 std::string Literal::name () const
 {
     return "literal";
@@ -500,5 +474,31 @@ bool Assignment::check () const
 Type Assignment::type () const
 {
     return variable->type ();
+}
+
+std::string PrintfStatement::name() const
+{
+    return "printf";
+}
+
+std::string PrintfStatement::value() const
+{
+    return "";
+}
+
+std::vector<Node*> PrintfStatement::children() const
+{
+    return { expr };
+}
+
+Literal* PrintfStatement::fold()
+{
+    if(auto* res = expr->fold()) expr = res;
+    return nullptr;
+}
+
+Type PrintfStatement::type () const
+{
+    return Type(false, BaseType::Int);
 }
 } // namespace Ast

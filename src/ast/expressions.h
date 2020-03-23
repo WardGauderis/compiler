@@ -159,4 +159,22 @@ struct Assignment final : public Expr
   Variable* variable;
   Expr* expr;
 };
+
+struct PrintfStatement final : public Expr
+{
+    explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+            : Expr(std::move(table), line, column), expr(expr)
+    {
+    }
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] Type type() const final;
+    [[nodiscard]] llvm::Value* codegen() const final;
+
+    Expr* expr;
+};
+
 }

@@ -6,9 +6,48 @@
 
 #include "statements.h"
 
+namespace
+{
+template <typename Type>
+bool assign_fold(Type*& elem)
+{
+    if(auto* res = elem->fold())
+    {
+        elem = res;
+        return true;
+    }
+    return false;
+}
+}
 
 namespace Ast
 {
+std::string Scope::name () const
+{
+    return "block";
+}
+
+std::string Scope::value () const
+{
+    return "";
+}
+
+std::vector<Node*> Scope::children () const
+{
+    return std::vector<Node*>(statements.begin(), statements.end());
+}
+
+std::string Scope::color () const
+{
+    return "#ceebe3"; // light green
+}
+
+Literal* Scope::fold ()
+{
+    for (auto& child : statements) assign_fold(child);
+    return nullptr;
+}
+
 std::string Statement::color() const
 {
     return " #ebcee5"; // light orange/pink
@@ -60,25 +99,72 @@ bool Declaration::check() const
         return true;
 }
 
-
-std::string PrintfStatement::name() const
+std::string LoopStatement::name() const
 {
-    return "printf";
+    return "loop";
 }
 
-std::string PrintfStatement::value() const
+std::string LoopStatement::value() const
 {
     return "";
 }
 
-std::vector<Node*> PrintfStatement::children() const
+std::vector<Node*> LoopStatement::children() const
 {
-    return { expr };
+    std::vector<Node*> res;
+    if(init) res.emplace_back(init);
+    if(condition) res.emplace_back(condition);
+    if(iteration) res.emplace_back(iteration);
+    res.emplace_back(body);
+    return res;
 }
 
-Literal* PrintfStatement::fold()
+Literal* LoopStatement::fold()
 {
-    if(auto* res = expr->fold()) expr = res;
+    for(auto& child : children()) assign_fold(child);
     return nullptr;
 }
+
+std::string IfStatement::name() const
+{
+    return "if";
+}
+
+std::string IfStatement::value() const
+{
+    return "";
+}
+
+std::vector<Node*> IfStatement::children() const
+{
+    if (ifBody) return {condition, ifBody};
+    else return {condition, ifBody, elseBody};
+}
+
+Literal* IfStatement::fold()
+{
+    for(auto& child : children()) assign_fold(child);
+    return nullptr;
+}
+
+std::string ControlFlowStatement::name() const
+{
+    return type;
+}
+
+std::string ControlFlowStatement::value() const
+{
+    return "";
+}
+
+std::vector<Node*> ControlFlowStatement::children() const
+{
+    return {};
+}
+
+Literal* ControlFlowStatement::fold()
+{
+    return nullptr;
+}
+
 } // namespace Ast
