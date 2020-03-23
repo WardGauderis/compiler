@@ -36,6 +36,9 @@ literal:
     INT|
     FLOAT;
 
+printf:
+    'printf' '(' expr ')';
+
 basicExpr:
     '(' expr ')'|
     IDENTIFIER|
@@ -114,9 +117,6 @@ initizalizer:
 declaration:
     typeName IDENTIFIER ('=' initizalizer)?;
 
-printf:
-    'printf' '(' expr ')';
-
 expr:
     assignExpr;
 
@@ -134,10 +134,14 @@ forStatement:
     'for' '(' (declaration | expr)? ';' expr? ';' expr? ')' statement;
 
 exprStatement:
-    (expr | 'break' | 'continue')? ';';
+    (expr)? ';';
+
+controlStatement:
+    ('break' | 'continue') ';';
 
 statement:
     exprStatement|
+    controlStatement|
     scopeStatement|
     ifStatement |
     whileStatement | forStatement;
