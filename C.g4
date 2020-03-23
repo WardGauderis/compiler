@@ -43,6 +43,7 @@ basicExpr:
 
 postfixExpr:
     basicExpr|
+    printf|
     IDENTIFIER '++'|
     IDENTIFIER '--';
 
@@ -117,29 +118,32 @@ printf:
     'printf' '(' expr ')';
 
 expr:
-    assignExpr | printf;
+    assignExpr;
 
-scope:
+scopeStatement:
     '{' (statement | declaration? ';')* '}';
 
-if:
+ifStatement:
     'if' '(' expr ')' statement ('else' statement)?;
 
-while:
+whileStatement:
     'while' '(' expr ')' statement|
     'do' statement 'while' '(' expr ')' ';';
 
-for:
+forStatement:
     'for' '(' (declaration | expr)? ';' expr? ';' expr? ')' statement;
 
+exprStatement:
+    (expr | 'break' | 'continue')? ';';
+
 statement:
-    (expr | 'break' | 'continue')? ';'|
-    scope|
-    if |
-    while | for;
+    exprStatement|
+    scopeStatement|
+    ifStatement |
+    whileStatement | forStatement;
 
 file:
-    (declaration? ';' | scope)* EOF;
+    (declaration? ';' | scopeStatement)* EOF;
 
 
 
