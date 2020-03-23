@@ -68,7 +68,7 @@ Ast::Statement* visitExprStatement(antlr4::tree::ParseTree* context, std::shared
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Scope* visitFile(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Scope* visitFile(antlr4::tree::ParseTree* context);
 
 namespace Ast
 {

@@ -464,17 +464,13 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
 Ast::Statement* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     if(context->children.size() == 1) return nullptr;
-    const auto child = context->children[0];
+    return visitExpr(context->children[0], table);
+}
 
-    if(dynamic_cast<CParser::ExprContext*>(child))
-    {
-        return visitExpr(child, table);
-    }
-    else
-    {
-        const auto [line, column] = getColumnAndLine(context);
-        return new Ast::ControlFlowStatement(child->getText(), table, line, column);
-    }
+Ast::Statement* visitControlStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+{
+    const auto [line, column] = getColumnAndLine(context);
+    return new Ast::controlStatement(context->children[0]->getText(), table, line, column);
 }
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -485,9 +481,15 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
     {
         return visitExprStatement(child, table);
     }
+    else if(dynamic_cast<CParser::ControlStatementContext*>(child))
+    {
+        return visitControlStatement(child, table);
+    }
     else if(dynamic_cast<CParser::ScopeStatementContext*>(child))
     {
-        return visitScopeStatement(child, table);
+        // make a new symbol table for the new scope
+        auto scopeTable = std::make_shared<SymbolTable>(table);
+        return visitScopeStatement(child, scopeTable);
     }
     else if(dynamic_cast<CParser::IfStatementContext*>(child))
     {
@@ -504,9 +506,10 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
     else throw UnexpectedContextType(context);
 }
 
-Ast::Scope* visitFile(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
 {
     std::vector<Ast::Statement*> statements;
+    auto global = std::make_shared<SymbolTable>();
     const auto [line, column] = getColumnAndLine(context);
 
     for(size_t i = 0; i < context->children.size() - 1; i++)
@@ -515,20 +518,21 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTa
 
         if(dynamic_cast<CParser::ExprContext*>(child))
         {
-            statements.emplace_back(visitDeclaration(child, table));
+            statements.emplace_back(visitDeclaration(child, global));
         }
         else if(dynamic_cast<CParser::ScopeStatementContext*>(child))
         {
+            auto table = std::make_shared<SymbolTable>(global);
             statements.emplace_back(visitScopeStatement(child, table));
         }
     }
-    return new Ast::Scope(statements, table, line, column);
+    return new Ast::Scope(statements, global, line, column);
 }
 
 std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root, bool fold)
 {
-    auto table = std::make_shared<SymbolTable>();
-    auto res = std::unique_ptr<Ast::Scope>(visitFile(root->file, table));
+
+    auto res = std::unique_ptr<Ast::Scope>(visitFile(root->file));
     res->complete(true, fold, true);
     return res;
 }

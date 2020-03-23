@@ -147,22 +147,22 @@ Literal* IfStatement::fold()
     return nullptr;
 }
 
-std::string ControlFlowStatement::name() const
+std::string controlStatement::name() const
 {
     return type;
 }
 
-std::string ControlFlowStatement::value() const
+std::string controlStatement::value() const
 {
     return "";
 }
 
-std::vector<Node*> ControlFlowStatement::children() const
+std::vector<Node*> controlStatement::children() const
 {
     return {};
 }
 
-Literal* ControlFlowStatement::fold()
+Literal* controlStatement::fold()
 {
     return nullptr;
 }

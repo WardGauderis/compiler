@@ -95,9 +95,9 @@ struct IfStatement final : public Statement
     Statement* elseBody; // can be nullptr
 };
 
-struct ControlFlowStatement final : public Statement
+struct controlStatement final : public Statement
 {
-    explicit ControlFlowStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    explicit controlStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     : Statement(std::move(table), line, column), type(std::move(type))
     {
     }
