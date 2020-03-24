@@ -2,6 +2,7 @@
 // this file specifically tests unary pointer operations
 
 int* x = 5; // warning
+{
 +x; // error
 -x; // error
 !x; //no error
@@ -9,5 +10,7 @@ int* x = 5; // warning
 --x; // no error
 x++; // no error
 x--; // no error
+}
+
 
 

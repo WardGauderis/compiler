@@ -8,11 +8,14 @@ int d = 5;
 int e = 6;
 int f = d + e;
 
-(4 + 6) / 2;
-(3 + 5) / 0; //! will not fold
-printf(a);
-printf(b);
-printf(c);
-printf(d);
-printf(e);
-printf(f);
+{
+    (4 + 6) / 2;
+    (3 + 5) / 0; //! will not fold
+    printf(a);
+    printf(b);
+    printf(c);
+    printf(d);
+    printf(e);
+    printf(f);
+}
+

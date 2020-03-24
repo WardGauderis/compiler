@@ -246,8 +246,7 @@ Type Variable::type () const
 {
     const auto temp = table->lookup (identifier);
     if (temp.has_value ()) return (*temp)->second.type;
-    else
-        return Type ();
+    else return Type ();
 }
 
 std::string BinaryExpr::name () const
