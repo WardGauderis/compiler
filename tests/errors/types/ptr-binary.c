@@ -4,6 +4,7 @@
 int* a; // warning
 float* b; // warning
 
+{
 a + 5; // no error
 a + 5.5; // error
 a && 1; // no error
@@ -21,3 +22,4 @@ a != b; // no error
 b == a; // no error
 b < a; // no error
 a > 5.5; // error
+}

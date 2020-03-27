@@ -23,13 +23,13 @@ class SymbolTable
 {
 public:
     using Table = std::unordered_map<std::string, TableElement>;
-    using Entry = Table::const_iterator;
+    using Entry = Table::iterator;
 
     explicit SymbolTable(std::shared_ptr<SymbolTable> parent = nullptr) : parent(std::move(parent))
     {
     }
 
-    std::optional<Entry> lookup(const std::string& id) const;
+    std::optional<Entry> lookup(const std::string& id);
 
     std::pair<Entry, bool> insert(const std::string& id, Type type, bool initialized);
 

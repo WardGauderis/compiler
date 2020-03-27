@@ -134,7 +134,7 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
     {
         if(auto* res = dynamic_cast<CParser::PrintfContext*>(context->children[0]))
         {
-            return visitPrintf(context, table);
+            return visitPrintf(res, table);
         }
         else return visitBasicExpr(context->children[0], table);
     });
@@ -327,7 +327,7 @@ Type visitPointerType(antlr4::tree::ParseTree* context, Type type, std::shared_p
 
 Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    return visitExpr(context->children[0], table);
+    return visitAssignExpr(context->children[0], table);
 }
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -342,7 +342,7 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
         return new Ast::Declaration(type, var, nullptr, table, line, column);
     });
     visitor(4, [&](auto* context) {
-        auto* expr = visitExpr(context->children[3]->children[0], table);
+        auto* expr = visitInitializer(context->children[3], table);
         return new Ast::Declaration(type, var, expr, table, line, column);
     });
     return visitor.result();
@@ -357,19 +357,17 @@ Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolT
 
 Ast::Scope* visitScopeStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    size_t iter = 1;
-    size_t size = context->children.size() - 1;
     std::vector<Ast::Statement*> statements;
     const auto [line, column] = getColumnAndLine(context);
 
     for(size_t i = 1; i < context->children.size(); i++)
     {
-        if(auto* res = dynamic_cast<CParser::StatementContext*>(context->children[iter]))
+        if(auto* res = dynamic_cast<CParser::StatementContext*>(context->children[i]))
         {
             auto* statement = visitStatement(res, table);
             if(statement) statements.emplace_back(statement); // needs to check for nullptr
         }
-        else if(auto* res = dynamic_cast<CParser::DeclarationContext*>(context->children[iter]))
+        else if(auto* res = dynamic_cast<CParser::DeclarationContext*>(context->children[i]))
         {
             statements.emplace_back(visitDeclaration(res, table));
         }
@@ -516,7 +514,7 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
     {
         const auto& child = context->children[i];
 
-        if(dynamic_cast<CParser::ExprContext*>(child))
+        if(dynamic_cast<CParser::DeclarationContext*>(child))
         {
             statements.emplace_back(visitDeclaration(child, global));
         }
@@ -531,7 +529,6 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
 
 std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root, bool fold)
 {
-
     auto res = std::unique_ptr<Ast::Scope>(visitFile(root->file));
     res->complete(true, fold, true);
     return res;
