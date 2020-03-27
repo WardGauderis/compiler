@@ -28,9 +28,6 @@ MULTILINECOMMENT:
 WS:
     [ \t\n\r]+ -> skip;
 
-comment:
-    LINECOMMENT | MULTILINECOMMENT;
-
 literal:
     CHAR|
     INT|
@@ -46,6 +43,7 @@ basicExpr:
 
 postfixExpr:
     basicExpr|
+    IDENTIFIER '(' argumentList? ')'|
     printf|
     IDENTIFIER '++'|
     IDENTIFIER '--';
@@ -54,6 +52,7 @@ prefixExpr:
     postfixExpr|
     '++' IDENTIFIER|
     '--' IDENTIFIER|
+    '&' IDENTIFIER|
     '+' prefixExpr|
     '-' prefixExpr|
     '!' prefixExpr|
@@ -103,7 +102,7 @@ qualifier:
     QUALIFIER+;
 
 typeName:
-     basicType pointerType?;
+     basicType pointerType? | qualifier? 'void' qualifier? pointerType;
 
 basicType:
     qualifier? specifier qualifier?;
@@ -115,13 +114,13 @@ initizalizer:
     assignExpr;
 
 declaration:
-    typeName IDENTIFIER ('=' initizalizer)?;
+    typeName IDENTIFIER ('=' initizalizer)? ';';
 
 expr:
     assignExpr;
 
 scopeStatement:
-    '{' (statement | declaration? ';')* '}';
+    '{' (statement | declaration)* '}';
 
 ifStatement:
     'if' '(' expr ')' statement ('else' statement)?;
@@ -131,13 +130,13 @@ whileStatement:
     'do' statement 'while' '(' expr ')' ';';
 
 forStatement:
-    'for' '(' (declaration | expr)? ';' expr? ';' expr? ')' statement;
+    'for' '(' (declaration | exprStatement)  expr? ';'  expr? ')' statement;
 
 exprStatement:
-    (expr)? ';';
+    expr? ';';
 
 controlStatement:
-    ('break' | 'continue') ';';
+    ('break' | 'continue') ';' | 'return' exprStatement;
 
 statement:
     exprStatement|
@@ -147,8 +146,17 @@ statement:
     whileStatement |
     forStatement;
 
+parameterList:
+    typeName IDENTIFIER (',' parameterList)?;
+
+argumentList:
+    expr (',' argumentList)?;
+
+functionDefinition:
+    (typeName | 'void') IDENTIFIER '(' parameterList? ')' scopeStatement ';'?;
+
 file:
-    (declaration? ';' | scopeStatement)* EOF;
+    (declaration | functionDefinition | ';' )* EOF;
 
 
 
