@@ -24,9 +24,10 @@ struct Scope final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string color() const final;
     [[nodiscard]] Literal* fold() final;
-    [[nodiscard]] llvm::Value* codegen() const final;
 
-    std::vector<Statement*> statements;
+	void visit(IRVisitor& visitor) override;
+
+	std::vector<Statement*> statements;
 };
 
 struct Declaration final : public Statement
@@ -41,9 +42,9 @@ struct Declaration final : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
     [[nodiscard]] bool check() const final;
-    [[nodiscard]] llvm::Value* codegen() const final;
+	void visit(IRVisitor& visitor) final;
 
-    Type vartype;
+	Type vartype;
     Variable* variable;
     Expr* expr; // can be nullptr
 };
@@ -68,9 +69,9 @@ struct LoopStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
-    [[nodiscard]] llvm::Value* codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    Statement* init; // can be nullptr
+	Statement* init; // can be nullptr
     Expr* condition; // can be nullptr
     Expr* iteration; // can be nullptr
     Statement* body;
@@ -88,16 +89,16 @@ struct IfStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
-    [[nodiscard]] llvm::Value* codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    Expr* condition;
+	Expr* condition;
     Statement* ifBody;
     Statement* elseBody; // can be nullptr
 };
 
-struct controlStatement final : public Statement
+struct ControlStatement final : public Statement
 {
-    explicit controlStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    explicit ControlStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     : Statement(std::move(table), line, column), type(std::move(type))
     {
     }
@@ -106,9 +107,9 @@ struct controlStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
-    [[nodiscard]] llvm::Value* codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    std::string type;
+	std::string type;
 };
 
 } // namespace Ast

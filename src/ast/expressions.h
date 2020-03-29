@@ -33,9 +33,9 @@ struct Literal final : public Expr
   [[nodiscard]] std::vector<Node*> children() const final;
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
-  TypeVariant literal;
+	TypeVariant literal;
 };
 
 struct Variable final : public Expr
@@ -53,7 +53,7 @@ struct Variable final : public Expr
   [[nodiscard]] bool check() const final;
 
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
   std::string identifier;
 };
@@ -71,7 +71,7 @@ struct BinaryExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
   BinaryOperation operation;
 
@@ -92,7 +92,7 @@ struct PostfixExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
   PostfixOperation operation;
   Variable* variable;
@@ -116,7 +116,7 @@ struct PrefixExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
   PrefixOperation operation;
   std::variant<Variable*, Expr*> operand;
@@ -135,7 +135,7 @@ struct CastExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
   Type cast;
   Expr* operand;
@@ -154,7 +154,7 @@ struct Assignment final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) override;
 
   Variable* variable;
   Expr* expr;
@@ -172,9 +172,10 @@ struct PrintfStatement final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
     [[nodiscard]] Type type() const final;
-    [[nodiscard]] llvm::Value* codegen() const final;
 
-    Expr* expr;
+	void visit(IRVisitor& visitor) override;
+
+	Expr* expr;
 };
 
 }

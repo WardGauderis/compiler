@@ -468,7 +468,7 @@ Ast::Statement* visitExprStatement(antlr4::tree::ParseTree* context, std::shared
 Ast::Statement* visitControlStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    return new Ast::controlStatement(context->children[0]->getText(), table, line, column);
+    return new Ast::ControlStatement(context->children[0]->getText(), table, line, column);
 }
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)

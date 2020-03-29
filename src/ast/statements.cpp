@@ -5,7 +5,7 @@
 //============================================================================
 
 #include "statements.h"
-
+#include "IRVisitor/irVisitor.h"
 namespace
 {
 template <typename Type>
@@ -48,7 +48,12 @@ Literal* Scope::fold ()
     return nullptr;
 }
 
-std::string Statement::color() const
+void Scope::visit(IRVisitor& visitor)
+{
+    visitor.visitScope(*this);
+}
+
+    std::string Statement::color() const
 {
     return " #ebcee5"; // light orange/pink
 }
@@ -99,7 +104,12 @@ bool Declaration::check() const
         return true;
 }
 
-std::string LoopStatement::name() const
+void Declaration::visit(IRVisitor& visitor)
+{
+    visitor.visitDeclaration(*this);
+}
+
+	std::string LoopStatement::name() const
 {
     return "loop";
 }
@@ -125,7 +135,12 @@ Literal* LoopStatement::fold()
     return nullptr;
 }
 
-std::string IfStatement::name() const
+void LoopStatement::visit(IRVisitor& visitor)
+{
+    visitor.visitLoopStatement(*this);
+}
+
+    std::string IfStatement::name() const
 {
     return "if";
 }
@@ -147,24 +162,34 @@ Literal* IfStatement::fold()
     return nullptr;
 }
 
-std::string controlStatement::name() const
+void IfStatement::visit(IRVisitor& visitor)
+{
+    visitor.visitIfStatement(*this);
+}
+
+    std::string ControlStatement::name() const
 {
     return type;
 }
 
-std::string controlStatement::value() const
+std::string ControlStatement::value() const
 {
     return "";
 }
 
-std::vector<Node*> controlStatement::children() const
+std::vector<Node*> ControlStatement::children() const
 {
     return {};
 }
 
-Literal* controlStatement::fold()
+Literal* ControlStatement::fold()
 {
     return nullptr;
+}
+
+void ControlStatement::visit(IRVisitor& visitor)
+{
+    visitor.visitControlStatement(*this);
 }
 
 } // namespace Ast

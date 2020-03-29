@@ -10,6 +10,8 @@
 #include <llvm/IR/Value.h>
 #include <filesystem>
 
+class IRVisitor;
+
 namespace Ast
 {
 
@@ -39,7 +41,7 @@ struct Node
 
   [[nodiscard]] virtual bool check() const { return true; }
 
-  virtual llvm::Value* codegen() const = 0;
+  virtual void visit(IRVisitor& visitor) = 0;
 
   size_t column;
   size_t line;
@@ -59,9 +61,9 @@ struct Comment final : public Node
   [[nodiscard]] std::vector<Node*> children() const final;
   [[nodiscard]] std::string color() const final;
   [[nodiscard]] Literal* fold() final;
-  [[nodiscard]] llvm::Value* codegen() const final;
+  void visit(IRVisitor& visitor) final;
 
-  std::string comment;
+	std::string comment;
 };
 
 struct Statement : public Node

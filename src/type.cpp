@@ -75,7 +75,7 @@ bool Type::isIntegerType() const
     return isBaseType() and getBaseType() == BaseType::Int;
 }
 
-bool Type::isFloatingType() const
+bool Type::isFloatType() const
 {
     return isBaseType() and (getBaseType() == BaseType::Float or getBaseType() == BaseType::Double);
 }
@@ -151,13 +151,13 @@ std::optional<Type> Type::combine(BinaryOperation operation, Type lhs, Type rhs,
         return Type(false, BaseType::Int); // TODO: make this a bool
     }
 
-    if (operation.isComparisonOperator() and ((rhs.isPointerType() and lhs.isFloatingType()) or (rhs.isFloatingType() and lhs.isPointerType())))
+    if (operation.isComparisonOperator() and ((rhs.isPointerType() and lhs.isFloatType()) or (rhs.isFloatType() and lhs.isPointerType())))
     {
         // empty statement, just go to throw
     }
     else if (lhs.isBaseType() and rhs.isBaseType())
     {
-        if(operation == BinaryOperation::Mod and (lhs.isFloatingType() or rhs.isFloatingType()))
+        if(operation == BinaryOperation::Mod and (lhs.isFloatType() or rhs.isFloatType()))
         {
         }
         else if(operation.isComparisonOperator())
@@ -191,7 +191,7 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column, bo
 
     if (from.isPointerType())
     {
-        if (to.isFloatingType())
+        if (to.isFloatType())
         {
             if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
             return false;
@@ -203,7 +203,7 @@ bool Type::convert(Type from, Type to, bool cast, size_t line, size_t column, bo
     }
     if (to.isPointerType())
     {
-        if (from.isFloatingType())
+        if (from.isFloatType())
         {
             if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
             return false;

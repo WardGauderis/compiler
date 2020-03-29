@@ -7,6 +7,7 @@
 #include "cst.h"
 #include "visitor.h"
 #include <boost/program_options.hpp>
+#include <IRVisitor/irVisitor.h>
 
 std::string CompilationError::file;
 
@@ -86,7 +87,11 @@ void compileFile(const std::filesystem::path& input, bool printCst, bool printAs
 
 	if (printAst) make_dot(ast, astPath);
 
-	Ast::ast2ir(ast, input, llPath, optimised);
+	IRVisitor visitor(input);
+	visitor.convertAST(ast);
+	if(optimised) visitor.LLVMOptimize();
+	visitor.print(llPath);
+
 	std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 }
 
@@ -152,7 +157,10 @@ void output_all_tests(bool redo_existing)
 
 				make_dot(ast, ast_path);
 
-				Ast::ast2ir(ast, input, ll_path, false);
+				IRVisitor visitor(input);
+				visitor.convertAST(ast);
+				visitor.print(ll_path);
+
 				std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 			}
 		}

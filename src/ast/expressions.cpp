@@ -4,6 +4,7 @@
 // @copyright   : BA2 Informatica - Thomas Dooms - University of Antwerp
 //============================================================================
 
+#include <IRVisitor/irVisitor.h>
 #include "expressions.h"
 
 namespace
@@ -175,7 +176,12 @@ Literal* Comment::fold ()
     return nullptr;
 }
 
-std::string Literal::name () const
+void Comment::visit(IRVisitor& visitor)
+{
+
+}
+
+	std::string Literal::name () const
 {
     return "literal";
 }
@@ -198,6 +204,11 @@ Literal* Literal::fold ()
 Type Literal::type () const
 {
     return Type (true, static_cast<BaseType> (literal.index ()));
+}
+
+void Literal::visit(IRVisitor& visitor)
+{
+	visitor.visitLiteral(*this);
 }
 
 std::string Variable::name () const
@@ -249,7 +260,12 @@ Type Variable::type () const
     else return Type ();
 }
 
-std::string BinaryExpr::name () const
+void Variable::visit(IRVisitor& visitor)
+{
+	visitor.visitVariable(*this);
+}
+
+	std::string BinaryExpr::name () const
 {
     return "binary expression";
 }
@@ -309,7 +325,12 @@ Type BinaryExpr::type () const
     }
 }
 
-std::string PrefixExpr::name () const
+void BinaryExpr::visit(IRVisitor& visitor)
+{
+	visitor.visitBinaryExpr(*this);
+}
+
+	std::string PrefixExpr::name () const
 {
     return "prefix expression";
 }
@@ -366,7 +387,12 @@ Type PrefixExpr::type () const
     }
 }
 
-std::string PostfixExpr::name () const
+void PrefixExpr::visit(IRVisitor& visitor)
+{
+	visitor.visitPrefixExpr(*this);
+}
+
+	std::string PostfixExpr::name () const
 {
     return "prefix expression";
 }
@@ -402,7 +428,12 @@ Type PostfixExpr::type () const
     return variable->type ();
 }
 
-std::string CastExpr::name () const
+void PostfixExpr::visit(IRVisitor& visitor)
+{
+	visitor.visitPostfixExpr(*this);
+}
+
+	std::string CastExpr::name () const
 {
     return "cast expression";
 }
@@ -438,7 +469,12 @@ Type CastExpr::type () const
     return cast;
 }
 
-std::string Assignment::name () const
+void CastExpr::visit(IRVisitor& visitor)
+{
+	visitor.visitCastExpr(*this);
+}
+
+	std::string Assignment::name () const
 {
     return "assignment";
 }
@@ -475,7 +511,12 @@ Type Assignment::type () const
     return variable->type ();
 }
 
-std::string PrintfStatement::name() const
+void Assignment::visit(IRVisitor& visitor)
+{
+	visitor.visitAssignment(*this);
+}
+
+	std::string PrintfStatement::name() const
 {
     return "printf";
 }
@@ -499,5 +540,10 @@ Literal* PrintfStatement::fold()
 Type PrintfStatement::type () const
 {
     return Type(false, BaseType::Int);
+}
+
+void PrintfStatement::visit(IRVisitor& visitor)
+{
+	visitor.visitPrintfStatement(*this);
 }
 } // namespace Ast

@@ -7,9 +7,7 @@
 #pragma once
 
 #include <antlr4-runtime/tree/ParseTree.h>
-#include <memory>
-#include <ostream>
-#include <stdexcept>
+#include "type.h"
 
 class CompilationError : public std::exception
 {
@@ -101,6 +99,11 @@ struct InternalError : public CompilationError
         : CompilationError(message, line, column, warning, "internal")
     {
     }
+};
+
+struct IRError : public InternalError {
+	explicit IRError(const std::string& type)
+			:InternalError("Type '"+type+"' is not supported in LLVM IR") { }
 };
 
 struct UnexpectedContextType : public InternalError
