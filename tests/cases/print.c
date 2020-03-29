@@ -1,7 +1,8 @@
-int a = 7;
-const float b = 5.0;
-
+int main()
 {
+    int         a = 7;
+    const float b = 5.0;
+
     printf(5);
     printf(a);
     printf(a++);

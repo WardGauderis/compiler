@@ -1,7 +1,6 @@
-int a = 1;
-
+int main()
 {
-    a = 2;
+    int a = 1;
+    a     = 2;
     printf(a);
 }
-

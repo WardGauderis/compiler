@@ -14,36 +14,27 @@
 
 struct TableElement
 {
-    Type type;
+    Type                       type;
     std::optional<TypeVariant> literal;
-    bool initialized;
+    bool                       isInitialized;
 };
 
 class SymbolTable
 {
-public:
+    public:
     using Table = std::unordered_map<std::string, TableElement>;
-    using Entry = Table::iterator;
 
     explicit SymbolTable(std::shared_ptr<SymbolTable> parent = nullptr) : parent(std::move(parent))
     {
     }
 
-    std::optional<Entry> lookup(const std::string& id);
+    TableElement* lookup(const std::string& id);
 
-    std::pair<Entry, bool> insert(const std::string& id, Type type, bool initialized);
+    bool insert(const std::string& id, Type type, bool initialized);
 
-    void set_initialized(const std::string& id);
+    std::shared_ptr<SymbolTable>& getParent() { return parent; }
 
-    void set_literal(const std::string& id, std::optional<TypeVariant> type);
-
-    std::optional<TypeVariant> get_literal(const std::string& id);
-
-    bool lookup_initialized(const std::string& id);
-
-    bool lookup_const(const std::string& id);
-
-private:
+    private:
     std::shared_ptr<SymbolTable> parent;
-    Table table;
+    Table                        table;
 };

@@ -29,6 +29,7 @@ int x = 80 % 2;
 int y = 80 / 2;
 int z = 2 * 400;
 
+int main()
 {
     printf(a);
     printf(b);

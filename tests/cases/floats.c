@@ -5,6 +5,8 @@ float d = 6 - 1;
 float e = 5. / 0.;
 float f = 1 * 1.5;
 float g = (int)5.7;
+
+int main()
 {
     printf(a);
     printf(b);
