@@ -158,7 +158,7 @@ struct Assignment final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
-  void visit(IRVisitor& visitor) override;
+  void visit(IRVisitor& visitor) final;
 
     Variable* variable;
     Expr*     expr;
@@ -175,9 +175,9 @@ struct FunctionCall final : public Expr
     [[nodiscard]] Literal*           fold() final;
     [[nodiscard]] bool               check() const final;
     [[nodiscard]] Type               type() const final;
-    [[nodiscard]] llvm::Value*       codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    std::vector<Expr*> arguments;
+	std::vector<Expr*> arguments;
     std::string identifier;
 };
 

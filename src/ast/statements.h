@@ -59,9 +59,9 @@ struct FunctionDefinition : public Statement
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
     [[nodiscard]] bool check() const final;
-    [[nodiscard]] llvm::Value* codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    Type returnType;
+	Type returnType;
     std::string identifier;
     std::vector<std::pair<Type, std::string>> parameters;
     Scope* body;
@@ -141,9 +141,9 @@ struct ReturnStatement final : public Statement
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
-    [[nodiscard]] llvm::Value* codegen() const final {}
+	void visit(IRVisitor& visitor) final;
 
-    Expr* expr;
+	Expr* expr;
 };
 
 } // namespace Ast

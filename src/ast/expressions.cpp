@@ -507,8 +507,16 @@ Type Assignment::type() const
     return variable->type();
 }
 
+void Assignment::visit(IRVisitor& visitor)
+{
+	visitor.visitAssignment(*this);
+}
 
 std::string PrintfStatement::name() const
+{
+	return "printf";
+}
+
 std::string FunctionCall::name() const
 {
     return "function call";
@@ -567,12 +575,12 @@ Type FunctionCall::type() const
     }
 }
 
-std::string PrintfStatement::name() const
+void FunctionCall::visit(IRVisitor& visitor)
 {
-    return "printf";
+	visitor.visitFunctionCall(*this);
 }
 
-std::string PrintfStatement::value() const
+	std::string PrintfStatement::value() const
 {
     return "";
 }

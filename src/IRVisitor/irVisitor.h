@@ -53,6 +53,12 @@ public:
 
 	void visitControlStatement(const Ast::ControlStatement& controlStatement);
 
+	void visitReturnStatement(const Ast::ReturnStatement& returnStatement);
+
+	void visitFunctionDefinition(const Ast::FunctionDefinition& functionDefinition);
+
+	void visitFunctionCall(const Ast::FunctionCall& functionCall);
+
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;

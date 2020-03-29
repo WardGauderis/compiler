@@ -315,6 +315,21 @@ void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatem
 	throw InternalError("Control statement not yet supported in LLVM IR");
 }
 
+void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
+{
+	throw InternalError("Return statement not yet supported in LLVM IR");
+}
+
+void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionDefinition)
+{
+	throw InternalError("Function definition not yet supported in LLVM IR");
+}
+
+void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
+{
+	throw InternalError("Function call not yet supported in LLVM IR");
+}
+
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 {
 	auto from = value->getType();

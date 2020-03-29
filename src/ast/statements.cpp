@@ -158,7 +158,12 @@ bool FunctionDefinition::check() const
     return true;
 }
 
-void Declaration::visit(IRVisitor& visitor)
+void FunctionDefinition::visit(IRVisitor& visitor)
+{
+	visitor.visitFunctionDefinition(*this);
+}
+
+	void Declaration::visit(IRVisitor& visitor)
 {
     visitor.visitDeclaration(*this);
 }
@@ -262,7 +267,12 @@ Literal* ReturnStatement::fold()
     return nullptr;
 }
 
-void ControlStatement::visit(IRVisitor& visitor)
+void ReturnStatement::visit(IRVisitor& visitor)
+{
+	visitor.visitReturnStatement(*this);
+}
+
+	void ControlStatement::visit(IRVisitor& visitor)
 {
     visitor.visitControlStatement(*this);
 }
