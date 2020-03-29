@@ -5,6 +5,7 @@
 //============================================================================
 
 #include "statements.h"
+#include <numeric>
 
 namespace
 {
@@ -76,18 +77,22 @@ Literal* Declaration::fold()
 
     if(auto* res = expr->fold())
     {
-        if(table->lookup_const(variable->name()))
+        if(auto* elem = table->lookup(variable->name()))
         {
-            table->set_literal(variable->name(), res->literal);
+            if(elem->type.isConst())
+            {
+                elem->literal = res->literal;
+            }
+            expr = res;
         }
-        expr = res;
+        else throw InternalError("declaration variable not in table when folding");
     }
     return nullptr;
 }
 
 bool Declaration::check() const
 {
-    const auto [iter, inserted] = table->insert(variable->name(), vartype, expr);
+    auto inserted = table->insert(variable->name(), vartype, expr);
     if(not inserted)
     {
         std::cout << RedefinitionError(variable->name(), line, column);
@@ -95,13 +100,62 @@ bool Declaration::check() const
     }
 
     if(expr) return Type::convert(expr->type(), variable->type(), false, line, column);
-    else
-        return true;
+    else return true;
+}
+
+std::string FunctionDefinition::name() const
+{
+    return "function declaration";
+}
+
+std::string FunctionDefinition::value() const
+{
+    std::string res = returnType.string() + ' ' + identifier + '(';
+    for(const auto& elem : parameters)
+    {
+        res += elem.first.string() + " " + elem.second;
+    }
+    return res + ')';
+}
+
+std::vector<Node*> FunctionDefinition::children() const
+{
+    return {body};
+}
+
+Literal* FunctionDefinition::fold()
+{
+    [[maybe_unused]] const auto _ = body->fold();
+}
+
+bool FunctionDefinition::check() const
+{
+    for(const auto& elem : parameters)
+    {
+        if(not table->insert(elem.second, elem.first, true))
+        {
+            std::cout << RedefinitionError(identifier, line, column);
+            return false;
+        }
+    }
+    // don't look at me, i'm not the one leaking memory
+    std::vector<Type*> types(parameters.size());
+    const auto convert = [&](const auto& param){ return new Type(param.first); };
+    std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
+
+    const auto inserted = table->getParent()->insert(identifier, Type(new Type(returnType), std::move(types)), true);
+    if(not inserted)
+    {
+        std::cout << RedefinitionError(identifier, line, column);
+        return false;
+    }
+    return true;
 }
 
 std::string LoopStatement::name() const
 {
-    return "loop";
+    if(doWhile) return "do while";
+    else return "loop";
 }
 
 std::string LoopStatement::value() const
@@ -147,22 +201,42 @@ Literal* IfStatement::fold()
     return nullptr;
 }
 
-std::string controlStatement::name() const
+std::string ControlStatement::name() const
 {
     return type;
 }
 
-std::string controlStatement::value() const
+std::string ControlStatement::value() const
 {
     return "";
 }
 
-std::vector<Node*> controlStatement::children() const
+std::vector<Node*> ControlStatement::children() const
 {
     return {};
 }
 
-Literal* controlStatement::fold()
+Literal* ControlStatement::fold()
+{
+    return nullptr;
+}
+
+std::string ReturnStatement::name() const
+{
+    return "return";
+}
+
+std::string ReturnStatement::value() const
+{
+    return "";
+}
+
+std::vector<Node*> ReturnStatement::children() const
+{
+    return {expr};
+}
+
+Literal* ReturnStatement::fold()
 {
     return nullptr;
 }

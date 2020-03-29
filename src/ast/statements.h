@@ -48,6 +48,24 @@ struct Declaration final : public Statement
     Expr* expr; // can be nullptr
 };
 
+struct FunctionDefinition : public Statement
+{
+    FunctionDefinition(Type returnType, std::string identifier, std::vector<std::pair<Type, std::string>> parameters, Scope* body, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : returnType(std::move(returnType)), identifier(std::move(identifier)), parameters(std::move(parameters)), body(body), Statement(std::move(table), line, column) {}
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] bool check() const final;
+    [[nodiscard]] llvm::Value* codegen() const final {}
+
+    Type returnType;
+    std::string identifier;
+    std::vector<std::pair<Type, std::string>> parameters;
+    Scope* body;
+};
+
 struct LoopStatement final : public Statement
 {
     explicit LoopStatement(Statement* init, // may only be declaration or expr
@@ -95,9 +113,9 @@ struct IfStatement final : public Statement
     Statement* elseBody; // can be nullptr
 };
 
-struct controlStatement final : public Statement
+struct ControlStatement final : public Statement
 {
-    explicit controlStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    explicit ControlStatement(std::string type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     : Statement(std::move(table), line, column), type(std::move(type))
     {
     }
@@ -109,6 +127,22 @@ struct controlStatement final : public Statement
     [[nodiscard]] llvm::Value* codegen() const final {}
 
     std::string type;
+};
+
+struct ReturnStatement final : public Statement
+{
+    explicit ReturnStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column), expr(expr)
+    {
+    }
+
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal* fold() final;
+    [[nodiscard]] llvm::Value* codegen() const final {}
+
+    Expr* expr;
 };
 
 } // namespace Ast

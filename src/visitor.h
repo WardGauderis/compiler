@@ -42,8 +42,6 @@ Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolT
 
 Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
-
 Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
@@ -54,7 +52,9 @@ Ast::Expr* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+//Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Scope* visitScopeStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
@@ -64,9 +64,17 @@ Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::share
 
 Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
 
-Ast::Statement* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Expr* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+Ast::Statement* visitControlStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+std::vector<std::pair<Type, std::string>> visitParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
 
 Ast::Scope* visitFile(antlr4::tree::ParseTree* context);
 

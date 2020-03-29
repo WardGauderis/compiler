@@ -8,21 +8,21 @@
 
 #include "errors.h"
 #include "operation.h"
+#include <llvm/IR/Type.h>
 #include <memory>
 #include <string>
 #include <variant>
-#include <llvm/IR/Type.h>
 
 namespace
 {
-template<typename Variant, typename Type, std::size_t index = 0>
+template <typename Variant, typename Type, std::size_t index = 0>
 constexpr std::size_t variant_index()
 {
-    if constexpr (index == std::variant_size_v<Variant>)
+    if constexpr(index == std::variant_size_v<Variant>)
     {
         return index;
     }
-    else if constexpr (std::is_same_v<std::variant_alternative_t<index, Variant>, Type>)
+    else if constexpr(std::is_same_v<std::variant_alternative_t<index, Variant>, Type>)
     {
         return index;
     }
@@ -44,29 +44,34 @@ enum class BaseType
     Double = variant_index<TypeVariant, double>(),
 };
 
+class Type; // stupid predeclaration but oh well
+using FunctionType = std::pair<Type*, std::vector<Type*>>;
+
 class Type
 {
-public:
-    explicit Type(bool isConst, Type* ptr)
-    : isTypeConst(isConst), type(ptr)
-    {
-    }
+    public:
+    // default init to void
+    explicit Type() : isTypeConst(false), type() {}
+
+    explicit Type(bool isConst, Type* ptr) : isTypeConst(isConst), type(ptr) {}
 
     explicit Type(bool isConst, const std::string& baseType)
-        : isTypeConst(isConst), type(fromString(baseType))
+    : isTypeConst(isConst), type(fromString(baseType))
     {
     }
 
-    explicit Type(bool isConst, BaseType baseType)
-    : isTypeConst(isConst), type(baseType)
+    explicit Type(Type* ret, std::vector<Type*> params)
+            : isTypeConst(true), type(std::make_pair(ret, std::move(params)))
     {
     }
 
-    explicit Type() = default;
+    explicit Type(bool isConst, BaseType baseType) : isTypeConst(isConst), type(baseType) {}
 
     [[nodiscard]] std::string string() const;
 
     [[nodiscard]] BaseType getBaseType() const;
+
+    [[nodiscard]] const FunctionType& getFunctionType() const;
 
     [[nodiscard]] std::optional<Type> getDerefType() const;
 
@@ -84,20 +89,24 @@ public:
 
     [[nodiscard]] bool isFloatingType() const;
 
-    [[nodiscard]] llvm::Type * convertToIR() const;
+    [[nodiscard]] bool isFunctionType() const;
 
-    friend bool operator==(Type lhs, Type rhs);
-    friend bool operator!=(Type lhs, Type rhs);
+    [[nodiscard]] llvm::Type* convertToIR() const;
+
+    friend bool operator==(const Type& lhs, const Type& rhs);
+    friend bool operator!=(const Type& lhs, const Type& rhs);
 
     static std::string toString(BaseType type);
-    static BaseType fromString(const std::string& str);
+    static BaseType    fromString(const std::string& str);
 
-    static std::optional<Type> unary(PrefixOperation operation, Type operand, size_t line = 0, size_t column = 0, bool print = true);
-    static std::optional<Type> combine(BinaryOperation operation, Type lhs, Type rhs, size_t line = 0, size_t column = 0, bool print = true);
-    static bool convert(Type from, Type to, bool cast, size_t line = 0, size_t column = 0, bool print = true);
+    static std::optional<Type>
+    unary(PrefixOperation operation, const Type& operand, size_t line = 0, size_t column = 0, bool print = true);
+    static std::optional<Type>
+                combine(BinaryOperation operation, const Type& lhs, const Type& rhs, size_t line = 0, size_t column = 0, bool print = true);
+    static bool convert(const Type& from, const Type& to, bool cast, size_t line = 0, size_t column = 0, bool print = true);
 
-private:
+    private:
     bool isTypeConst;
     // do not change the order of this variant
-    std::variant<std::monostate, Type*, BaseType> type;
+    std::variant<std::monostate, Type*, BaseType, FunctionType> type;
 };
