@@ -77,6 +77,14 @@ struct RedefinitionError : public SemanticError
     }
 };
 
+struct NonConstantGlobal : public SemanticError
+{
+    explicit NonConstantGlobal(const std::string& symbol, unsigned int line = 0, unsigned int column = 0)
+    : SemanticError("'" + symbol + "' is not initialized by a constant expression", line, column)
+    {
+    }
+};
+
 struct ConstError : public SemanticError
 {
     explicit ConstError(const std::string& operation, const std::string& name, unsigned int line = 0, unsigned int column = 0)

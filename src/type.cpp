@@ -20,7 +20,7 @@ overloaded(Ts...)->overloaded<Ts...>;
 [[nodiscard]] std::string Type::string() const
 {
     return std::visit(
-    overloaded{ [&](std::monostate empty) { return std::string("undefined"); },
+    overloaded{ [&](std::monostate empty) { return std::string("void"); },
                 [&](const Type* ptr) { return ptr->string() + "*" + (isTypeConst ? " const" : ""); },
                 [&](BaseType base) { return (isTypeConst ? "const " : "") + toString(base); },
                 [&](const FunctionType& func) {
@@ -63,13 +63,6 @@ bool Type::isPointerType() const
     return type.index() == 1;
 }
 
-bool Type::isIntegralType() const
-{
-    return isBaseType()
-           and (getBaseType() == BaseType::Char or getBaseType() == BaseType::Short
-                or getBaseType() == BaseType::Int or getBaseType() == BaseType::Long);
-}
-
 bool Type::isCharacterType() const
 {
     return isBaseType() and getBaseType() == BaseType::Char;
@@ -80,9 +73,19 @@ bool Type::isIntegerType() const
     return isBaseType() and getBaseType() == BaseType::Int;
 }
 
+bool Type::isIntegralType() const
+{
+    return isCharacterType() or isIntegerType();
+}
+
 bool Type::isFloatType() const
 {
-    return isBaseType() and (getBaseType() == BaseType::Float or getBaseType() == BaseType::Double);
+    return isBaseType() and getBaseType() == BaseType::Float;
+}
+
+bool Type::isVoidType() const
+{
+    return type.index() == 0;
 }
 
 bool Type::isFunctionType() const
@@ -110,16 +113,10 @@ std::string Type::toString(BaseType type)
     {
     case BaseType::Char:
         return "char";
-    case BaseType::Short:
-        return "short";
     case BaseType::Int:
         return "int";
-    case BaseType::Long:
-        return "long";
     case BaseType::Float:
         return "float";
-    case BaseType::Double:
-        return "double";
     default:
         throw InternalError("unknown base type");
     }
@@ -127,17 +124,12 @@ std::string Type::toString(BaseType type)
 
 BaseType Type::fromString(const std::string& str)
 {
-    if(str == "char") return BaseType::Char;
-    else if(str == "short")
-        return BaseType::Short;
+    if(str == "char")
+        return BaseType::Char;
     else if(str == "int")
         return BaseType::Int;
-    else if(str == "long")
-        return BaseType::Long;
     else if(str == "float")
         return BaseType::Float;
-    else if(str == "double")
-        return BaseType::Double;
     else
         throw InternalError("string cannot convert to base type");
 }
@@ -242,7 +234,7 @@ bool Type::convert(const Type& from, const Type& to, bool cast, size_t line, siz
     {
         std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
     }
-    if(from.isPointerType() and to.isBaseType() and to.getBaseType() != BaseType::Long)
+    if(from.isPointerType() and to.isCharacterType())
     {
         std::cout << NarrowingConversion(operation, from.string(), to.string(), line, column);
     }

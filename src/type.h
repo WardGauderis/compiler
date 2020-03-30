@@ -31,15 +31,12 @@ namespace {
 		}
 	}
 } // namespace
-using TypeVariant = std::variant<char, short, int, long, float, double>;
+using TypeVariant = std::variant<char, int, float>;
 
 enum class BaseType {
 	Char = variant_index<TypeVariant, char>(),
-	Short = variant_index<TypeVariant, short>(),
 	Int = variant_index<TypeVariant, int>(),
-	Long = variant_index<TypeVariant, long>(),
 	Float = variant_index<TypeVariant, float>(),
-	Double = variant_index<TypeVariant, double>(),
 };
 
 class Type; // stupid predeclaration but oh well
@@ -77,13 +74,15 @@ public:// default init to void
 
 	[[nodiscard]] bool isPointerType() const;
 
-	[[nodiscard]] bool isIntegralType() const;
-
 	[[nodiscard]] bool isCharacterType() const;
+
+    [[nodiscard]] bool isIntegralType() const;
 
 	[[nodiscard]] bool isIntegerType() const;
 
     [[nodiscard]] bool isFloatType() const;
+
+    [[nodiscard]] bool isVoidType() const;
 
     [[nodiscard]] bool isFunctionType() const;
 

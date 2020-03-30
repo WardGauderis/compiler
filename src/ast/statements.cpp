@@ -6,6 +6,7 @@
 
 #include "statements.h"
 #include "IRVisitor/irVisitor.h"
+#include "helper.h"
 #include <numeric>
 
 namespace
@@ -20,33 +21,33 @@ bool assign_fold(Type*& elem)
     }
     return false;
 }
-}
+} // namespace
 
 namespace Ast
 {
-std::string Scope::name () const
+std::string Scope::name() const
 {
     return "block";
 }
 
-std::string Scope::value () const
+std::string Scope::value() const
 {
     return "";
 }
 
-std::vector<Node*> Scope::children () const
+std::vector<Node*> Scope::children() const
 {
     return std::vector<Node*>(statements.begin(), statements.end());
 }
 
-std::string Scope::color () const
+std::string Scope::color() const
 {
     return "#ceebe3"; // light green
 }
 
-Literal* Scope::fold ()
+Literal* Scope::fold()
 {
-    for (auto& child : statements) assign_fold(child);
+    for(auto& child : statements) assign_fold(child);
     return nullptr;
 }
 
@@ -55,7 +56,7 @@ void Scope::visit(IRVisitor& visitor)
     visitor.visitScope(*this);
 }
 
-    std::string Statement::color() const
+std::string Statement::color() const
 {
     return " #ebcee5"; // light orange/pink
 }
@@ -91,8 +92,22 @@ Literal* Declaration::fold()
             }
             expr = res;
         }
-        else throw InternalError("declaration variable not in table when folding");
+        else
+            throw InternalError("declaration variable not in table when folding");
     }
+
+    // precast if it is constant
+    if(expr->constant())
+    {
+        const auto lambda
+        = [&](const auto& val) { return Helper::fold_cast(val, vartype, table, line, column); };
+
+        if(auto* res = dynamic_cast<Literal*>(expr))
+        {
+//            expr = std::visit(lambda, res->literal);
+        }
+    }
+
     return nullptr;
 }
 
@@ -105,8 +120,17 @@ bool Declaration::check() const
         return false;
     }
 
-    if(expr) return Type::convert(expr->type(), variable->type(), false, line, column);
-    else return true;
+    if(expr)
+    {
+        if(table->getParent() == nullptr and not expr->constant())
+        {
+            std::cout << NonConstantGlobal(variable->name(), line, column);
+            return false;
+        }
+        return Type::convert(expr->type(), variable->type(), false, line, column);
+    }
+    else
+        return true;
 }
 
 std::string FunctionDefinition::name() const
@@ -126,7 +150,7 @@ std::string FunctionDefinition::value() const
 
 std::vector<Node*> FunctionDefinition::children() const
 {
-    return {body};
+    return { body };
 }
 
 Literal* FunctionDefinition::fold()
@@ -146,10 +170,11 @@ bool FunctionDefinition::check() const
     }
     // don't look at me, i'm not the one leaking memory
     std::vector<Type*> types(parameters.size());
-    const auto convert = [&](const auto& param){ return new Type(param.first); };
+    const auto         convert = [&](const auto& param) { return new Type(param.first); };
     std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
-    const auto inserted = table->getParent()->insert(identifier, Type(new Type(returnType), std::move(types)), true);
+    const auto inserted
+    = table->getParent()->insert(identifier, Type(new Type(returnType), std::move(types)), true);
     if(not inserted)
     {
         std::cout << RedefinitionError(identifier, line, column);
@@ -160,18 +185,19 @@ bool FunctionDefinition::check() const
 
 void FunctionDefinition::visit(IRVisitor& visitor)
 {
-	visitor.visitFunctionDefinition(*this);
+    visitor.visitFunctionDefinition(*this);
 }
 
-	void Declaration::visit(IRVisitor& visitor)
+void Declaration::visit(IRVisitor& visitor)
 {
     visitor.visitDeclaration(*this);
 }
 
-	std::string LoopStatement::name() const
+std::string LoopStatement::name() const
 {
     if(doWhile) return "do while";
-    else return "loop";
+    else
+        return "loop";
 }
 
 std::string LoopStatement::value() const
@@ -200,7 +226,7 @@ void LoopStatement::visit(IRVisitor& visitor)
     visitor.visitLoopStatement(*this);
 }
 
-    std::string IfStatement::name() const
+std::string IfStatement::name() const
 {
     return "if";
 }
@@ -212,8 +238,9 @@ std::string IfStatement::value() const
 
 std::vector<Node*> IfStatement::children() const
 {
-    if (ifBody) return {condition, ifBody};
-    else return {condition, ifBody, elseBody};
+    if(ifBody) return { condition, ifBody };
+    else
+        return { condition, ifBody, elseBody };
 }
 
 Literal* IfStatement::fold()
@@ -227,7 +254,7 @@ void IfStatement::visit(IRVisitor& visitor)
     visitor.visitIfStatement(*this);
 }
 
-    std::string ControlStatement::name() const
+std::string ControlStatement::name() const
 {
     return type;
 }
@@ -259,7 +286,7 @@ std::string ReturnStatement::value() const
 
 std::vector<Node*> ReturnStatement::children() const
 {
-    return {expr};
+    return { expr };
 }
 
 Literal* ReturnStatement::fold()
@@ -269,10 +296,10 @@ Literal* ReturnStatement::fold()
 
 void ReturnStatement::visit(IRVisitor& visitor)
 {
-	visitor.visitReturnStatement(*this);
+    visitor.visitReturnStatement(*this);
 }
 
-	void ControlStatement::visit(IRVisitor& visitor)
+void ControlStatement::visit(IRVisitor& visitor)
 {
     visitor.visitControlStatement(*this);
 }

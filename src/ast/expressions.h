@@ -18,6 +18,7 @@ struct Expr : public Statement
 
     [[nodiscard]] std::string  color() const override;
     [[nodiscard]] virtual Type type() const = 0;
+    [[nodiscard]] virtual bool constant() const = 0;
 };
 
 struct Literal final : public Expr
@@ -33,6 +34,7 @@ struct Literal final : public Expr
   [[nodiscard]] std::vector<Node*> children() const final;
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] Type type() const final;
+  [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
   TypeVariant literal;
@@ -50,6 +52,7 @@ struct Variable final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string        color() const final;
     [[nodiscard]] Literal*           fold() final;
+    [[nodiscard]] bool constant() const final;
     [[nodiscard]] bool               check() const final;
 
   [[nodiscard]] Type type() const final;
@@ -71,6 +74,7 @@ struct BinaryExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
     BinaryOperation operation;
@@ -96,6 +100,7 @@ struct PostfixExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
     PostfixOperation operation;
@@ -120,6 +125,7 @@ struct PrefixExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
     PrefixOperation                operation;
@@ -139,6 +145,7 @@ struct CastExpr final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
     Type  cast;
@@ -158,6 +165,7 @@ struct Assignment final : public Expr
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
     Variable* variable;
@@ -175,6 +183,7 @@ struct FunctionCall final : public Expr
     [[nodiscard]] Literal*           fold() final;
     [[nodiscard]] bool               check() const final;
     [[nodiscard]] Type               type() const final;
+    [[nodiscard]] bool constant() const final;
 	void visit(IRVisitor& visitor) final;
 
 	std::vector<Expr*> arguments;
@@ -193,6 +202,7 @@ struct PrintfStatement final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
     [[nodiscard]] Type type() const final;
+    [[nodiscard]] bool constant() const final;
 	void visit(IRVisitor& visitor) override;
 
     Expr* expr;
