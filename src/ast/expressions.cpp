@@ -4,136 +4,10 @@
 // @copyright   : BA2 Informatica - Thomas Dooms - University of Antwerp
 //============================================================================
 
-#include <IRVisitor/irVisitor.h>
 #include "expressions.h"
+#include "helper.h"
+#include <IRVisitor/irVisitor.h>
 
-namespace
-{
-template <typename Type>
-bool assign_fold(Type*& elem)
-{
-    if(auto* res = elem->fold())
-    {
-        elem = res;
-        return true;
-    }
-    return false;
-}
-
-template <typename Type0, typename Type1>
-Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-{
-    if constexpr(std::is_integral_v<Type0> and std::is_integral_v<Type1>)
-    {
-        return new Ast::Literal(lhs % rhs, std::move(table), line, column);
-    }
-    else
-    {
-        throw InternalError("modulo on floating points while folding", line, column);
-    }
-}
-
-template <typename Type0, typename Type1>
-Ast::Literal*
-fold_binary(Type0 lhs, Type1 rhs, BinaryOperation operation, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-{
-    if(operation.isDivisionModulo() and rhs == 0) return nullptr;
-
-    if(operation == BinaryOperation::Add)
-        return new Ast::Literal(lhs + rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Sub)
-        return new Ast::Literal(lhs - rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Mul)
-        return new Ast::Literal(lhs * rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Div)
-        return new Ast::Literal(lhs / rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Mod)
-        return fold_modulo(lhs, rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Lt)
-        return new Ast::Literal(lhs < rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Gt)
-        return new Ast::Literal(lhs > rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Le)
-        return new Ast::Literal(lhs <= rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Ge)
-        return new Ast::Literal(lhs >= rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Eq)
-        return new Ast::Literal(lhs == rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Neq)
-        return new Ast::Literal(lhs != rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::And)
-        return new Ast::Literal(lhs && rhs, std::move(table), line, column);
-    else if(operation == BinaryOperation::Or)
-        return new Ast::Literal(lhs || rhs, std::move(table), line, column);
-    else
-        throw InternalError("unknown binary operation", line, column);
-}
-
-template <typename Type>
-Ast::Literal*
-fold_prefix(Type operand, PrefixOperation operation, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-{
-    if(operation == PrefixOperation::Plus)
-        return new Ast::Literal(operand, std::move(table), line, column);
-    else if(operation == PrefixOperation::Neg)
-        return new Ast::Literal(-operand, std::move(table), line, column);
-    else if(operation == PrefixOperation::Not)
-        return new Ast::Literal(!operand, std::move(table), line, column);
-    else if(operation == PrefixOperation::Incr)
-        return new Ast::Literal(operand + 1, std::move(table), line, column);
-    else if(operation == PrefixOperation::Decr)
-        return new Ast::Literal(operand - 1, std::move(table), line, column);
-    else
-        throw InternalError("unknown prefix expression", line, column);
-}
-
-template <typename Type>
-Ast::Literal*
-fold_postfix(Type operand, PostfixOperation operation, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-{
-    if(operation == PostfixOperation::Incr)
-        return new Ast::Literal(operand + 1, std::move(table), line, column);
-    else if(operation == PostfixOperation::Decr)
-        return new Ast::Literal(operand - 1, std::move(table), line, column);
-    else
-        throw InternalError("unknown postfix expression", line, column);
-}
-
-template <typename Type>
-Ast::Literal*
-fold_cast(Type operand, const std::string& operation, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-{
-    if(operation == "float")
-        return new Ast::Literal((float)operand, std::move(table), line, column);
-    else if(operation == "double")
-        return new Ast::Literal((double)operand, std::move(table), line, column);
-    else if(operation == "char")
-        return new Ast::Literal((char)operand, std::move(table), line, column);
-    else if(operation == "short")
-        return new Ast::Literal((short)operand, std::move(table), line, column);
-    else if(operation == "int")
-        return new Ast::Literal((int)operand, std::move(table), line, column);
-    else if(operation == "long")
-        return new Ast::Literal((long)operand, std::move(table), line, column);
-    else
-        throw InternalError("unknown type for conversion: " + operation, line, column);
-}
-
-bool check_const(const std::shared_ptr<SymbolTable>& table,
-                 const std::string&                  identifier,
-                 const std::string&                  operation,
-                 size_t                              line,
-                 size_t                              column)
-{
-    if(table->lookup(identifier)->type.isConst())
-    {
-        std::cout << ConstError(operation, identifier, line, column);
-        return false;
-    }
-    return true;
-}
-
-} // namespace
 
 namespace Ast
 {
@@ -169,10 +43,10 @@ Literal* Comment::fold()
 
 void Comment::visit(IRVisitor& visitor)
 {
-	visitor.visitComment(*this);
+    visitor.visitComment(*this);
 }
 
-	std::string Literal::name () const
+std::string Literal::name() const
 {
     return "literal";
 }
@@ -204,10 +78,10 @@ bool Literal::constant() const
 
 void Literal::visit(IRVisitor& visitor)
 {
-	visitor.visitLiteral(*this);
+    visitor.visitLiteral(*this);
 }
 
-std::string Variable::name () const
+std::string Variable::name() const
 {
     return identifier;
 }
@@ -232,7 +106,8 @@ Literal* Variable::fold()
     if(auto* res = table->lookup(name()))
     {
         if(not res->literal.has_value()) return nullptr;
-        else return new Ast::Literal(res->literal.value(), table, line, column);
+        else
+            return new Ast::Literal(res->literal.value(), table, line, column);
     }
     throw InternalError("variable not found while folding");
 }
@@ -258,7 +133,8 @@ bool Variable::check() const
 Type Variable::type() const
 {
     if(auto* res = table->lookup(identifier)) return res->type;
-    else return Type();
+    else
+        return Type();
 }
 
 bool Variable::constant() const
@@ -268,10 +144,10 @@ bool Variable::constant() const
 
 void Variable::visit(IRVisitor& visitor)
 {
-	visitor.visitVariable(*this);
+    visitor.visitVariable(*this);
 }
 
-	std::string BinaryExpr::name () const
+std::string BinaryExpr::name() const
 {
     return "binary expression";
 }
@@ -300,7 +176,7 @@ Literal* BinaryExpr::fold()
     if(new_lhs and new_rhs)
     {
         const auto lambda = [&](const auto& lhs, const auto& rhs) {
-            auto* res = fold_binary(lhs, rhs, operation, table, line, column);
+            auto* res = Helper::fold_binary(lhs, rhs, operation, table, line, column);
             if(res) return res;
             else
                 return set_folded();
@@ -337,10 +213,10 @@ bool BinaryExpr::constant() const
 
 void BinaryExpr::visit(IRVisitor& visitor)
 {
-	visitor.visitBinaryExpr(*this);
+    visitor.visitBinaryExpr(*this);
 }
 
-	std::string PrefixExpr::name () const
+std::string PrefixExpr::name() const
 {
     return "prefix expression";
 }
@@ -360,7 +236,7 @@ Literal* PrefixExpr::fold()
 {
     auto*      new_operand = std::visit([&](auto val) { return val->fold(); }, operand);
     const auto lambda
-    = [&](const auto& val) { return fold_prefix(val, operation, table, line, column); };
+    = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
 
     // TODO: deletus feetus, memory leakus
     if(new_operand) return std::visit(lambda, new_operand->literal);
@@ -371,8 +247,8 @@ bool PrefixExpr::check() const
 {
     if(operand.index() == 0 and operation.isIncrDecr())
     {
-        auto*      variable = std::get<Variable*>(operand);
-        const auto error = check_const(table, variable->name(), operation.string(), line, column);
+        auto* variable = std::get<Variable*>(operand);
+        const auto error = Helper::check_const(table, variable->name(), operation.string(), line, column);
         if(not error) return false;
     }
     if(operand.index() == 1 and operation.isIncrDecr())
@@ -404,10 +280,10 @@ bool PrefixExpr::constant() const
 
 void PrefixExpr::visit(IRVisitor& visitor)
 {
-	visitor.visitPrefixExpr(*this);
+    visitor.visitPrefixExpr(*this);
 }
 
-	std::string PostfixExpr::name () const
+std::string PostfixExpr::name() const
 {
     return "prefix expression";
 }
@@ -426,7 +302,7 @@ Literal* PostfixExpr::fold()
 {
     auto*      new_operand = variable->fold();
     const auto lambda
-    = [&](const auto& val) { return fold_postfix(val, operation, table, line, column); };
+    = [&](const auto& val) { return Helper::fold_postfix(val, operation, table, line, column); };
 
     // TODO: deletus feetus, memory leakus
     if(new_operand) return std::visit(lambda, new_operand->literal);
@@ -435,7 +311,7 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    return check_const(table, variable->name(), operation.string(), line, column);
+    return Helper::check_const(table, variable->name(), operation.string(), line, column);
 }
 
 Type PostfixExpr::type() const
@@ -449,10 +325,10 @@ bool PostfixExpr::constant() const
 
 void PostfixExpr::visit(IRVisitor& visitor)
 {
-	visitor.visitPostfixExpr(*this);
+    visitor.visitPostfixExpr(*this);
 }
 
-std::string CastExpr::name () const
+std::string CastExpr::name() const
 {
     return "cast expression";
 }
@@ -471,7 +347,7 @@ Literal* CastExpr::fold()
 {
     auto*      new_operand = operand->fold();
     const auto lambda
-    = [&](const auto& val) { return fold_cast(val, cast.string(), table, line, column); };
+    = [&](const auto& val) { return Helper::fold_cast(val, cast, table, line, column); };
 
     if(new_operand) return std::visit(lambda, new_operand->literal);
     else
@@ -494,10 +370,10 @@ bool CastExpr::constant() const
 
 void CastExpr::visit(IRVisitor& visitor)
 {
-	visitor.visitCastExpr(*this);
+    visitor.visitCastExpr(*this);
 }
 
-	std::string Assignment::name () const
+std::string Assignment::name() const
 {
     return "assignment";
 }
@@ -514,7 +390,7 @@ std::vector<Node*> Assignment::children() const
 
 Literal* Assignment::fold()
 {
-    assign_fold(expr);
+    Helper::assign_fold(expr);
     return nullptr;
 }
 
@@ -540,12 +416,12 @@ bool Assignment::constant() const
 
 void Assignment::visit(IRVisitor& visitor)
 {
-	visitor.visitAssignment(*this);
+    visitor.visitAssignment(*this);
 }
 
 std::string PrintfStatement::name() const
 {
-	return "printf";
+    return "printf";
 }
 
 std::string FunctionCall::name() const
@@ -565,7 +441,7 @@ std::vector<Node*> FunctionCall::children() const
 
 Literal* FunctionCall::fold()
 {
-    for(auto& arg : arguments) assign_fold(arg);
+    for(auto& arg : arguments) Helper::assign_fold(arg);
     return nullptr;
 }
 
@@ -613,10 +489,10 @@ bool FunctionCall::constant() const
 
 void FunctionCall::visit(IRVisitor& visitor)
 {
-	visitor.visitFunctionCall(*this);
+    visitor.visitFunctionCall(*this);
 }
 
-	std::string PrintfStatement::value() const
+std::string PrintfStatement::value() const
 {
     return "";
 }
@@ -644,6 +520,6 @@ bool PrintfStatement::constant() const
 
 void PrintfStatement::visit(IRVisitor& visitor)
 {
-	visitor.visitPrintfStatement(*this);
+    visitor.visitPrintfStatement(*this);
 }
 } // namespace Ast
