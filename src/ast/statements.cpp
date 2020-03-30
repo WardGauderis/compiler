@@ -104,7 +104,7 @@ Literal* Declaration::fold()
 
         if(auto* res = dynamic_cast<Literal*>(expr))
         {
-//            expr = std::visit(lambda, res->literal);
+            expr = std::visit(lambda, res->literal);
         }
     }
 
