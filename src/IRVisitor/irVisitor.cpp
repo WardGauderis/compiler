@@ -262,14 +262,20 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 	auto& allocaInst = declaration.table->lookup(declaration.variable->name())->allocaInst;
 	bool global = !declaration.table->getParent();
 	if (global)
-		allocaInst = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::CommonLinkage,
-				Constant::getNullValue(type), name);
-	else allocaInst = builder.CreateAlloca(type, nullptr, name);
-
-	if (declaration.expr)
 	{
-		if (global);    //TODO initializer
-		else
+		const auto& var = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::LinkageTypes::ExternalLinkage,
+				Constant::getNullValue(type), name);
+		allocaInst = var;
+		if (declaration.expr)
+		{
+			declaration.expr->visit(*this);
+			var->setInitializer(::cast<Constant>(ret));
+		}
+	}
+	else
+	{
+		allocaInst = builder.CreateAlloca(type, nullptr, name);
+		if (declaration.expr)
 		{
 			declaration.expr->visit(*this);
 			ret = cast(ret, type);
@@ -347,8 +353,12 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	builder.SetInsertPoint(block);
 	functionDefinition.body->visit(*this);
 	if (!block->getTerminator())
-		builder.CreateRet(functionDefinition.identifier=="main" ? Constant::getNullValue(returnType) :
-		                  UndefValue::get(returnType));
+	{
+		if (returnType->isVoidTy()) builder.CreateRetVoid();
+		else
+			builder.CreateRet(functionDefinition.identifier=="main" ? Constant::getNullValue(returnType) :
+			                  UndefValue::get(returnType));
+	}
 }
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
@@ -360,7 +370,7 @@ void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 		argument->visit(*this);
 		arguments.emplace_back(ret);
 	}
-	ret = builder.CreateCall(function,arguments);
+	ret = builder.CreateCall(function, arguments);
 }
 
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
@@ -419,6 +429,9 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type)
 	{
 		return PointerType::getUnqual(convertToIR(type.getDerefType().value()));
 	}
-	return builder.getVoidTy();
+	else if (type.isVoidType())
+	{
+		return builder.getVoidTy();
+	}
 	throw IRError(type.string());
 }

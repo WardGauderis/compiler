@@ -1,17 +1,10 @@
-int f = 6;
-
-void h(){
-    printf(f);
+void* f(int a){
+	void* f = a;
+	return f;
 }
-
-int g(){
-    return 3;
-}
-
 int main()
 {
-    int x = 10 * g();
-    printf(x);
-    h();
+    int x = 10;
+    printf(f(10));
 }
 
