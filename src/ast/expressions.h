@@ -55,7 +55,7 @@ struct Variable final : public Expr
   [[nodiscard]] Type type() const final;
   void visit(IRVisitor& visitor) final;
 
-    std::string identifier;
+  std::string identifier;
 };
 
 struct BinaryExpr final : public Expr

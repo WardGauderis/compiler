@@ -11,12 +11,14 @@
 #include <memory>
 #include <unordered_map>
 #include <variant>
+#include <llvm/IR/Instructions.h>
 
 struct TableElement
 {
     Type                       type;
     std::optional<TypeVariant> literal;
     bool                       isInitialized;
+    llvm::AllocaInst*          allocaInst;
 };
 
 class SymbolTable

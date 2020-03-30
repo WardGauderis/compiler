@@ -74,7 +74,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
-	ret = builder.CreateLoad(variables[variable.name()]);
+	ret = builder.CreateLoad(variable.table->lookup(variable.name())->allocaInst);
 }
 
 void IRVisitor::visitScope(const Ast::Scope& scope)
@@ -210,7 +210,7 @@ void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 	postFixExpr.variable->visit(*this);
 	bool inc = postFixExpr.operation.type==PostfixOperation::Incr;
 	auto temp = increaseOrDecrease(inc, ret);
-	builder.CreateStore(temp, variables[postFixExpr.variable->name()]);
+	builder.CreateStore(temp, postFixExpr.table->lookup(postFixExpr.children()[0]->name())->allocaInst);
 }
 
 void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
@@ -236,7 +236,7 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	else
 	{
 		ret = increaseOrDecrease(optType==PrefixOperation::Incr, ret);
-		builder.CreateStore(ret, variables[prefixExpr.children()[0]->name()]);
+		builder.CreateStore(ret, prefixExpr.table->lookup(prefixExpr.children()[0]->name())->allocaInst);
 	}
 }
 
@@ -251,7 +251,7 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 {
 	assignment.expr->visit(*this);
 	ret = cast(ret, convertToIR(assignment.variable->type()));
-	builder.CreateStore(ret, variables[assignment.variable->name()]);
+	builder.CreateStore(ret, assignment.table->lookup(assignment.variable->name())->allocaInst);
 }
 
 void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
@@ -259,11 +259,12 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 	const auto& ASTType = declaration.variable->type();
 	const auto& type = convertToIR(ASTType);
 	const auto& name = declaration.variable->name();
+	auto& allocaInst = declaration.table->lookup(declaration.variable->name())->allocaInst;
 	GlobalVariable* global = nullptr;
 	if (!declaration.table->getParent())
 		global = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::CommonLinkage,
 				Constant::getNullValue(type), name);
-	else variables[name] = builder.CreateAlloca(type, nullptr, name);
+	else allocaInst = builder.CreateAlloca(type, nullptr, name);
 
 	if (declaration.expr)
 	{
@@ -272,7 +273,7 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 		{
 			declaration.expr->visit(*this);
 			ret = cast(ret, type);
-			builder.CreateStore(ret, variables[name]);
+			builder.CreateStore(ret, allocaInst);
 		}
 	}
 }

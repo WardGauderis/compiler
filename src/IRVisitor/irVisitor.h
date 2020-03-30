@@ -64,7 +64,6 @@ private:
 	llvm::Module module;
 	llvm::IRBuilder<> builder;
 
-	std::unordered_map<std::string, llvm::AllocaInst*> variables;
 
 	llvm::Value* ret;
 
