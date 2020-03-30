@@ -145,13 +145,20 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
         const auto lhs = new Ast::Variable(identifier, table, line, column);
         return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
     });
+    visitor(2, [&](auto* context)
+    {
+      const auto identifier = context->children[0]->getText();
+      const auto lhs = new Ast::Variable(identifier, table, line, column);
+      return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
+    });
+    visitor(3, [&](auto* context)
+    {
+      auto name = context->children[0]->getText();
+      return new Ast::FunctionCall({}, std::move(name), table, line, column);
+    });
     visitor(4, [&](auto* context)
     {
-        std::vector<Ast::Expr*> args;
-        if(auto* res = dynamic_cast<CParser::ArgumentListContext*>(context->children[2]))
-        {
-            args = visitArgumentList(res, table);
-        }
+        auto args = visitArgumentList(context->children[2], table);
         auto name = context->children[0]->getText();
       return new Ast::FunctionCall(std::move(args), std::move(name), table, line, column);
     });
