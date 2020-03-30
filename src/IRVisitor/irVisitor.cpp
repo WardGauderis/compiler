@@ -275,7 +275,7 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 	}
 	else
 	{
-		allocaInst = builder.CreateAlloca(type, nullptr, name);
+		allocaInst = createAlloca(type, name);
 		if (declaration.expr)
 		{
 			declaration.expr->visit(*this);
@@ -319,12 +319,58 @@ void IRVisitor::visitPrintfStatement(const Ast::PrintfStatement& printfStatement
 
 void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 {
-	throw InternalError("If statement not yet supported in LLVM IR");
+	ifStatement.condition->visit(*this);
+	const auto& type = ret->getType();
+	const auto& ifTrue = BasicBlock::Create(context, "if.true", builder.GetInsertBlock()->getParent());
+	BasicBlock* ifFalse = (ifStatement.elseBody==nullptr) ? nullptr : BasicBlock::Create(context, "if.false",
+			builder.GetInsertBlock()->getParent());
+	const auto& ifEnd = BasicBlock::Create(context, "if.end", builder.GetInsertBlock()->getParent());
+
+	ret = type->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, ret, Constant::getNullValue(type)) :
+	      builder.CreateICmp(CmpInst::ICMP_NE, ret, Constant::getNullValue(type));
+	builder.CreateCondBr(ret, ifTrue, ifFalse ? ifFalse : ifEnd);
+
+	builder.SetInsertPoint(ifTrue);
+	ifStatement.ifBody->visit(*this);
+	builder.CreateBr(ifEnd);
+
+	if (ifFalse)
+	{
+		builder.SetInsertPoint(ifFalse);
+		ifStatement.elseBody->visit(*this);
+		builder.CreateBr(ifEnd);
+	}
+
+	builder.SetInsertPoint(ifEnd);
 }
 
 void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 {
-	throw InternalError("Loop statement not yet supported in LLVM IR");
+	const auto& loopCond = BasicBlock::Create(context, "loop.cond", builder.GetInsertBlock()->getParent());
+	const auto& loopBody = BasicBlock::Create(context, "loop.body", builder.GetInsertBlock()->getParent());
+	const auto& loopEnd = BasicBlock::Create(context, "loop.end", builder.GetInsertBlock()->getParent());
+
+	if (loopStatement.init) loopStatement.init->visit(*this);
+
+	builder.CreateBr(loopCond);
+	builder.SetInsertPoint(loopCond);
+
+	if (loopStatement.condition)
+	{
+		loopStatement.condition->visit(*this);
+		const auto& type = ret->getType();
+		ret = type->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, ret, Constant::getNullValue(type)) :
+		      builder.CreateICmp(CmpInst::ICMP_NE, ret, Constant::getNullValue(type));
+		builder.CreateCondBr(ret, loopBody, loopEnd);
+	}
+	else builder.CreateBr(loopBody);
+
+	builder.SetInsertPoint(loopBody);
+	loopStatement.body->visit(*this);
+	if (loopStatement.iteration) loopStatement.iteration->visit(*this);
+	builder.CreateBr(loopCond);
+
+	builder.SetInsertPoint(loopEnd);
 }
 
 void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatement)
@@ -357,12 +403,12 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	for (auto& parameter: function->args())
 	{
 		const auto& name = functionDefinition.parameters[i++].second;
-		ret = builder.CreateAlloca(parameter.getType(), nullptr, name);
+		ret = createAlloca(parameter.getType(), name);
 		functionDefinition.table->lookup(name)->allocaInst = ret;
 		builder.CreateStore(&parameter, ret);
 	}
 	functionDefinition.body->visit(*this);
-	if (!block->getTerminator())
+	if (!builder.GetInsertBlock()->getTerminator())
 	{
 		if (returnType->isVoidTy()) builder.CreateRetVoid();
 		else
@@ -442,7 +488,14 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type, const bool function)
 	else if (type.isVoidType())
 	{
 		if (function) return builder.getVoidTy();
-		return builder.getInt8PtrTy();
+		return builder.getInt8Ty();
 	}
 	throw IRError(type.string());
+}
+
+llvm::AllocaInst* IRVisitor::createAlloca(llvm::Type* type, const std::string& name)
+{
+	auto& block = builder.GetInsertBlock()->getParent()->getEntryBlock();
+	IRBuilder tmpBuilder(&block, block.begin());
+	return tmpBuilder.CreateAlloca(type, nullptr, name);
 }

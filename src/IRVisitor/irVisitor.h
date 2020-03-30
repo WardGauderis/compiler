@@ -71,6 +71,8 @@ private:
 	llvm::Value* increaseOrDecrease(bool inc, llvm::Value* input);
 
 	llvm::Type* convertToIR(const Type& type, bool function = false);
+
+	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
 };
 
 #endif //COMPILER_IRVISITOR_H
