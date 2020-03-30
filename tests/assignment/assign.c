@@ -1,17 +1,17 @@
 int f = 6;
 
-void f(){
+void h(){
     printf(f);
 }
 
-int f(){
+int g(){
     return 3;
 }
 
 int main()
 {
-    int x = 10 * f();
+    int x = 10 * g();
     printf(x);
-    f();
+    h();
 }
 

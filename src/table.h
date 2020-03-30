@@ -18,7 +18,7 @@ struct TableElement
     Type                       type;
     std::optional<TypeVariant> literal;
     bool                       isInitialized;
-    llvm::AllocaInst*          allocaInst;
+    llvm::Value*               allocaInst;
 };
 
 class SymbolTable

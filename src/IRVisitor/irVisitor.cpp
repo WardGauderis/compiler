@@ -260,9 +260,9 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 	const auto& type = convertToIR(ASTType);
 	const auto& name = declaration.variable->name();
 	auto& allocaInst = declaration.table->lookup(declaration.variable->name())->allocaInst;
-	GlobalVariable* global = nullptr;
-	if (!declaration.table->getParent())
-		global = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::CommonLinkage,
+	bool global = !declaration.table->getParent();
+	if (global)
+		allocaInst = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::CommonLinkage,
 				Constant::getNullValue(type), name);
 	else allocaInst = builder.CreateAlloca(type, nullptr, name);
 
@@ -327,7 +327,8 @@ void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatem
 
 void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
 {
-	throw InternalError("Return statement not yet supported in LLVM IR");
+	returnStatement.expr->visit(*this);
+	builder.CreateRet(ret);
 }
 
 void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionDefinition)
@@ -341,6 +342,7 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
 	const auto& function =
 			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
+	functionDefinition.table->lookup(functionDefinition.identifier)->allocaInst = function;
 	const auto& block = BasicBlock::Create(context, "entry", function);
 	builder.SetInsertPoint(block);
 	functionDefinition.body->visit(*this);
@@ -351,7 +353,14 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 {
-	throw InternalError("Function call not yet supported in LLVM IR");
+	const auto& function = functionCall.table->lookup(functionCall.value())->allocaInst;
+	std::vector<Value*> arguments;
+	for (const auto& argument: functionCall.arguments)
+	{
+		argument->visit(*this);
+		arguments.emplace_back(ret);
+	}
+	ret = builder.CreateCall(function,arguments);
 }
 
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
@@ -408,8 +417,8 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type)
 	}
 	else if (type.isPointerType())
 	{
-		return llvm::PointerType::getUnqual(convertToIR(type.getDerefType().value()));
+		return PointerType::getUnqual(convertToIR(type.getDerefType().value()));
 	}
-
+	return builder.getVoidTy();
 	throw IRError(type.string());
 }
