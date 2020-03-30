@@ -263,7 +263,8 @@ void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 	bool global = !declaration.table->getParent();
 	if (global)
 	{
-		const auto& var = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::LinkageTypes::ExternalLinkage,
+		const auto& var = new GlobalVariable(module, type, ASTType.isConst(),
+				GlobalValue::LinkageTypes::ExternalLinkage,
 				Constant::getNullValue(type), name);
 		allocaInst = var;
 		if (declaration.expr)
@@ -334,6 +335,7 @@ void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatem
 void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
 {
 	returnStatement.expr->visit(*this);
+	ret = cast(ret, builder.getCurrentFunctionReturnType());
 	builder.CreateRet(ret);
 }
 
@@ -344,13 +346,21 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	{
 		parameters.emplace_back(convertToIR(parameter.first));
 	}
-	const auto& returnType = convertToIR(functionDefinition.returnType);
+	const auto& returnType = convertToIR(functionDefinition.returnType, true);
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
 	const auto& function =
 			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
 	functionDefinition.table->lookup(functionDefinition.identifier)->allocaInst = function;
 	const auto& block = BasicBlock::Create(context, "entry", function);
 	builder.SetInsertPoint(block);
+	size_t i = 0;
+	for (auto& parameter: function->args())
+	{
+		const auto& name = functionDefinition.parameters[i++].second;
+		ret = builder.CreateAlloca(parameter.getType(), nullptr, name);
+		functionDefinition.table->lookup(name)->allocaInst = ret;
+		builder.CreateStore(&parameter, ret);
+	}
 	functionDefinition.body->visit(*this);
 	if (!block->getTerminator())
 	{
@@ -409,7 +419,7 @@ llvm::Value* IRVisitor::increaseOrDecrease(const bool inc, llvm::Value* input)
 		return builder.CreateBinOp(inc ? Instruction::Add : Instruction::Sub, input, ConstantInt::get(type, 1), opName);
 }
 
-llvm::Type* IRVisitor::convertToIR(const ::Type& type)
+llvm::Type* IRVisitor::convertToIR(const ::Type& type, const bool function)
 {
 	if (type.isBaseType())
 	{
@@ -431,7 +441,8 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type)
 	}
 	else if (type.isVoidType())
 	{
-		return builder.getVoidTy();
+		if (function) return builder.getVoidTy();
+		return builder.getInt8PtrTy();
 	}
 	throw IRError(type.string());
 }

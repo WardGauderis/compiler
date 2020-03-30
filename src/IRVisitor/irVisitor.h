@@ -64,14 +64,13 @@ private:
 	llvm::Module module;
 	llvm::IRBuilder<> builder;
 
-
-	llvm::Value* ret;
+	llvm::Value* ret{};
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to);
 
 	llvm::Value* increaseOrDecrease(bool inc, llvm::Value* input);
 
-	llvm::Type* convertToIR(const Type& type);
+	llvm::Type* convertToIR(const Type& type, bool function = false);
 };
 
 #endif //COMPILER_IRVISITOR_H

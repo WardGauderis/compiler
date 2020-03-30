@@ -45,14 +45,14 @@ postfixExpr:
     basicExpr|
     IDENTIFIER '(' argumentList? ')'|
     printf|
-    IDENTIFIER '++'|
-    IDENTIFIER '--';
+    postfixExpr '++'|
+    postfixExpr '--';
 
 prefixExpr:
     postfixExpr|
-    '++' IDENTIFIER|
-    '--' IDENTIFIER|
-    '&' IDENTIFIER|
+    '++' prefixExpr|
+    '--' prefixExpr|
+    '&' prefixExpr|
     '+' prefixExpr|
     '-' prefixExpr|
     '!' prefixExpr|
@@ -91,7 +91,7 @@ orExpr:
 
 assignExpr:
     orExpr|
-    IDENTIFIER '=' assignExpr;
+    prefixExpr '=' assignExpr;
 
 specifier:
     'char'|

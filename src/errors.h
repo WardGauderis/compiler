@@ -88,7 +88,7 @@ struct NonConstantGlobal : public SemanticError
 struct ConstError : public SemanticError
 {
     explicit ConstError(const std::string& operation, const std::string& name, unsigned int line = 0, unsigned int column = 0)
-        : SemanticError("operation "+operation + " on const variable '" + name + "' is not allowed", line, column)
+        : SemanticError("operation '"+operation + "' on const variable '" + name + "' is not allowed", line, column)
     {
     }
 };

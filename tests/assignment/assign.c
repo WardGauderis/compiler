@@ -1,10 +1,10 @@
-void* f(int a){
-	void* f = a;
-	return f;
+const int f = 6;
+int g(int* f){
+	return ++*f;
 }
+
 int main()
 {
-    int x = 10;
-    printf(f(10));
+	printf(g(&f));
 }
 
