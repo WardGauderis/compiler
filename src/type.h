@@ -48,9 +48,18 @@ public:// default init to void
 	{
 	}
 
-	explicit Type(bool isConst, const std::string& baseType)
-			:isTypeConst(isConst), type(fromString(baseType))
+	explicit Type(bool isConst, const std::string& str)
+			:isTypeConst(isConst)
 	{
+        if(str == "char")
+            type = BaseType::Char;
+        else if(str == "int")
+            type = BaseType::Int;
+        else if(str == "float")
+            type = BaseType::Float;
+        else if(str == "void")
+            type = std::monostate();
+        else throw std::runtime_error("cannot convert string to type");
 	}
 
 	explicit Type(Type* ret, std::vector<Type*> params)
@@ -91,8 +100,6 @@ public:// default init to void
 	friend bool operator!=(const Type& lhs, const Type& rhs);
 
 	static std::string toString(BaseType type);
-
-	static BaseType    fromString(const std::string& str);
 
 	static std::optional<Type>
 	unary(PrefixOperation operation, const Type& operand, size_t line = 0, size_t column = 0, bool print = true);

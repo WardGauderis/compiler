@@ -122,18 +122,6 @@ std::string Type::toString(BaseType type)
     }
 }
 
-BaseType Type::fromString(const std::string& str)
-{
-    if(str == "char")
-        return BaseType::Char;
-    else if(str == "int")
-        return BaseType::Int;
-    else if(str == "float")
-        return BaseType::Float;
-    else
-        throw InternalError("string cannot convert to base type");
-}
-
 std::optional<Type>
 Type::unary(PrefixOperation operation, const Type& operand, size_t line, size_t column, bool print)
 {

@@ -311,7 +311,6 @@ Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable
 Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     bool isConst = context->children.size() != 1;
-
     antlr4::tree::ParseTree* specifier
     = *std::find_if(context->children.begin(), context->children.end(), [](const auto& context) {
           return typeid(*context) == typeid(CParser::SpecifierContext);
@@ -557,11 +556,7 @@ std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std:
 Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
     auto table = std::make_shared<SymbolTable>(parent);
-    Type ret;
-    if(auto* res = dynamic_cast<CParser::TypeNameContext*>(context->children[0]))
-    {
-        ret = visitTypeName(res, table);
-    }
+    auto ret = visitTypeName(context->children[0], table);
 
     auto scopeIndex = 4;
     std::vector<std::pair<Type, std::string>> params;

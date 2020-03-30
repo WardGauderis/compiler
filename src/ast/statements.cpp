@@ -113,10 +113,17 @@ Literal* Declaration::fold()
 
 bool Declaration::check() const
 {
+
     auto inserted = table->insert(variable->name(), vartype, expr);
     if(not inserted)
     {
         std::cout << RedefinitionError(variable->name(), line, column);
+        return false;
+    }
+
+    if(vartype.isVoidType())
+    {
+        std::cout << SemanticError("type declaration cannot have void type");
         return false;
     }
 
@@ -156,12 +163,18 @@ std::vector<Node*> FunctionDefinition::children() const
 Literal* FunctionDefinition::fold()
 {
     [[maybe_unused]] const auto _ = body->fold();
+    return nullptr;
 }
 
 bool FunctionDefinition::check() const
 {
     for(const auto& elem : parameters)
     {
+        if(elem.first.isVoidType())
+        {
+            std::cout << SemanticError("parameter type canoot be void", line, column);
+            return false;
+        }
         if(not table->insert(elem.second, elem.first, true))
         {
             std::cout << RedefinitionError(identifier, line, column);
