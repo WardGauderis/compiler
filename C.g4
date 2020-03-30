@@ -96,13 +96,14 @@ assignExpr:
 specifier:
     'char'|
     'int'|
-    'float';
+    'float'|
+    'void';
 
 qualifier:
     QUALIFIER+;
 
 typeName:
-     basicType pointerType? | qualifier? 'void' qualifier? pointerType;
+     basicType pointerType?;
 
 basicType:
     qualifier? specifier qualifier?;
@@ -153,7 +154,7 @@ argumentList:
     expr (',' argumentList)?;
 
 functionDefinition:
-    (typeName | 'void') IDENTIFIER '(' parameterList? ')' scopeStatement ';'?;
+    typeName IDENTIFIER '(' parameterList? ')' scopeStatement ';'?;
 
 file:
     (declaration | functionDefinition | ';' )* EOF;
