@@ -87,8 +87,6 @@ public:// default init to void
 
     [[nodiscard]] bool isFunctionType() const;
 
-    [[nodiscard]] llvm::Type* convertToIR() const;
-
 	friend bool operator==(const Type& lhs, const Type& rhs);
 
 	friend bool operator!=(const Type& lhs, const Type& rhs);

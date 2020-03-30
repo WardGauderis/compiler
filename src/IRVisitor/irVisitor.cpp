@@ -17,11 +17,11 @@ IRVisitor::IRVisitor(const std::filesystem::path& input)
 	module.getOrInsertFunction("printf",
 			llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true));
 
-	FunctionCallee tmp = module.getOrInsertFunction("main", builder.getInt32Ty());
-	auto main = ::cast<Function>(tmp.getCallee());
-
-	auto block = BasicBlock::Create(context, "entry", main);
-	builder.SetInsertPoint(block);
+//	FunctionCallee tmp = module.getOrInsertFunction("main", builder.getInt32Ty());
+//	auto main = ::cast<Function>(tmp.getCallee());
+//
+//	auto block = BasicBlock::Create(context, "entry", main);
+//	builder.SetInsertPoint(block);
 }
 
 void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
@@ -256,15 +256,24 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 
 void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
 {
-	const auto& type = convertToIR(declaration.variable->type());
+	const auto& ASTType = declaration.variable->type();
+	const auto& type = convertToIR(ASTType);
 	const auto& name = declaration.variable->name();
-	variables[name] = builder.CreateAlloca(type, nullptr, name);
+	GlobalVariable* global = nullptr;
+	if (!declaration.table->getParent())
+		global = new GlobalVariable(module, type, ASTType.isConst(), GlobalValue::CommonLinkage,
+				Constant::getNullValue(type), name);
+	else variables[name] = builder.CreateAlloca(type, nullptr, name);
 
 	if (declaration.expr)
 	{
-		declaration.expr->visit(*this);
-		ret = cast(ret, type);
-		builder.CreateStore(ret, variables[name]);
+		if (global);    //TODO initializer
+		else
+		{
+			declaration.expr->visit(*this);
+			ret = cast(ret, type);
+			builder.CreateStore(ret, variables[name]);
+		}
 	}
 }
 
@@ -322,7 +331,21 @@ void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement
 
 void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionDefinition)
 {
-	throw InternalError("Function definition not yet supported in LLVM IR");
+	std::vector<llvm::Type*> parameters;
+	for (const auto& parameter: functionDefinition.parameters)
+	{
+		parameters.emplace_back(convertToIR(parameter.first));
+	}
+	const auto& returnType = convertToIR(functionDefinition.returnType);
+	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
+	const auto& function =
+			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
+	const auto& block = BasicBlock::Create(context, "entry", function);
+	builder.SetInsertPoint(block);
+	functionDefinition.body->visit(*this);
+	if (!block->getTerminator())
+		builder.CreateRet(functionDefinition.identifier=="main" ? Constant::getNullValue(returnType) :
+		                  UndefValue::get(returnType));
 }
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
@@ -386,5 +409,6 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type)
 	{
 		return llvm::PointerType::getUnqual(convertToIR(type.getDerefType().value()));
 	}
+
 	throw IRError(type.string());
 }
