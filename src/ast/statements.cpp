@@ -105,7 +105,15 @@ bool Declaration::check() const
         return false;
     }
 
-    if(expr) return Type::convert(expr->type(), variable->type(), false, line, column);
+    if(expr)
+    {
+        if(table->getParent() == nullptr and not expr->constant())
+        {
+            std::cout << NonConstantGlobal(variable->name(), line, column);
+            return false;
+        }
+        return Type::convert(expr->type(), variable->type(), false, line, column);
+    }
     else return true;
 }
 

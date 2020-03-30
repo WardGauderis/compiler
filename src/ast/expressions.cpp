@@ -197,6 +197,11 @@ Type Literal::type() const
     return Type(true, static_cast<BaseType>(literal.index()));
 }
 
+bool Literal::constant() const
+{
+    return true;
+}
+
 void Literal::visit(IRVisitor& visitor)
 {
 	visitor.visitLiteral(*this);
@@ -254,6 +259,11 @@ Type Variable::type() const
 {
     if(auto* res = table->lookup(identifier)) return res->type;
     else return Type();
+}
+
+bool Variable::constant() const
+{
+    return false;
 }
 
 void Variable::visit(IRVisitor& visitor)
@@ -320,6 +330,10 @@ Type BinaryExpr::type() const
         return Type();
     }
 }
+bool BinaryExpr::constant() const
+{
+    return rhs->constant() && lhs->constant();
+}
 
 void BinaryExpr::visit(IRVisitor& visitor)
 {
@@ -383,6 +397,11 @@ Type PrefixExpr::type() const
     }
 }
 
+bool PrefixExpr::constant() const
+{
+    return std::visit([&](auto val) { return val->constant(); }, operand);
+}
+
 void PrefixExpr::visit(IRVisitor& visitor)
 {
 	visitor.visitPrefixExpr(*this);
@@ -422,6 +441,10 @@ bool PostfixExpr::check() const
 Type PostfixExpr::type() const
 {
     return variable->type();
+}
+bool PostfixExpr::constant() const
+{
+    return false;
 }
 
 void PostfixExpr::visit(IRVisitor& visitor)
@@ -464,6 +487,10 @@ Type CastExpr::type() const
 {
     return cast;
 }
+bool CastExpr::constant() const
+{
+    return operand->constant();
+}
 
 void CastExpr::visit(IRVisitor& visitor)
 {
@@ -505,6 +532,10 @@ bool Assignment::check() const
 Type Assignment::type() const
 {
     return variable->type();
+}
+bool Assignment::constant() const
+{
+    return false;
 }
 
 void Assignment::visit(IRVisitor& visitor)
@@ -575,6 +606,11 @@ Type FunctionCall::type() const
     }
 }
 
+bool FunctionCall::constant() const
+{
+    return false;
+}
+
 void FunctionCall::visit(IRVisitor& visitor)
 {
 	visitor.visitFunctionCall(*this);
@@ -599,6 +635,11 @@ Literal* PrintfStatement::fold()
 Type PrintfStatement::type() const
 {
     return Type(false, BaseType::Int);
+}
+
+bool PrintfStatement::constant() const
+{
+    return false;
 }
 
 void PrintfStatement::visit(IRVisitor& visitor)
