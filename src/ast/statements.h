@@ -96,6 +96,7 @@ struct LoopStatement final : public Statement
     [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal*           fold() final;
+    [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
     Statement* init;      // can be nullptr
