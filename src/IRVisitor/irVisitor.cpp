@@ -16,12 +16,6 @@ IRVisitor::IRVisitor(const std::filesystem::path& input)
 {
 	module.getOrInsertFunction("printf",
 			llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true));
-
-//	FunctionCallee tmp = module.getOrInsertFunction("main", builder.getInt32Ty());
-//	auto main = ::cast<Function>(tmp.getCallee());
-//
-//	auto block = BasicBlock::Create(context, "entry", main);
-//	builder.SetInsertPoint(block);
 }
 
 void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
@@ -106,24 +100,20 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 				builder.GetInsertBlock()->getParent());
 		auto current = builder.GetInsertBlock();
 
-		ret = lhsType->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, lhs, Constant::getNullValue(lhsType)) :
-		      builder.CreateICmp(CmpInst::ICMP_NE, lhs, Constant::getNullValue(lhsType));
-
+		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateCondBr(ret, landTrue, landEnd);
 
 		builder.SetInsertPoint(landTrue);
 		binaryExpr.rhs->visit(*this);
 		auto rhs = ret;
 		const auto rhsType = rhs->getType();
-		ret = rhsType->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, rhs, Constant::getNullValue(rhsType)) :
-		      builder.CreateICmp(CmpInst::ICMP_NE, rhs, Constant::getNullValue(rhsType));
+		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateBr(landEnd);
 
 		builder.SetInsertPoint(landEnd);
 		auto phi = builder.CreatePHI(builder.getInt1Ty(), 2);
 		phi->addIncoming(land ? builder.getFalse() : builder.getTrue(), current);
 		phi->addIncoming(ret, landTrue);
-		ret = builder.CreateZExt(ret, builder.getInt32Ty());
 		return;
 	}
 
@@ -173,8 +163,6 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 		else if (operationType==BinaryOperation::Neq)
 			ret = floatOperation ? builder.CreateFCmp(CmpInst::FCMP_UNE, lhs, rhs, "neq") :
 			      builder.CreateICmp(CmpInst::ICMP_NE, lhs, rhs, "nq");
-
-		ret = builder.CreateZExt(ret, builder.getInt32Ty());
 	}
 	else if (operationType==BinaryOperation::Add && lhs->getType()->isPointerTy())
 		ret = builder.CreateInBoundsGEP(lhs, rhs);
@@ -228,10 +216,8 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	}
 	else if (optType==PrefixOperation::Not)
 	{
-		ret = type->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, ret, Constant::getNullValue(type)) :
-		      builder.CreateICmp(CmpInst::ICMP_NE, ret, Constant::getNullValue(type));
+		ret = cast(ret, builder.getInt1Ty());
 		ret = builder.CreateXor(ret, builder.getTrue());
-		ret = builder.CreateZExt(ret, builder.getInt32Ty());
 	}
 	else
 	{
@@ -326,8 +312,7 @@ void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 			builder.GetInsertBlock()->getParent());
 	const auto& ifEnd = BasicBlock::Create(context, "if.end", builder.GetInsertBlock()->getParent());
 
-	ret = type->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, ret, Constant::getNullValue(type)) :
-	      builder.CreateICmp(CmpInst::ICMP_NE, ret, Constant::getNullValue(type));
+	ret = cast(ret, builder.getInt1Ty());
 	builder.CreateCondBr(ret, ifTrue, ifFalse ? ifFalse : ifEnd);
 
 	builder.SetInsertPoint(ifTrue);
@@ -359,8 +344,7 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	{
 		loopStatement.condition->visit(*this);
 		const auto& type = ret->getType();
-		ret = type->isFloatTy() ? builder.CreateFCmp(CmpInst::FCMP_UNE, ret, Constant::getNullValue(type)) :
-		      builder.CreateICmp(CmpInst::ICMP_NE, ret, Constant::getNullValue(type));
+		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateCondBr(ret, loopBody, loopEnd);
 	}
 	else builder.CreateBr(loopBody);
@@ -375,7 +359,14 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 
 void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatement)
 {
-	throw InternalError("Control statement not yet supported in LLVM IR");
+	if (controlStatement.type=="break")
+	{
+
+	}
+	else
+	{
+
+	}
 }
 
 void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
@@ -434,19 +425,28 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 	auto from = value->getType();
 	if (from==to) return value;
 
-	if (from->isIntegerTy())
+	if (from==builder.getInt1Ty())
 	{
-		if (to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
+		if(to->isIntegerTy()) return builder.CreateZExt(value, to);
+		else if(to->isFloatTy()) return builder.CreateFPToUI(value, to);
+		else if(to->isPointerTy()) return builder.CreateIntToPtr(value, to);
+	}
+	else if (from->isIntegerTy())
+	{
+		if (to==builder.getInt1Ty()) return builder.CreateICmpNE(value, Constant::getNullValue(from));
+		else if (to->isIntegerTy()) return builder.CreateSExtOrTrunc(value, to);
 		else if (to->isFloatTy()) return builder.CreateSIToFP(value, to);
 		else if (to->isPointerTy()) return builder.CreateIntToPtr(value, to);
 	}
 	else if (from->isFloatTy())
 	{
-		if (to->isIntegerTy()) return builder.CreateFPToSI(value, to);
+		if (to==builder.getInt1Ty()) return builder.CreateFCmpUNE(value, Constant::getNullValue(from));
+		else if (to->isIntegerTy()) return builder.CreateFPToSI(value, to);
 	}
 	else if (from->isPointerTy())
 	{
-		if (to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
+		if (to==builder.getInt1Ty()) return builder.CreateICmpNE(value, Constant::getNullValue(from));
+		else if (to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
 		else if (to->isPointerTy()) return builder.CreatePointerCast(value, to);
 	}
 

@@ -9,9 +9,10 @@
 //}
 //
 
-int main(){
-	for (int i = 0; i<5; ++i)
-	{
+int main()
+{
+	int i = 0;
+	for(;;i++){
 		printf(i);
 	}
 }
