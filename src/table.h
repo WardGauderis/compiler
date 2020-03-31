@@ -42,22 +42,15 @@ class SymbolTable
 
     TableElement* lookup(const std::string& id);
 
+    llvm::Value* lookupValue(const std::string& id);
+
     bool insert(const std::string& id, Type type, bool initialized);
 
-    std::shared_ptr<SymbolTable>& getParent() { return parent; }
+    std::shared_ptr<SymbolTable>& getParent();
 
-    ScopeType getType() { return type; }
+    ScopeType getType();
 
-    bool lookupType(ScopeType type)
-    {
-        auto iter = this;
-        while(iter != nullptr)
-        {
-            if(type == iter->type) return true;
-            iter = iter->parent.get();
-        }
-        return false;
-    }
+    bool lookupType(ScopeType type);
 
     private:
     std::shared_ptr<SymbolTable> parent;
