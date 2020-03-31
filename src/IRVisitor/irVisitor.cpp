@@ -395,7 +395,7 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	{
 		const auto& name = functionDefinition.parameters[i++].second;
 		ret = createAlloca(parameter.getType(), name);
-		functionDefinition.table->lookup(name)->allocaInst = ret;
+		functionDefinition.body->table->lookup(name)->allocaInst = ret;
 		builder.CreateStore(&parameter, ret);
 	}
 	functionDefinition.body->visit(*this);

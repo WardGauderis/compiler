@@ -12,7 +12,9 @@
 int main()
 {
 	int i = 0;
-	for(;;i++){
-		printf(i);
+	for (; i<5;)
+	{
+		++i;
+		int i = 4;
 	}
 }

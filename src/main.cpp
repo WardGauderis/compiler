@@ -89,7 +89,7 @@ void compileFile(const std::filesystem::path& input, bool printCst, bool printAs
 
 	IRVisitor visitor(input);
 	visitor.convertAST(ast);
-	if(optimised) visitor.LLVMOptimize();
+	if (optimised) visitor.LLVMOptimize();
 	visitor.print(llPath);
 
 	std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
@@ -190,7 +190,8 @@ int main(int argc, const char** argv)
 			("cst,c", "Print the cst to dot")
 			("ast,a", "Print the ast to dot")
 			("optimised,o", "Run llvm optimisation passes")
-			("test,t", "Run compiler tests ('tests' folder must be in working directory, new tests may be added there)");
+			("test,t",
+					"Run compiler tests ('tests' folder must be in working directory, new tests may be added there)");
 	po::options_description hidden;
 	hidden.add_options()
 			("files", po::value<std::vector<std::filesystem::path>>(&files), "files to compile");
@@ -200,7 +201,6 @@ int main(int argc, const char** argv)
 
 	po::positional_options_description pos;
 	pos.add("files", -1);
-
 
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc, argv).options(combined).positional(pos).run(), vm);
@@ -230,16 +230,21 @@ int main(int argc, const char** argv)
 				std::cout << desc;
 				return 1;
 			}
-		}
-		for (const auto& file :files)
-		{
+
 			try
 			{
-				compileFile(file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
-			}
-			catch (const SyntaxError& ex)
-			{
-				std::cout << ex << CompilationError("could not complete compilation due to above errors") << std::endl;
+				for (const auto& file :files)
+				{
+					try
+					{
+						compileFile(file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
+					}
+					catch (const SyntaxError& ex)
+					{
+						std::cout << ex << CompilationError("could not complete compilation due to above errors")
+						          << std::endl;
+					}
+				}
 			}
 			catch (const InternalError& ex)
 			{
@@ -249,9 +254,10 @@ int main(int argc, const char** argv)
 			{
 				std::cout << ex.what() << std::endl;
 			}
+
+			return 0;
 		}
-		return 0;
+		std::cout << desc;
+		return 1;
 	}
-	std::cout << desc;
-	return 1;
 }
