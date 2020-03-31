@@ -168,28 +168,6 @@ Literal* FunctionDefinition::fold()
 
 bool FunctionDefinition::check() const
 {
-    bool found = false;
-    std::function<void(Node*)> func = [&](auto* root)
-    {
-        for(auto* child : root->children())
-        {
-            if(auto* res = dynamic_cast<ReturnStatement*>(child))
-            {
-                found = true;
-                auto type = (res->expr) ? res->expr->type()  : Type();
-                const auto worked = Type::convert(type, returnType, false, line, column, true);
-                if(not worked) return false;
-            }
-            func(child);
-        }
-    };
-    func(body);
-
-    if(not found and not returnType.isVoidType())
-    {
-        std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
-    }
-
     for(const auto& elem : parameters)
     {
         if(elem.first.isVoidType())
@@ -215,6 +193,29 @@ bool FunctionDefinition::check() const
         std::cout << RedefinitionError(identifier, line, column);
         return false;
     }
+
+    bool found = false;
+    std::function<void(Node*)> func = [&](auto* root)
+    {
+      for(auto* child : root->children())
+      {
+          if(auto* res = dynamic_cast<ReturnStatement*>(child))
+          {
+              found = true;
+              auto type = (res->expr) ? res->expr->type() : Type();
+              const auto worked = Type::convert(type, returnType, false, line, column, true);
+              if(not worked) return false;
+          }
+          func(child);
+      }
+    };
+    func(body);
+
+    if(not found and not returnType.isVoidType())
+    {
+        std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
+    }
+
     return true;
 }
 
