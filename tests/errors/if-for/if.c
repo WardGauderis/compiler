@@ -3,7 +3,7 @@ int main(){
 
 if(5)
 {
-    break; // no error
+    break; // error
 }
 
 if(6)
@@ -14,7 +14,7 @@ if(6)
 int a;
 if(a = 6)
 {
-    if(5.5) break;
+    if(5.5) break; // error
 }
 
 }

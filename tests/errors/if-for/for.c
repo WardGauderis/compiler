@@ -6,5 +6,8 @@ int main(){
     for(;;)
     {
         break;
+        return; // no error
     }
+    continue; // error
+    break; // error
 }

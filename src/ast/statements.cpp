@@ -129,7 +129,7 @@ bool Declaration::check() const
 
     if(expr)
     {
-        if(table->getParent() == nullptr and not expr->constant())
+        if(table->getType() == ScopeType::global and not expr->constant())
         {
             std::cout << NonConstantGlobal(variable->name(), line, column);
             return false;
@@ -168,11 +168,33 @@ Literal* FunctionDefinition::fold()
 
 bool FunctionDefinition::check() const
 {
+    bool found = false;
+    std::function<void(Node*)> func = [&](auto* root)
+    {
+        for(auto* child : root->children())
+        {
+            if(auto* res = dynamic_cast<ReturnStatement*>(child))
+            {
+                found = true;
+                auto type = (res->expr) ? res->expr->type()  : Type();
+                const auto worked = Type::convert(type, returnType, false, line, column, true);
+                if(not worked) return false;
+            }
+            func(child);
+        }
+    };
+    func(body);
+
+    if(not found and not returnType.isVoidType())
+    {
+        std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
+    }
+
     for(const auto& elem : parameters)
     {
         if(elem.first.isVoidType())
         {
-            std::cout << SemanticError("parameter type canoot be void", line, column);
+            std::cout << SemanticError("parameter type cannot be void", line, column);
             return false;
         }
         if(not table->insert(elem.second, elem.first, true))
@@ -287,6 +309,19 @@ Literal* ControlStatement::fold()
     return nullptr;
 }
 
+bool ControlStatement::check() const
+{
+    if(table->lookupType(ScopeType::loop))
+    {
+        return true;
+    }
+    else
+    {
+        std::cout << SemanticError(type + " statement is not in a loop", line, column);
+        return false;
+    }
+}
+
 std::string ReturnStatement::name() const
 {
     return "return";
@@ -299,12 +334,26 @@ std::string ReturnStatement::value() const
 
 std::vector<Node*> ReturnStatement::children() const
 {
-    return { expr };
+    if(expr) return { expr };
+    else return {};
 }
 
 Literal* ReturnStatement::fold()
 {
     return nullptr;
+}
+
+bool ReturnStatement::check() const
+{
+    if(table->lookupType(ScopeType::function))
+    {
+        return true;
+    }
+    else
+    {
+        std::cout << SemanticError("return statement is not in a loop", line, column);
+        return false;
+    }
 }
 
 void ReturnStatement::visit(IRVisitor& visitor)

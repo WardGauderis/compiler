@@ -185,6 +185,12 @@ bool Type::convert(const Type& from, const Type& to, bool cast, size_t line, siz
 {
     std::string operation = cast ? "casting" : "assigning";
 
+    if((from.isVoidType() and not to.isVoidType()) or (not from.isVoidType() and to.isVoidType()))
+    {
+        if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+        return false;
+    }
+
     if(from.isPointerType())
     {
         if (to.isFloatType())

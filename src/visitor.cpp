@@ -391,7 +391,7 @@ Ast::Scope* visitScopeStatement(antlr4::tree::ParseTree* context, std::shared_pt
 
 Ast::Statement* visitIfStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
-    auto table = std::make_shared<SymbolTable>(parent);
+    auto table = std::make_shared<SymbolTable>(ScopeType::condition, parent);
     const auto [line, column] = getColumnAndLine(context);
 
     auto* condition = visitExpr(context->children[2], table);
@@ -411,7 +411,7 @@ Ast::Statement* visitIfStatement(antlr4::tree::ParseTree* context, std::shared_p
 
 Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
-    auto table = std::make_shared<SymbolTable>(parent);
+    auto table = std::make_shared<SymbolTable>(ScopeType::loop, parent);
     const auto [line, column] = getColumnAndLine(context);
 
     VisitorHelper<Ast::Statement*> helper(context, "while");
@@ -430,7 +430,7 @@ Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::share
 
 Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
-    auto table = std::make_shared<SymbolTable>(parent);
+    auto table = std::make_shared<SymbolTable>(ScopeType::loop, parent);
     Ast::Statement* init = nullptr;
     Ast::Expr* condition = nullptr;
     Ast::Expr* iteration = nullptr;
@@ -444,12 +444,8 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
     {
         init = visitExpr(res, table);
     }
-    else
-    {
-        offset++;
-    }
 
-    if(auto* res = dynamic_cast<CParser::ExprContext*>(context->children[4 - offset]))
+    if(auto* res = dynamic_cast<CParser::ExprContext*>(context->children[3]))
     {
         condition = visitExpr(res, table);
     }
@@ -458,7 +454,7 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
         offset++;
     }
 
-    if(auto* res = dynamic_cast<CParser::ExprContext*>(context->children[6 - offset]))
+    if(auto* res = dynamic_cast<CParser::ExprContext*>(context->children[5 - offset]))
     {
         iteration = visitExpr(res, table);
     }
@@ -467,7 +463,7 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
         offset++;
     }
 
-    auto* body = visitStatement(context->children[8 - offset], table);
+    auto* body = visitStatement(context->children[7 - offset], table);
     const auto [line, column] = getColumnAndLine(context);
 
     return new Ast::LoopStatement(init, condition, iteration, body, false, table, line, column);
@@ -505,7 +501,7 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
     else if(dynamic_cast<CParser::ScopeStatementContext*>(child))
     {
         // make a new symbol table for the new scope
-        auto scopeTable = std::make_shared<SymbolTable>(table);
+        auto scopeTable = std::make_shared<SymbolTable>(ScopeType::plain, table);
         return visitScopeStatement(child, scopeTable);
     }
     else if(dynamic_cast<CParser::IfStatementContext*>(child))
@@ -555,7 +551,7 @@ std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std:
 
 Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
-    auto table = std::make_shared<SymbolTable>(parent);
+    auto table = std::make_shared<SymbolTable>(ScopeType::function, parent);
     auto ret = visitTypeName(context->children[0], table);
 
     auto scopeIndex = 4;
@@ -574,7 +570,7 @@ Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::s
 Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
 {
     std::vector<Ast::Statement*> statements;
-    auto global = std::make_shared<SymbolTable>();
+    auto global = std::make_shared<SymbolTable>(ScopeType::global);
     const auto [line, column] = getColumnAndLine(context);
 
     for(size_t i = 0; i < context->children.size() - 1; i++)
