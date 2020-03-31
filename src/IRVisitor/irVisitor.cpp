@@ -207,7 +207,7 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 
 void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 {
-	postFixExpr.variable->visit(*this);
+	postFixExpr.operand->visit(*this);
 	bool inc = postFixExpr.operation.type==PostfixOperation::Incr;
 	auto temp = increaseOrDecrease(inc, ret);
 	builder.CreateStore(temp, postFixExpr.table->lookup(postFixExpr.children()[0]->name())->allocaInst);
@@ -249,9 +249,9 @@ void IRVisitor::visitCastExpr(const Ast::CastExpr& castExpr)
 
 void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 {
-	assignment.expr->visit(*this);
-	ret = cast(ret, convertToIR(assignment.variable->type()));
-	builder.CreateStore(ret, assignment.table->lookup(assignment.variable->name())->allocaInst);
+	assignment.rhs->visit(*this);
+	ret = cast(ret, convertToIR(assignment.lhs->type()));
+	builder.CreateStore(ret, assignment.table->lookup(assignment.lhs->name())->allocaInst);
 }
 
 void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)

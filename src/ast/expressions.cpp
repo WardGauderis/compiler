@@ -223,49 +223,51 @@ std::string PrefixExpr::name() const
 
 std::string PrefixExpr::value() const
 {
-    return operation.string() + std::visit([&](auto val) { return val->value(); }, operand);
+    return operation.string() + operand->value();
 }
 
 std::vector<Node*> PrefixExpr::children() const
 {
-    const auto node = std::visit([&](auto val) { return static_cast<Node*>(val); }, operand);
-    return { node };
+    return { operand };
 }
 
 Literal* PrefixExpr::fold()
 {
-    auto*      new_operand = std::visit([&](auto val) { return val->fold(); }, operand);
-    const auto lambda
-    = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
-
-    // TODO: deletus feetus, memory leakus
-    if(new_operand) return std::visit(lambda, new_operand->literal);
+    if(auto* res = operand->fold())
+    {
+        const auto lambda = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
+        return std::visit(lambda, res->literal);
+    }
     return nullptr;
 }
 
 bool PrefixExpr::check() const
 {
-    if(operand.index() == 0 and operation.isIncrDecr())
+    if(auto* res = dynamic_cast<Variable*>(operand))
     {
-        auto* variable = std::get<Variable*>(operand);
-        const auto error = Helper::check_const(table, variable->name(), operation.string(), line, column);
-        if(not error) return false;
+        if(operation.isIncrDecr())
+        {
+            const auto error = Helper::check_const(table, operand->name(), operation.string(), line, column);
+            if(not error) return false;
+        }
     }
-    if(operand.index() == 1 and operation.isIncrDecr())
+    else
     {
-        throw SemanticError("assigning to an r-value in prefix expression", line, column);
+        if(operation.isIncrDecr())
+        {
+            std::cout << RValueError("assigning to", line, column);
+            return false;
+        }
     }
 
-    const auto type = std::visit([&](auto val) { return val->type(); }, operand);
-    return Type::unary(operation, type, line, column).has_value();
+    return Type::unary(operation, operand->type(), line, column).has_value();
 }
 
 Type PrefixExpr::type() const
 {
     try
     {
-        const auto type = std::visit([&](auto val) { return val->type(); }, operand);
-        return Type::unary(operation, type, 0, 0, false).value();
+        return Type::unary(operation, operand->type(), 0, 0, false).value();
     }
     catch(...)
     {
@@ -275,7 +277,7 @@ Type PrefixExpr::type() const
 
 bool PrefixExpr::constant() const
 {
-    return std::visit([&](auto val) { return val->constant(); }, operand);
+    return operand->constant();
 }
 
 void PrefixExpr::visit(IRVisitor& visitor)
@@ -290,17 +292,17 @@ std::string PostfixExpr::name() const
 
 std::string PostfixExpr::value() const
 {
-    return operation.string() + variable->value();
+    return operation.string() + operand->value();
 }
 
 std::vector<Node*> PostfixExpr::children() const
 {
-    return { variable };
+    return { operand };
 }
 
 Literal* PostfixExpr::fold()
 {
-    auto*      new_operand = variable->fold();
+    auto*      new_operand = operand->fold();
     const auto lambda
     = [&](const auto& val) { return Helper::fold_postfix(val, operation, table, line, column); };
 
@@ -311,12 +313,19 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    return Helper::check_const(table, variable->name(), operation.string(), line, column);
+    if(auto* res = dynamic_cast<Variable*>(operand)){}
+    else
+    {
+        std::cout << RValueError("assigning to", line, column);
+        return false;
+    }
+
+    return Helper::check_const(table, operand->name(), operation.string(), line, column);
 }
 
 Type PostfixExpr::type() const
 {
-    return variable->type();
+    return operand->type();
 }
 bool PostfixExpr::constant() const
 {
@@ -385,29 +394,36 @@ std::string Assignment::value() const
 
 std::vector<Node*> Assignment::children() const
 {
-    return { variable, expr };
+    return { lhs, rhs };
 }
 
 Literal* Assignment::fold()
 {
-    Helper::assign_fold(expr);
+    Helper::assign_fold(rhs);
     return nullptr;
 }
 
 bool Assignment::check() const
 {
-    if(table->lookup(variable->name())->type.isConst())
+    if(auto* res = dynamic_cast<Variable*>(lhs)){}
+    else
     {
-        std::cout << ConstError("assignment", variable->name(), line, column);
+        std::cout << RValueError("assigning to", line, column);
         return false;
     }
-    table->lookup(variable->name())->isInitialized = true;
-    return Type::convert(expr->type(), variable->type(), false, line, column);
+
+    if(table->lookup(lhs->name())->type.isConst())
+    {
+        std::cout << ConstError("assignment", lhs->name(), line, column);
+        return false;
+    }
+    table->lookup(lhs->name())->isInitialized = true;
+    return Type::convert(rhs->type(), lhs->type(), false, line, column);
 }
 
 Type Assignment::type() const
 {
-    return variable->type();
+    return lhs->type();
 }
 bool Assignment::constant() const
 {

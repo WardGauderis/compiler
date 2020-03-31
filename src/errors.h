@@ -85,6 +85,14 @@ struct NonConstantGlobal : public SemanticError
     }
 };
 
+struct RValueError : public SemanticError
+{
+    explicit RValueError(const std::string& operation, unsigned int line = 0, unsigned int column = 0)
+    : SemanticError(operation + " rvalue is not allowed", line, column)
+    {
+    }
+};
+
 struct ConstError : public SemanticError
 {
     explicit ConstError(const std::string& operation, const std::string& name, unsigned int line = 0, unsigned int column = 0)

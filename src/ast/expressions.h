@@ -86,11 +86,11 @@ struct BinaryExpr final : public Expr
 struct PostfixExpr final : public Expr
 {
     explicit PostfixExpr(const std::string&           operation,
-                         Variable*                    variable,
+                         Expr*                    operand,
                          std::shared_ptr<SymbolTable> table,
                          size_t                       line,
                          size_t                       column)
-    : Expr(std::move(table), line, column), operation(operation), variable(variable)
+    : Expr(std::move(table), line, column), operation(operation), operand(operand)
     {
     }
 
@@ -104,16 +104,11 @@ struct PostfixExpr final : public Expr
   void visit(IRVisitor& visitor) final;
 
     PostfixOperation operation;
-    Variable*        variable;
+    Expr*        operand;
 };
 
 struct PrefixExpr final : public Expr
 {
-    explicit PrefixExpr(const std::string& operation, Variable* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), operation(operation), operand(operand)
-    {
-    }
-
     explicit PrefixExpr(const std::string& operation, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     : Expr(std::move(table), line, column), operation(operation), operand(operand)
     {
@@ -129,7 +124,7 @@ struct PrefixExpr final : public Expr
   void visit(IRVisitor& visitor) final;
 
     PrefixOperation                operation;
-    std::variant<Variable*, Expr*> operand;
+    Expr* operand;
 };
 
 struct CastExpr final : public Expr
@@ -154,8 +149,8 @@ struct CastExpr final : public Expr
 
 struct Assignment final : public Expr
 {
-    explicit Assignment(Variable* variable, Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), variable(variable), expr(expr)
+    explicit Assignment(Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Expr(std::move(table), line, column), lhs(lhs), rhs(rhs)
     {
     }
 
@@ -168,8 +163,8 @@ struct Assignment final : public Expr
     [[nodiscard]] bool constant() const final;
   void visit(IRVisitor& visitor) final;
 
-    Variable* variable;
-    Expr*     expr;
+    Expr* lhs;
+    Expr*     rhs;
 };
 
 struct FunctionCall final : public Expr
