@@ -1,4 +1,4 @@
-//const int f = 6;
+const int f = 6;
 //int g(int* f){
 //	return ++(*f);
 //}
@@ -13,20 +13,10 @@
 //
 //void g(const int* f)
 //{
-//	++*f;
+//	++(*f);
 //}
 //
 //int main()
 //{
 //	g(&f);
 //}
-
-int main()
-{
-	for (int i = 0;; ++i)
-	{
-		printf(i);
-		if (i==5) break;
-		printf(0);
-	}
-}

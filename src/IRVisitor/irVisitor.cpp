@@ -11,6 +11,10 @@
 
 using namespace llvm;
 
+char RemoveUnusedCodeInBlockPass::ID = 0;
+
+static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove unused code");
+
 IRVisitor::IRVisitor(const std::filesystem::path& input)
 		:module(input.string(), context), builder(context)
 {
@@ -392,7 +396,7 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	}
 	const auto& returnType = convertToIR(functionDefinition.returnType, true);
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
-	const auto& function =
+	const auto function =
 			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
 	functionDefinition.table->lookup(functionDefinition.identifier)->allocaInst = function;
 	const auto& block = BasicBlock::Create(context, "entry", function);
@@ -406,13 +410,11 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 		builder.CreateStore(&parameter, ret);
 	}
 	functionDefinition.body->visit(*this);
-	if (!builder.GetInsertBlock()->getTerminator())
-	{
-		if (returnType->isVoidTy()) builder.CreateRetVoid();
-		else
-			builder.CreateRet(functionDefinition.identifier=="main" ? Constant::getNullValue(returnType) :
-			                  UndefValue::get(returnType));
-	}
+	if (returnType->isVoidTy()) builder.CreateRetVoid();
+	else
+		builder.CreateRet(functionDefinition.identifier=="main" ? Constant::getNullValue(returnType) :
+		                  UndefValue::get(returnType));
+	removeUnusedCode.runOnFunction(*function);
 }
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
