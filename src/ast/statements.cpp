@@ -197,7 +197,7 @@ bool FunctionDefinition::check() const
             std::cout << SemanticError("parameter type cannot be void", line, column);
             return false;
         }
-        if(not table->insert(elem.second, elem.first, true))
+        if(not body->table->insert(elem.second, elem.first, true))
         {
             std::cout << RedefinitionError(identifier, line, column);
             return false;
@@ -209,7 +209,7 @@ bool FunctionDefinition::check() const
     std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
     const auto inserted
-    = table->getParent()->insert(identifier, Type(new Type(returnType), std::move(types)), true);
+    = table->insert(identifier, Type(new Type(returnType), std::move(types)), true);
     if(not inserted)
     {
         std::cout << RedefinitionError(identifier, line, column);
@@ -254,6 +254,19 @@ Literal* LoopStatement::fold()
 {
     for(auto& child : children()) assign_fold(child);
     return nullptr;
+}
+
+bool LoopStatement::check() const
+{
+    // WARNING: there is a very important exception here
+    // we assign the table of init statements,
+    // so that it belongs to the scope table and not the parent one.
+    // This is the only place where we do this, as this is an exception in the language.
+    const auto& temp = children();
+    for(size_t i = 0; i < temp.size() - 1; i++)
+    {
+        temp[i]->table = body->table;
+    }
 }
 
 void LoopStatement::visit(IRVisitor& visitor)
