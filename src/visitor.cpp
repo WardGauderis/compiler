@@ -427,8 +427,9 @@ Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::share
     return helper.result();
 }
 
-Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
 {
+    auto table = std::make_shared<SymbolTable>(ScopeType::loop, parent);
     Ast::Statement* init = nullptr;
     Ast::Expr* condition = nullptr;
     Ast::Expr* iteration = nullptr;
@@ -461,7 +462,7 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
         offset++;
     }
 
-    auto* body = visitStatement(context->children[7 - offset], table, ScopeType::loop);
+    auto* body = visitStatement(context->children[7 - offset], table, ScopeType::plain);
     const auto [line, column] = getColumnAndLine(context);
 
     return new Ast::LoopStatement(init, condition, iteration, body, false, table, line, column);

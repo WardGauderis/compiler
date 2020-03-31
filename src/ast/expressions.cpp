@@ -465,6 +465,12 @@ bool FunctionCall::check() const
 {
     if(auto* res = table->lookup(identifier))
     {
+        if(not res->type.isFunctionType())
+        {
+            std::cout << SemanticError("calling non function object: " + identifier, line, column);
+            return false;
+        }
+
         const auto& func = res->type.getFunctionType();
         if(func.second.size() != arguments.size())
         {
