@@ -334,12 +334,13 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	const auto& loopCond = BasicBlock::Create(context, "loop.cond", builder.GetInsertBlock()->getParent());
 	const auto& loopBody = BasicBlock::Create(context, "loop.body", builder.GetInsertBlock()->getParent());
 	const auto& loopEnd = BasicBlock::Create(context, "loop.end", builder.GetInsertBlock()->getParent());
+	const auto& loopIter = loopStatement.iteration ? BasicBlock::Create(context, "loop.iter",
+			builder.GetInsertBlock()->getParent()) : nullptr;
 
 	if (loopStatement.init) loopStatement.init->visit(*this);
-
 	builder.CreateBr(loopCond);
-	builder.SetInsertPoint(loopCond);
 
+	builder.SetInsertPoint(loopCond);
 	if (loopStatement.condition)
 	{
 		loopStatement.condition->visit(*this);
@@ -351,8 +352,13 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 
 	builder.SetInsertPoint(loopBody);
 	loopStatement.body->visit(*this);
-	if (loopStatement.iteration) loopStatement.iteration->visit(*this);
-	builder.CreateBr(loopCond);
+	builder.CreateBr(loopIter ? loopIter : loopCond);
+
+	if(loopIter){
+		builder.SetInsertPoint(loopIter);
+		loopStatement.iteration->visit(*this);
+		builder.CreateBr(loopCond);
+	}
 
 	builder.SetInsertPoint(loopEnd);
 }
@@ -427,9 +433,9 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 
 	if (from==builder.getInt1Ty())
 	{
-		if(to->isIntegerTy()) return builder.CreateZExt(value, to);
-		else if(to->isFloatTy()) return builder.CreateFPToUI(value, to);
-		else if(to->isPointerTy()) return builder.CreateIntToPtr(value, to);
+		if (to->isIntegerTy()) return builder.CreateZExt(value, to);
+		else if (to->isFloatTy()) return builder.CreateFPToUI(value, to);
+		else if (to->isPointerTy()) return builder.CreateIntToPtr(value, to);
 	}
 	else if (from->isIntegerTy())
 	{

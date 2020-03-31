@@ -53,6 +53,7 @@ prefixExpr:
     '++' prefixExpr|
     '--' prefixExpr|
     '&' prefixExpr|
+    '*' prefixExpr|
     '+' prefixExpr|
     '-' prefixExpr|
     '!' prefixExpr|
