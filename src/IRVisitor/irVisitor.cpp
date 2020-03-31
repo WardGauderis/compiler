@@ -68,7 +68,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
-	ret = builder.CreateLoad(variable.table->lookup(variable.name())->allocaInst);
+	ret = builder.CreateLoad(*variable.table->lookupAllocaInst(variable.name()));
 }
 
 void IRVisitor::visitScope(const Ast::Scope& scope)
@@ -198,7 +198,7 @@ void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 	postFixExpr.operand->visit(*this);
 	bool inc = postFixExpr.operation.type==PostfixOperation::Incr;
 	auto temp = increaseOrDecrease(inc, ret);
-	builder.CreateStore(temp, postFixExpr.table->lookup(postFixExpr.children()[0]->name())->allocaInst);
+	builder.CreateStore(temp, *postFixExpr.table->lookupAllocaInst(postFixExpr.children()[0]->name()));
 }
 
 void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
@@ -222,7 +222,7 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	else
 	{
 		ret = increaseOrDecrease(optType==PrefixOperation::Incr, ret);
-		builder.CreateStore(ret, prefixExpr.table->lookup(prefixExpr.children()[0]->name())->allocaInst);
+		builder.CreateStore(ret, *prefixExpr.table->lookupAllocaInst(prefixExpr.children()[0]->name()));
 	}
 }
 
@@ -237,7 +237,7 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 {
 	assignment.rhs->visit(*this);
 	ret = cast(ret, convertToIR(assignment.lhs->type()));
-	builder.CreateStore(ret, assignment.table->lookup(assignment.lhs->name())->allocaInst);
+	builder.CreateStore(ret, *assignment.table->lookupAllocaInst(assignment.lhs->name()));
 }
 
 void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
@@ -351,10 +351,17 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	else builder.CreateBr(loopBody);
 
 	builder.SetInsertPoint(loopBody);
+	const auto& breakBackup = breakBlock;
+	const auto& continueBackup = continueBlock; //TODO
+	breakBlock = loopEnd;
+	continueBlock = loopIter ? loopIter : loopCond;
 	loopStatement.body->visit(*this);
+	breakBlock = breakBackup;
+	continueBlock = continueBackup;
 	builder.CreateBr(loopIter ? loopIter : loopCond);
 
-	if(loopIter){
+	if (loopIter)
+	{
 		builder.SetInsertPoint(loopIter);
 		loopStatement.iteration->visit(*this);
 		builder.CreateBr(loopCond);
@@ -365,14 +372,8 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 
 void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatement)
 {
-	if (controlStatement.type=="break")
-	{
-
-	}
-	else
-	{
-
-	}
+	if (controlStatement.name()=="break") builder.CreateBr(breakBlock);
+	else builder.CreateBr(continueBlock);
 }
 
 void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
@@ -416,7 +417,7 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 {
-	const auto& function = functionCall.table->lookup(functionCall.value())->allocaInst;
+	const auto& function = *functionCall.table->lookupAllocaInst(functionCall.value());
 	std::vector<Value*> arguments;
 	for (const auto& argument: functionCall.arguments)
 	{

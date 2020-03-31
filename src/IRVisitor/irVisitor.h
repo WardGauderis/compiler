@@ -65,6 +65,8 @@ private:
 	llvm::IRBuilder<> builder;
 
 	llvm::Value* ret{};
+	llvm::BasicBlock* breakBlock{};
+	llvm::BasicBlock* continueBlock{};
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to);
 

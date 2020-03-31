@@ -9,16 +9,6 @@
 //}
 
 
-//int main()
-//{
-//	int i = 0;
-//	for (; i<5;)
-//	{
-//		++i;
-//		int i = 4;
-//	}
-//}
-
 //int f = 6;
 //
 //void g(const int* f)
@@ -30,3 +20,13 @@
 //{
 //	g(&f);
 //}
+
+int main()
+{
+	for (int i = 0;; ++i)
+	{
+		printf(i);
+		if (i==5) break;
+		printf(0);
+	}
+}

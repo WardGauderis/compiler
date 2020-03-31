@@ -42,7 +42,7 @@ class SymbolTable
 
     TableElement* lookup(const std::string& id);
 
-    llvm::Value* lookupValue(const std::string& id);
+    llvm::Value** lookupAllocaInst(const std::string& id);
 
     bool insert(const std::string& id, Type type, bool initialized);
 

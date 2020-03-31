@@ -115,8 +115,17 @@ pointerType:
 initizalizer:
     assignExpr;
 
+variableDeclaration:
+    typeName IDENTIFIER ('=' initizalizer);
+
+declarationParameterList:
+    typeName IDENTIFIER? (',' declarationParameterList)?;
+
+functionDeclaration:
+    typeName IDENTIFIER '(' declarationParameterList? ')';
+
 declaration:
-    typeName IDENTIFIER ('=' initizalizer)? ';';
+    variableDeclaration | functionDeclaration ';';
 
 expr:
     assignExpr;
@@ -132,7 +141,7 @@ whileStatement:
     'do' statement 'while' '(' expr ')' ';';
 
 forStatement:
-    'for' '(' (declaration | exprStatement)  expr? ';'  expr? ')' statement;
+    'for' '(' (variableDeclaration | expr)? ';'  expr? ';'  expr? ')' statement;
 
 exprStatement:
     expr? ';';
