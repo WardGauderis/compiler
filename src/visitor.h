@@ -62,7 +62,7 @@ Ast::Statement* visitIfStatement(antlr4::tree::ParseTree* context, std::shared_p
 
 Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
 
 Ast::Expr* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 

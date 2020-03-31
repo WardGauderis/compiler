@@ -38,7 +38,14 @@ BaseType Type::getBaseType() const
 
 const FunctionType& Type::getFunctionType() const
 {
-    return std::get<FunctionType>(type);
+    try
+    {
+        return std::get<FunctionType>(type);
+    }
+    catch(...)
+    {
+        throw InternalError("wrong index");
+    }
 }
 
 std::optional<Type> Type::getDerefType() const

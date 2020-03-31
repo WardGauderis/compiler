@@ -113,7 +113,6 @@ Literal* Declaration::fold()
 
 bool Declaration::check() const
 {
-
     auto inserted = table->insert(variable->name(), vartype, expr);
     if(not inserted)
     {
@@ -186,8 +185,7 @@ bool FunctionDefinition::check() const
     const auto         convert = [&](const auto& param) { return new Type(param.first); };
     std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
-    const auto inserted
-    = table->insert(identifier, Type(new Type(returnType), std::move(types)), true);
+    const auto inserted = table->insert(identifier, Type(new Type(returnType), std::move(types)), true);
     if(not inserted)
     {
         std::cout << RedefinitionError(identifier, line, column);
@@ -259,15 +257,7 @@ Literal* LoopStatement::fold()
 
 bool LoopStatement::check() const
 {
-    // WARNING: there is a very important exception here
-    // we assign the table of init statements,
-    // so that it belongs to the scope table and not the parent one.
-    // This is the only place where we do this, as this is an exception in the language.
-    const auto& temp = children();
-    for(size_t i = 0; i < temp.size() - 1; i++)
-    {
-        temp[i]->table = body->table;
-    }
+    return true;
 }
 
 void LoopStatement::visit(IRVisitor& visitor)
