@@ -141,15 +141,8 @@ Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sy
     });
     visitor(2, [&](auto* context)
     {
-        const auto identifier = context->children[0]->getText();
-        const auto lhs = new Ast::Variable(identifier, table, line, column);
-        return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
-    });
-    visitor(2, [&](auto* context)
-    {
-      const auto identifier = context->children[0]->getText();
-      const auto lhs = new Ast::Variable(identifier, table, line, column);
-      return new Ast::PostfixExpr(context->children[1]->getText(), lhs, table, line, column);
+        const auto expr = visitPostfixExpr(context->children[0], table);
+        return new Ast::PostfixExpr(context->children[1]->getText(), expr, table, line, column);
     });
     visitor(3, [&](auto* context)
     {
