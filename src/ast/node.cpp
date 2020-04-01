@@ -31,19 +31,32 @@ std::ofstream& operator<< (std::ofstream& stream, const std::unique_ptr<Node>& r
 
 void Node::complete (bool check, bool fold, bool output)
 {
-    bool result = true;
-    std::function<void (Ast::Node*)> recursion = [&] (Ast::Node* root) {
-        result &= root->check ();
+    bool check_result = true;
+    bool fill_result = true;
+
+    std::function<void (Ast::Node*)> check_recursion = [&] (Ast::Node* root) {
+      check_result &= root->check ();
         for (const auto child : root->children ())
         {
-            recursion (child);
+            check_recursion (child);
         }
     };
+
+    std::function<void (Ast::Node*)> fill_recursion = [&] (Ast::Node* root) {
+        fill_result &= root->fill();
+      for (const auto child : root->children ())
+      {
+          fill_recursion (child);
+      }
+    };
+
+    fill_recursion(this);
+
     if (check)
     {
-        recursion (this);
+        check_recursion (this);
     }
-    if (not result)
+    if (not check_result or not fill_result)
     {
         throw CompilationError ("could not complete compilation due to above errors");
     }
@@ -53,19 +66,34 @@ void Node::complete (bool check, bool fold, bool output)
     }
 }
 
+std::string Node::value() const
+{
+    return "";
+}
+
+std::vector<Node *> Node::children() const
+{
+    return {};
+}
+
 [[nodiscard]] Literal* Node::fold()
 {
     for(auto& child : children()) Helper::assign_fold(child);
     return nullptr;
-};
+}
+
+[[nodiscard]] bool Node::fill() const
+{
+    return true;
+}
 
 [[nodiscard]] bool Node::check() const
 {
     return true;
 }
 
-[[nodiscard]] bool Node::unused() const
+[[nodiscard]] bool Node::used() const
 {
-    return false;
+    return true;
 }
 } // namespace Ast

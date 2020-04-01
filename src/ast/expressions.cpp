@@ -26,20 +26,12 @@ std::string Comment::value() const
     return "...";
 }
 
-std::vector<Node*> Comment::children() const
-{
-    return {};
-}
 
 std::string Comment::color() const
 {
     return "#d5ceeb"; // light purple
 }
 
-Literal* Comment::fold()
-{
-    return nullptr;
-}
 
 void Comment::visit(IRVisitor& visitor)
 {
@@ -56,10 +48,6 @@ std::string Literal::value() const
     return std::visit([&](const auto& val) { return std::to_string(val); }, literal);
 }
 
-std::vector<Node*> Literal::children() const
-{
-    return {};
-}
 
 Literal* Literal::fold()
 {
@@ -89,11 +77,6 @@ std::string Variable::name() const
 std::string Variable::value() const
 {
     return table->lookup(identifier)->type.string();
-}
-
-std::vector<Node*> Variable::children() const
-{
-    return {};
 }
 
 std::string Variable::color() const
@@ -380,20 +363,9 @@ std::string Assignment::name() const
     return "assignment";
 }
 
-std::string Assignment::value() const
-{
-    return "";
-}
-
 std::vector<Node*> Assignment::children() const
 {
     return { lhs, rhs };
-}
-
-Literal* Assignment::fold()
-{
-    Helper::assign_fold(rhs);
-    return nullptr;
 }
 
 bool Assignment::check() const
@@ -451,12 +423,6 @@ std::vector<Node*> FunctionCall::children() const
     return std::vector<Node*>(arguments.begin(), arguments.end());
 }
 
-Literal* FunctionCall::fold()
-{
-    for(auto& arg : arguments) Helper::assign_fold(arg);
-    return nullptr;
-}
-
 bool FunctionCall::check() const
 {
     if(auto* res = table->lookup(identifier))
@@ -508,11 +474,6 @@ bool FunctionCall::constant() const
 void FunctionCall::visit(IRVisitor& visitor)
 {
     visitor.visitFunctionCall(*this);
-}
-
-std::string PrintfStatement::value() const
-{
-    return "";
 }
 
 std::vector<Node*> PrintfStatement::children() const

@@ -31,17 +31,19 @@ struct Node
 
   [[nodiscard]] virtual std::string name() const = 0;
 
-  [[nodiscard]] virtual std::string value() const = 0;
+  [[nodiscard]] virtual std::string value() const;
 
-  [[nodiscard]] virtual std::vector<Node*> children() const = 0;
+  [[nodiscard]] virtual std::vector<Node*> children() const;
 
   [[nodiscard]] virtual std::string color() const = 0;
 
   [[nodiscard]] virtual Literal* fold();
 
+  [[nodiscard]] virtual bool fill() const;
+
   [[nodiscard]] virtual bool check() const;
 
-  [[nodiscard]] virtual bool unused() const;
+  [[nodiscard]] virtual bool used() const;
 
   virtual void visit(IRVisitor& visitor) = 0;
 
@@ -60,9 +62,7 @@ struct Comment final : public Node
 
   [[nodiscard]] std::string name() const final;
   [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
   [[nodiscard]] std::string color() const final;
-  [[nodiscard]] Literal* fold() final;
   void visit(IRVisitor& visitor) final;
 
 	std::string comment;

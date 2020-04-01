@@ -23,15 +23,14 @@ struct Expr : public Statement
 
 struct Literal final : public Expr
 {
-    template <typename Type>
-    explicit Literal(Type val, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), literal(val)
+    template <typename Variant>
+    explicit Literal(Variant val, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Expr(std::move(table), line, column), literal(std::move(val))
     {
     }
 
   [[nodiscard]] std::string name() const final;
   [[nodiscard]] std::string value() const final;
-  [[nodiscard]] std::vector<Node*> children() const final;
   [[nodiscard]] Literal* fold() final;
   [[nodiscard]] Type type() const final;
   [[nodiscard]] bool constant() const final;
@@ -49,7 +48,6 @@ struct Variable final : public Expr
 
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::string        value() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string        color() const final;
     [[nodiscard]] Literal*           fold() final;
     [[nodiscard]] bool constant() const final;
@@ -130,7 +128,7 @@ struct PrefixExpr final : public Expr
 struct CastExpr final : public Expr
 {
     explicit CastExpr(Type cast, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), cast(cast), operand(operand)
+    : Expr(std::move(table), line, column), cast(std::move(cast)), operand(operand)
     {
     }
 
@@ -155,9 +153,7 @@ struct Assignment final : public Expr
     }
 
   [[nodiscard]] std::string name() const final;
-  [[nodiscard]] std::string value() const final;
   [[nodiscard]] std::vector<Node*> children() const final;
-  [[nodiscard]] Literal* fold() final;
   [[nodiscard]] bool check() const final;
   [[nodiscard]] Type type() const final;
     [[nodiscard]] bool constant() const final;
@@ -175,7 +171,6 @@ struct FunctionCall final : public Expr
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
-    [[nodiscard]] Literal*           fold() final;
     [[nodiscard]] bool               check() const final;
     [[nodiscard]] Type               type() const final;
     [[nodiscard]] bool constant() const final;
@@ -193,7 +188,6 @@ struct PrintfStatement final : public Expr
     }
 
     [[nodiscard]] std::string        name() const final;
-    [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal* fold() final;
     [[nodiscard]] Type type() const final;
