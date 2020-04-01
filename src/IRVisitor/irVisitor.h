@@ -94,6 +94,7 @@ private:
 	llvm::Value* ret{};
 	llvm::BasicBlock* breakBlock{};
 	llvm::BasicBlock* continueBlock{};
+	bool requiresLvalue = false;
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to);
 
