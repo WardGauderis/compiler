@@ -12,10 +12,18 @@
 struct Helper
 {
     template <typename Type>
-    [[nodiscard]] static Type* folder(Type* elem)
+    static bool folder(Type*& elem)
     {
-        if(auto* res = dynamic_cast<Type*>(elem->fold())) return res;
-        else return elem;
+        if(not elem) return true;
+        if(auto* folded = elem->fold())
+        {
+            if(auto* res = dynamic_cast<Type*>(folded))
+            {
+                elem = res;
+            }
+        }
+        else return true;
+        return false;
     }
 
     template <typename Type0, typename Type1>
@@ -116,10 +124,7 @@ struct Helper
 
     static bool evaluate(Ast::Literal* literal)
     {
-        const auto lambda = [](const auto& val)
-        {
-            return static_cast<bool>(val);
-        };
+        const auto lambda = [](const auto& val) { return static_cast<bool>(val); };
         return std::visit(lambda, literal->literal);
     }
 
