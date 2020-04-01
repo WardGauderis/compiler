@@ -471,9 +471,9 @@ Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_
     Ast::Expr* iteration = nullptr;
     size_t offset = 0;
 
-    if(auto* res = dynamic_cast<CParser::DeclarationContext*>(context->children[2]))
+    if(auto* res = dynamic_cast<CParser::VariableDeclarationContext*>(context->children[2]))
     {
-        init = visitDeclaration(res, table);
+        init = visitVariableDeclaration(res, table);
     }
     else if(auto* res = dynamic_cast<CParser::ExprContext*>(context->children[2]))
     {

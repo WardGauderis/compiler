@@ -45,12 +45,6 @@ std::string Scope::color() const
     return "#ceebe3"; // light green
 }
 
-Literal* Scope::fold()
-{
-    for(auto& child : statements) assign_fold(child);
-    return nullptr;
-}
-
 void Scope::visit(IRVisitor& visitor)
 {
     visitor.visitScope(*this);
@@ -90,11 +84,13 @@ Literal* Declaration::fold()
             {
                 elem->literal = res->literal;
             }
-            expr = res;
         }
         else
+        {
             throw InternalError("declaration variable not in table when folding");
+        }
     }
+
 
     // precast if it is constant
     if(expr->constant())
@@ -157,12 +153,6 @@ std::string FunctionDefinition::value() const
 std::vector<Node*> FunctionDefinition::children() const
 {
     return { body };
-}
-
-Literal* FunctionDefinition::fold()
-{
-    [[maybe_unused]] const auto _ = body->fold();
-    return nullptr;
 }
 
 bool FunctionDefinition::check() const
@@ -244,11 +234,6 @@ std::vector<Node*> FunctionDeclaration::children() const
     return {};
 }
 
-Literal* FunctionDeclaration::fold()
-{
-    return nullptr;
-}
-
 void FunctionDeclaration::visit(IRVisitor& visitor)
 {
 
@@ -281,12 +266,6 @@ std::vector<Node*> LoopStatement::children() const
     return res;
 }
 
-Literal* LoopStatement::fold()
-{
-    for(auto& child : children()) assign_fold(child);
-    return nullptr;
-}
-
 void LoopStatement::visit(IRVisitor& visitor)
 {
     visitor.visitLoopStatement(*this);
@@ -309,12 +288,6 @@ std::vector<Node*> IfStatement::children() const
         return { condition, ifBody, elseBody };
 }
 
-Literal* IfStatement::fold()
-{
-    for(auto& child : children()) assign_fold(child);
-    return nullptr;
-}
-
 void IfStatement::visit(IRVisitor& visitor)
 {
     visitor.visitIfStatement(*this);
@@ -333,11 +306,6 @@ std::string ControlStatement::value() const
 std::vector<Node*> ControlStatement::children() const
 {
     return {};
-}
-
-Literal* ControlStatement::fold()
-{
-    return nullptr;
 }
 
 bool ControlStatement::check() const
@@ -367,11 +335,6 @@ std::vector<Node*> ReturnStatement::children() const
 {
     if(expr) return { expr };
     else return {};
-}
-
-Literal* ReturnStatement::fold()
-{
-    return nullptr;
 }
 
 bool ReturnStatement::check() const
