@@ -76,6 +76,30 @@ struct FunctionDefinition : public Statement
     Scope*                                    body;
 };
 
+struct FunctionDeclaration : public Statement
+{
+    FunctionDeclaration(Type                         returnType,
+                        std::string                  identifier,
+                        std::vector<Type>            parameters,
+                        std::shared_ptr<SymbolTable> table,
+                        size_t                       line,
+                        size_t                       column)
+    : returnType(std::move(returnType)), identifier(std::move(identifier)),
+      parameters(std::move(parameters)), Statement(std::move(table), line, column)
+    {
+    }
+
+    [[nodiscard]] std::string        name() const final;
+    [[nodiscard]] std::string        value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Literal*           fold() final;
+    void                             visit(IRVisitor& visitor) final;
+
+    Type              returnType;
+    std::string       identifier;
+    std::vector<Type> parameters;
+};
+
 struct LoopStatement final : public Statement
 {
     explicit LoopStatement(Statement*                   init, // may only be declaration or expr
@@ -96,7 +120,6 @@ struct LoopStatement final : public Statement
     [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal*           fold() final;
-    [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
     Statement* init;      // can be nullptr

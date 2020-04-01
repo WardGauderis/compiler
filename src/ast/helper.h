@@ -23,7 +23,8 @@ struct Helper
     }
 
     template <typename Type0, typename Type1>
-    static Ast::Literal* fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    static Ast::Literal*
+    fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     {
         if constexpr(std::is_integral_v<Type0> and std::is_integral_v<Type1>)
         {
@@ -85,6 +86,8 @@ struct Helper
             return new Ast::Literal(operand + 1, std::move(table), line, column);
         else if(operation == PrefixOperation::Decr)
             return new Ast::Literal(operand - 1, std::move(table), line, column);
+        else if(operation == PrefixOperation::Deref or operation == PrefixOperation::Addr)
+            return nullptr;
         else
             throw InternalError("unknown prefix expression", line, column);
     }
@@ -116,10 +119,10 @@ struct Helper
     }
 
     static bool check_const(const std::shared_ptr<SymbolTable>& table,
-                     const std::string&                  identifier,
-                     const std::string&                  operation,
-                     size_t                              line,
-                     size_t                              column)
+                            const std::string&                  identifier,
+                            const std::string&                  operation,
+                            size_t                              line,
+                            size_t                              column)
     {
         if(table->lookup(identifier)->type.isConst())
         {
@@ -127,5 +130,22 @@ struct Helper
             return false;
         }
         return true;
+    }
+
+    static bool is_lvalue(Ast::Expr* expr)
+    {
+        if(dynamic_cast<Ast::Variable*>(expr))
+        {
+            return true;
+        }
+        else if(auto* res = dynamic_cast<Ast::PrefixExpr*>(expr))
+        {
+            return res->operation == PrefixOperation::Addr;
+        }
+        else if(auto* res = dynamic_cast<Ast::PostfixExpr*>(expr))
+        {
+            // TODO there are some stuffs here
+        }
+        return false;
     }
 };

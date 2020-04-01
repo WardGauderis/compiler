@@ -206,6 +206,7 @@ bool FunctionDefinition::check() const
           }
           func(child);
       }
+      return true;
     };
     func(body);
 
@@ -220,6 +221,37 @@ bool FunctionDefinition::check() const
 void FunctionDefinition::visit(IRVisitor& visitor)
 {
     visitor.visitFunctionDefinition(*this);
+}
+
+std::string FunctionDeclaration::name() const
+{
+    return "function declaration";
+}
+
+std::string FunctionDeclaration::value() const
+{
+    std::string res = returnType.string() + ' ' + identifier + '(';
+    for(const auto& elem : parameters)
+    {
+        res += elem.string() + " ";
+    }
+    res.back() = ')';
+    return res;
+}
+
+std::vector<Node*> FunctionDeclaration::children() const
+{
+    return {};
+}
+
+Literal* FunctionDeclaration::fold()
+{
+    return nullptr;
+}
+
+void FunctionDeclaration::visit(IRVisitor& visitor)
+{
+
 }
 
 void Declaration::visit(IRVisitor& visitor)
@@ -253,11 +285,6 @@ Literal* LoopStatement::fold()
 {
     for(auto& child : children()) assign_fold(child);
     return nullptr;
-}
-
-bool LoopStatement::check() const
-{
-    return true;
 }
 
 void LoopStatement::visit(IRVisitor& visitor)

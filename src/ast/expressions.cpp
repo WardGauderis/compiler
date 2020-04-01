@@ -164,30 +164,21 @@ std::vector<Node*> BinaryExpr::children() const
 
 Literal* BinaryExpr::fold()
 {
-    auto* new_lhs = lhs->fold();
-    auto* new_rhs = rhs->fold();
+    Helper::assign_fold(lhs);
+    Helper::assign_fold(rhs);
 
-    const auto set_folded = [&]() -> Ast::Literal* {
-        if(new_lhs) lhs = new_lhs;
-        if(new_rhs) rhs = new_rhs;
-        return nullptr;
-    };
+    const auto res0 = dynamic_cast<Literal*>(lhs);
+    const auto res1 = dynamic_cast<Literal*>(rhs);
 
-    if(new_lhs and new_rhs)
+    if(res0 and res1)
     {
-        const auto lambda = [&](const auto& lhs, const auto& rhs) {
-            auto* res = Helper::fold_binary(lhs, rhs, operation, table, line, column);
-            if(res) return res;
-            else
-                return set_folded();
+        const auto lambda = [&](const auto& val0, const auto& val1)
+        {
+            return Helper::fold_binary(val0, val1, operation, table, line, column);
         };
-        // TODO: deletus feetus, memory leakus
-        return std::visit(lambda, new_lhs->literal, new_rhs->literal);
+        return std::visit(lambda, res0->literal, res1->literal);
     }
-    else
-    {
-        return set_folded();
-    }
+    return nullptr;
 }
 
 bool BinaryExpr::check() const
@@ -243,7 +234,7 @@ Literal* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    if(auto* res = dynamic_cast<Variable*>(operand))
+    if(not Helper::is_lvalue(operand))
     {
         if(operation.isIncrDecr())
         {
@@ -313,7 +304,7 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    if(auto* res = dynamic_cast<Variable*>(operand)){}
+    if(not Helper::is_lvalue(operand)){}
     else
     {
         std::cout << RValueError("assigning to", line, column);
@@ -405,19 +396,22 @@ Literal* Assignment::fold()
 
 bool Assignment::check() const
 {
-    if(auto* res = dynamic_cast<Variable*>(lhs)){}
+    if(not Helper::is_lvalue(lhs)){}
     else
     {
         std::cout << RValueError("assigning to", line, column);
         return false;
     }
-
-    if(table->lookup(lhs->name())->type.isConst())
+    if(auto* res = table->lookup(lhs->name()))
     {
-        std::cout << ConstError("assignment", lhs->name(), line, column);
-        return false;
+        if(res->type.isConst())
+        {
+            std::cout << ConstError("assignment", lhs->name(), line, column);
+            return false;
+        }
+        table->lookup(lhs->name())->isInitialized = true;
     }
-    table->lookup(lhs->name())->isInitialized = true;
+
     return Type::convert(rhs->type(), lhs->type(), false, line, column);
 }
 

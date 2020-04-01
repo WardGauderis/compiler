@@ -132,6 +132,16 @@ std::string Type::toString(BaseType type)
 std::optional<Type>
 Type::unary(PrefixOperation operation, const Type& operand, size_t line, size_t column, bool print)
 {
+    if(operation == PrefixOperation::Deref and not operand.isPointerType())
+    {
+        std::cout << SemanticError("cannot dereference non-pointer type " + operand.string(), line, column);
+        return std::nullopt;
+    }
+    if(operation == PrefixOperation::Addr)
+    {
+        return Type(false, new Type(operand));
+    }
+
     if(operation == PrefixOperation::Not)
     {
         return Type(false, BaseType::Int);
