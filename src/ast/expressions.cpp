@@ -207,7 +207,10 @@ std::vector<Node*> PrefixExpr::children() const
 
 Node* PrefixExpr::fold()
 {
-    Helper::folder(operand);
+    if(operation != PrefixOperation::Deref)
+    {
+        Helper::folder(operand);
+    }
 
     if(auto* res = dynamic_cast<Ast::Literal*>(operand))
     {
