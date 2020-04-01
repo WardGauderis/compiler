@@ -22,7 +22,7 @@ struct Scope final : public Statement
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string        color() const final;
-    [[nodiscard]] Literal*           fold() final;
+    [[nodiscard]] Node*           fold() final;
 
     void visit(IRVisitor& visitor) override;
 
@@ -38,7 +38,7 @@ struct Declaration final : public Statement
 
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
-    [[nodiscard]] Literal*           fold() final;
+    [[nodiscard]] Node*           fold() final;
     [[nodiscard]] bool               fill() const final;
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;

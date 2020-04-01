@@ -25,10 +25,20 @@ std::string Scope::color() const
 {
     return "#ceebe3"; // light green
 }
-Literal * Scope::fold()
+Node* Scope::fold()
 {
-    for(auto& child : statements) child = Helper::folder(child);
-    return nullptr;
+    for(auto iter = statements.begin(); iter != statements.end();)
+    {
+        if(Helper::folder(*iter))
+        {
+            iter = statements.erase(iter);
+        }
+        else
+        {
+            iter++;
+        }
+    }
+    return this;
 }
 
 void Scope::visit(IRVisitor& visitor)
@@ -52,11 +62,9 @@ std::vector<Node*> Declaration::children() const
     else return { variable };
 }
 
-Literal* Declaration::fold()
+Node* Declaration::fold()
 {
-    if(not expr) return nullptr;
-
-    expr = Helper::folder(expr);
+    Helper::folder(expr);
     if(auto* res = dynamic_cast<Ast::Literal*>(expr))
     {
         const auto& entry = table->lookup(variable->name());
@@ -67,7 +75,7 @@ Literal* Declaration::fold()
     }
 
     // precast if it is constant
-    if(expr->constant())
+    if(expr and expr->constant())
     {
         const auto lambda
         = [&](const auto& val) { return Helper::fold_cast(val, vartype, table, line, column); };
@@ -78,7 +86,7 @@ Literal* Declaration::fold()
         }
     }
 
-    return nullptr;
+    return this;
 }
 
 bool Declaration::fill() const
@@ -134,8 +142,8 @@ std::vector<Node*> FunctionDefinition::children() const
 
 Node* FunctionDefinition::fold()
 {
-    body = Helper::folder(body);
-    return nullptr;
+    Helper::folder(body);
+    return this;
 }
 
 bool FunctionDefinition::fill() const
@@ -169,6 +177,8 @@ bool FunctionDefinition::fill() const
 
 bool FunctionDefinition::check() const
 {
+    if(identifier == "main") return true;
+
     bool found = false;
     std::function<void(Node*)> func = [&](auto* root)
     {
@@ -218,7 +228,7 @@ std::string FunctionDeclaration::value() const
 
 Node* FunctionDeclaration::fold()
 {
-    return nullptr;
+    return this;
 }
 
 void FunctionDeclaration::visit(IRVisitor& visitor)
@@ -250,10 +260,10 @@ std::vector<Node*> LoopStatement::children() const
 
 Node* LoopStatement::fold()
 {
-    if(init) init = Helper::folder(init);
-    if(condition) condition = Helper::folder(condition);
-    if(iteration) iteration = Helper::folder(iteration);
-    return nullptr;
+    Helper::folder(init);
+    Helper::folder(condition);
+    Helper::folder(iteration);
+    return this;
 }
 
 void LoopStatement::visit(IRVisitor& visitor)
@@ -277,19 +287,19 @@ std::vector<Node*> IfStatement::children() const
 
 Node* IfStatement::fold()
 {
-    condition = Helper::folder(condition);
+    Helper::folder(condition);
 
     if(auto* res = dynamic_cast<Ast::Literal*>(condition))
     {
         if(Helper::evaluate(res)) return ifBody;
         else if(elseBody) return elseBody;
-        else return new Scope({}, table, line, column);
+        else return nullptr;
     }
 
-    ifBody = Helper::folder(ifBody);
-    if(elseBody) elseBody = Helper::folder(elseBody);
+    Helper::folder(ifBody);
+    Helper::folder(elseBody);
 
-    return nullptr;
+    return this;
 }
 
 void IfStatement::visit(IRVisitor& visitor)
@@ -317,7 +327,7 @@ bool ControlStatement::check() const
 
 Node * ControlStatement::fold()
 {
-    return nullptr;
+    return this;
 }
 
 std::string ReturnStatement::name() const
@@ -346,8 +356,8 @@ bool ReturnStatement::check() const
 
 Node* ReturnStatement::fold()
 {
-    expr = Helper::folder(expr);
-    return nullptr;
+    Helper::folder(expr);
+    return this;
 }
 
 void ReturnStatement::visit(IRVisitor& visitor)

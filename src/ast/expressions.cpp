@@ -84,11 +84,11 @@ std::string Variable::color() const
     return "#ebe6ce";
 }
 
-Literal* Variable::fold()
+Node* Variable::fold()
 {
     if(auto* res = table->lookup(identifier))
     {
-        if(not res->literal.has_value()) return nullptr;
+        if(not res->literal.has_value()) return this;
         else
             return new Ast::Literal(res->literal.value(), table, line, column);
     }
@@ -145,10 +145,10 @@ std::vector<Node*> BinaryExpr::children() const
     return { lhs, rhs };
 }
 
-Literal* BinaryExpr::fold()
+Node* BinaryExpr::fold()
 {
-    lhs = Helper::folder(lhs);
-    rhs = Helper::folder(rhs);
+    Helper::folder(lhs);
+    Helper::folder(rhs);
 
     const auto res0 = dynamic_cast<Literal*>(lhs);
     const auto res1 = dynamic_cast<Literal*>(rhs);
@@ -161,7 +161,7 @@ Literal* BinaryExpr::fold()
         };
         return std::visit(lambda, res0->literal, res1->literal);
     }
-    return nullptr;
+    return this;
 }
 
 bool BinaryExpr::check() const
@@ -205,16 +205,16 @@ std::vector<Node*> PrefixExpr::children() const
     return { operand };
 }
 
-Literal* PrefixExpr::fold()
+Node* PrefixExpr::fold()
 {
-    operand = Helper::folder(operand);
+    Helper::folder(operand);
 
     if(auto* res = dynamic_cast<Ast::Literal*>(operand))
     {
         const auto lambda = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
         return std::visit(lambda, res->literal);
     }
-    return nullptr;
+    return this;
 }
 
 bool PrefixExpr::check() const
@@ -274,9 +274,9 @@ std::vector<Node*> PostfixExpr::children() const
     return { operand };
 }
 
-Literal* PostfixExpr::fold()
+Node* PostfixExpr::fold()
 {
-    operand = Helper::folder(operand);
+    Helper::folder(operand);
 
     auto*      res = dynamic_cast<Ast::Literal*>(operand);
     const auto lambda
@@ -284,7 +284,7 @@ Literal* PostfixExpr::fold()
 
     // TODO: deletus feetus, memory leakus
     if(res) return std::visit(lambda, res->literal);
-    return nullptr;
+    return this;
 }
 
 bool PostfixExpr::check() const
@@ -332,9 +332,9 @@ std::vector<Node*> CastExpr::children() const
     return { operand };
 }
 
-Literal* CastExpr::fold()
+Node* CastExpr::fold()
 {
-    operand = Helper::folder(operand);
+    Helper::folder(operand);
 
     auto*      res = dynamic_cast<Ast::Literal*>(operand);
     const auto lambda
@@ -342,7 +342,7 @@ Literal* CastExpr::fold()
 
     if(res) return std::visit(lambda, res->literal);
     else
-        return nullptr;
+        return this;
 }
 
 bool CastExpr::check() const
@@ -374,10 +374,10 @@ std::vector<Node*> Assignment::children() const
     return { lhs, rhs };
 }
 
-Literal* Assignment::fold()
+Node* Assignment::fold()
 {
-    rhs = Helper::folder(rhs);
-    return nullptr;
+    Helper::folder(rhs);
+    return this;
 }
 
 bool Assignment::check() const
@@ -435,10 +435,10 @@ std::vector<Node*> FunctionCall::children() const
     return std::vector<Node*>(arguments.begin(), arguments.end());
 }
 
-Literal * FunctionCall::fold()
+Node * FunctionCall::fold()
 {
-    for(auto& child : arguments) child = Helper::folder(child);
-    return nullptr;
+    for(auto& child : arguments) Helper::folder(child);
+    return this;
 }
 
 bool FunctionCall::check() const
@@ -499,10 +499,10 @@ std::vector<Node*> PrintfStatement::children() const
     return { expr };
 }
 
-Literal* PrintfStatement::fold()
+Node* PrintfStatement::fold()
 {
-    expr = Helper::folder(expr);
-    return nullptr;
+    Helper::folder(expr);
+    return this;
 }
 
 Type PrintfStatement::type() const
