@@ -40,7 +40,9 @@ enum class BaseType {
 };
 
 class Type; // stupid predeclaration but oh well
-using FunctionType = std::pair<Type*, std::vector<Type*>>;class Type {
+using FunctionType = std::pair<Type*, std::vector<Type*>>;
+
+class Type {
 public:// default init to void
     explicit Type() : isTypeConst(false), type() {}
 	explicit Type(bool isConst, Type* ptr)

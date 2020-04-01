@@ -116,7 +116,7 @@ initizalizer:
     assignExpr;
 
 variableDeclaration:
-    typeName IDENTIFIER ('=' initizalizer);
+    typeName IDENTIFIER ('=' initizalizer)?;
 
 declarationParameterList:
     typeName IDENTIFIER? (',' declarationParameterList)?;
@@ -137,7 +137,7 @@ ifStatement:
     'if' '(' expr ')' statement ('else' statement)?;
 
 whileStatement:
-    'while' '(' expr ')' statement|
+    'while' '(' expr ')' statement |
     'do' statement 'while' '(' expr ')' ';';
 
 forStatement:
@@ -150,9 +150,9 @@ controlStatement:
     ('break' | 'continue') ';' | 'return' exprStatement;
 
 statement:
-    exprStatement|
-    controlStatement|
-    scopeStatement|
+    exprStatement |
+    controlStatement |
+    scopeStatement |
     ifStatement |
     whileStatement |
     forStatement;
@@ -164,7 +164,7 @@ argumentList:
     expr (',' argumentList)?;
 
 functionDefinition:
-    typeName IDENTIFIER '(' parameterList? ')' scopeStatement ';'?;
+    typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 file:
     (declaration | functionDefinition | ';' )* EOF;

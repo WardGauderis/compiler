@@ -100,6 +100,11 @@ PrefixOperation PrefixOperation::fromString(const std::string& str)
         return PrefixOperation::Incr;
     else if (str == "--")
         return PrefixOperation::Decr;
+    else if (str == "*")
+        return PrefixOperation::Deref;
+    else if (str == "&")
+        return PrefixOperation::Addr;
+
     else
         throw InternalError("unknown prefix operation string: " + str);
 }
@@ -115,6 +120,10 @@ std::string PrefixOperation::string() const
         return "++";
     else if (type == PrefixOperation::Decr)
         return "--";
+    else if (type == PrefixOperation::Deref)
+        return "*";
+    else if (type == PrefixOperation::Addr)
+        return "&";
     else
         throw InternalError("unknown prefix operation");
 }

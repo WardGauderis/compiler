@@ -56,6 +56,8 @@ struct PrefixOperation
         Not,
         Incr,
         Decr,
+        Deref,
+        Addr,
     } type;
 
     PrefixOperation(Type operation) : type(operation)
