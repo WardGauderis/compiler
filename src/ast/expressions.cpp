@@ -207,7 +207,8 @@ std::vector<Node*> PrefixExpr::children() const
 
 Node* PrefixExpr::fold()
 {
-    if(operation != PrefixOperation::Deref)
+    // I cannot constant fold variables when taking addrof
+    if(operation != PrefixOperation::Addr)
     {
         Helper::folder(operand);
     }
