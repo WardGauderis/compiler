@@ -52,8 +52,8 @@ prefixExpr:
     postfixExpr|
     '++' prefixExpr|
     '--' prefixExpr|
-    '&' prefixExpr|
     '*' prefixExpr|
+    '&' prefixExpr|
     '+' prefixExpr|
     '-' prefixExpr|
     '!' prefixExpr|

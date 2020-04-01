@@ -1,17 +1,19 @@
-const int f = 6;
-int g(int* f){
-	return ++(*f);
+int g(int* f)
+{
+	return (*f)++;
 }
 
 int main()
 {
-	printf(g(&f));
+	int f = 10;
+	printf(g(&(f)));
+	printf(f);
 }
 
 
-int f = 6;
+const int f = 6;
 
-void g(const int* f)
+void g(int* f)
 {
 	++(*f);
 }
@@ -19,4 +21,5 @@ void g(const int* f)
 int main()
 {
 	g(&f);
+	printf(f);
 }
