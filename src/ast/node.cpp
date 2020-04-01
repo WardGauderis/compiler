@@ -76,12 +76,6 @@ std::vector<Node *> Node::children() const
     return {};
 }
 
-[[nodiscard]] Literal* Node::fold()
-{
-    for(auto& child : children()) Helper::assign_fold(child);
-    return nullptr;
-}
-
 [[nodiscard]] bool Node::fill() const
 {
     return true;
@@ -92,8 +86,4 @@ std::vector<Node *> Node::children() const
     return true;
 }
 
-[[nodiscard]] bool Node::used() const
-{
-    return true;
-}
 } // namespace Ast
