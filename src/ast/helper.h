@@ -126,7 +126,7 @@ struct Helper
         }
         else if(auto* res = dynamic_cast<Ast::PrefixExpr*>(expr))
         {
-            return res->operation == PrefixOperation::Addr;
+            return res->operation == PrefixOperation::Deref;
         }
         else if(auto* res = dynamic_cast<Ast::PostfixExpr*>(expr))
         {

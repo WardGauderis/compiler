@@ -13,7 +13,7 @@ using namespace llvm;
 
 char RemoveUnusedCodeInBlockPass::ID = 0;
 
-static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove unused code");
+static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove used code");
 
 IRVisitor::IRVisitor(const std::filesystem::path& input)
 		:module(input.string(), context), builder(context)

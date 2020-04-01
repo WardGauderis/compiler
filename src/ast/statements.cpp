@@ -9,30 +9,11 @@
 #include "helper.h"
 #include <numeric>
 
-namespace
-{
-template <typename Type>
-bool assign_fold(Type*& elem)
-{
-    if(auto* res = elem->fold())
-    {
-        elem = res;
-        return true;
-    }
-    return false;
-}
-} // namespace
-
 namespace Ast
 {
 std::string Scope::name() const
 {
     return "block";
-}
-
-std::string Scope::value() const
-{
-    return "";
 }
 
 std::vector<Node*> Scope::children() const
@@ -60,16 +41,10 @@ std::string Declaration::name() const
     return "declaration";
 }
 
-std::string Declaration::value() const
-{
-    return "";
-}
-
 std::vector<Node*> Declaration::children() const
 {
     if(expr) return { variable, expr };
-    else
-        return { variable };
+    else return { variable };
 }
 
 Literal* Declaration::fold()
@@ -91,7 +66,6 @@ Literal* Declaration::fold()
         }
     }
 
-
     // precast if it is constant
     if(expr->constant())
     {
@@ -107,15 +81,18 @@ Literal* Declaration::fold()
     return nullptr;
 }
 
-bool Declaration::check() const
+bool Declaration::fill() const
 {
-    auto inserted = table->insert(variable->name(), vartype, expr);
-    if(not inserted)
+    if(not table->insert(variable->name(), vartype, expr))
     {
         std::cout << RedefinitionError(variable->name(), line, column);
         return false;
     }
+    return true;
+}
 
+bool Declaration::check() const
+{
     if(vartype.isVoidType())
     {
         std::cout << SemanticError("type declaration cannot have void type");
@@ -155,7 +132,7 @@ std::vector<Node*> FunctionDefinition::children() const
     return { body };
 }
 
-bool FunctionDefinition::check() const
+bool FunctionDefinition::fill() const
 {
     for(const auto& elem : parameters)
     {
@@ -170,7 +147,7 @@ bool FunctionDefinition::check() const
             return false;
         }
     }
-    // don't look at me, i'm not the one leaking memory
+
     std::vector<Type*> types(parameters.size());
     const auto         convert = [&](const auto& param) { return new Type(param.first); };
     std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
@@ -181,7 +158,11 @@ bool FunctionDefinition::check() const
         std::cout << RedefinitionError(identifier, line, column);
         return false;
     }
+    return true;
+}
 
+bool FunctionDefinition::check() const
+{
     bool found = false;
     std::function<void(Node*)> func = [&](auto* root)
     {
@@ -229,11 +210,6 @@ std::string FunctionDeclaration::value() const
     return res;
 }
 
-std::vector<Node*> FunctionDeclaration::children() const
-{
-    return {};
-}
-
 void FunctionDeclaration::visit(IRVisitor& visitor)
 {
 
@@ -249,11 +225,6 @@ std::string LoopStatement::name() const
     if(doWhile) return "do while";
     else
         return "loop";
-}
-
-std::string LoopStatement::value() const
-{
-    return "";
 }
 
 std::vector<Node*> LoopStatement::children() const
@@ -276,11 +247,6 @@ std::string IfStatement::name() const
     return "if";
 }
 
-std::string IfStatement::value() const
-{
-    return "";
-}
-
 std::vector<Node*> IfStatement::children() const
 {
     if(ifBody) return { condition, ifBody };
@@ -296,16 +262,6 @@ void IfStatement::visit(IRVisitor& visitor)
 std::string ControlStatement::name() const
 {
     return type;
-}
-
-std::string ControlStatement::value() const
-{
-    return "";
-}
-
-std::vector<Node*> ControlStatement::children() const
-{
-    return {};
 }
 
 bool ControlStatement::check() const
@@ -324,11 +280,6 @@ bool ControlStatement::check() const
 std::string ReturnStatement::name() const
 {
     return "return";
-}
-
-std::string ReturnStatement::value() const
-{
-    return "";
 }
 
 std::vector<Node*> ReturnStatement::children() const
