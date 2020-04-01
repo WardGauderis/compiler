@@ -22,6 +22,7 @@ struct Scope final : public Statement
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] std::string        color() const final;
+    [[nodiscard]] Literal*           fold() final;
 
     void visit(IRVisitor& visitor) override;
 
@@ -38,7 +39,7 @@ struct Declaration final : public Statement
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Literal*           fold() final;
-    [[nodiscard]] bool fill() const final;
+    [[nodiscard]] bool               fill() const final;
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -64,6 +65,7 @@ struct FunctionDefinition : public Statement
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Node*           fold() final;
     [[nodiscard]] bool               fill() const final;
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
@@ -87,9 +89,10 @@ struct FunctionDeclaration : public Statement
     {
     }
 
-    [[nodiscard]] std::string        name() const final;
-    [[nodiscard]] std::string        value() const final;
-    void                             visit(IRVisitor& visitor) final;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] std::string value() const final;
+    [[nodiscard]] Node*    fold() final;
+    void                      visit(IRVisitor& visitor) final;
 
     Type              returnType;
     std::string       identifier;
@@ -114,6 +117,7 @@ struct LoopStatement final : public Statement
 
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Node*           fold() final;
     void                             visit(IRVisitor& visitor) final;
 
     Statement* init;      // can be nullptr
@@ -137,6 +141,7 @@ struct IfStatement final : public Statement
 
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Node*              fold() final;
     void                             visit(IRVisitor& visitor) final;
 
     Expr*      condition;
@@ -151,9 +156,10 @@ struct ControlStatement final : public Statement
     {
     }
 
-    [[nodiscard]] std::string        name() const final;
-    [[nodiscard]] bool               check() const final;
-    void                             visit(IRVisitor& visitor) final;
+    [[nodiscard]] std::string name() const final;
+    [[nodiscard]] bool        check() const final;
+    [[nodiscard]] Node*              fold() final;
+    void                      visit(IRVisitor& visitor) final;
 
     std::string type;
 };
@@ -168,6 +174,7 @@ struct ReturnStatement final : public Statement
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] bool               check() const final;
+    [[nodiscard]] Node*              fold() final;
     void                             visit(IRVisitor& visitor) final;
 
     Expr* expr; // cna be nullptr

@@ -12,14 +12,10 @@
 struct Helper
 {
     template <typename Type>
-    static bool assign_fold(Type*& elem)
+    [[nodiscard]] static Type* folder(Type* elem)
     {
-        if(auto* res = elem->fold())
-        {
-            elem = res;
-            return true;
-        }
-        return false;
+        if(auto* res = dynamic_cast<Type*>(elem->fold())) return res;
+        else return elem;
     }
 
     template <typename Type0, typename Type1>
@@ -116,6 +112,15 @@ struct Helper
             return new Ast::Literal((int)operand, std::move(table), line, column);
         else
             throw InternalError("unknown type for conversion: " + type.string(), line, column);
+    }
+
+    static bool evaluate(Ast::Literal* literal)
+    {
+        const auto lambda = [](const auto& val)
+        {
+            return static_cast<bool>(val);
+        };
+        return std::visit(lambda, literal->literal);
     }
 
     static bool is_lvalue(Ast::Expr* expr)
