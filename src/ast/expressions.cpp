@@ -234,15 +234,13 @@ Literal* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    if(not Helper::is_lvalue(operand))
+    if(operation.isIncrDecr() and operand->type().isConst())
     {
-        if(operation.isIncrDecr())
-        {
-            const auto error = Helper::check_const(table, operand->name(), operation.string(), line, column);
-            if(not error) return false;
-        }
+        std::cout << ConstError("prefix operator", operand->name(), line, column);
+        return false;
     }
-    else
+
+    if(not Helper::is_lvalue(operand))
     {
         if(operation.isIncrDecr())
         {
@@ -304,14 +302,18 @@ Literal* PostfixExpr::fold()
 
 bool PostfixExpr::check() const
 {
-    if(not Helper::is_lvalue(operand)){}
-    else
+    if(not Helper::is_lvalue(operand))
     {
         std::cout << RValueError("assigning to", line, column);
         return false;
     }
 
-    return Helper::check_const(table, operand->name(), operation.string(), line, column);
+    if(operand->type().isConst())
+    {
+        std::cout << ConstError("postfix expr", operand->name(), line, column);
+        return false;
+    }
+    return true;
 }
 
 Type PostfixExpr::type() const
@@ -396,12 +398,12 @@ Literal* Assignment::fold()
 
 bool Assignment::check() const
 {
-    if(not Helper::is_lvalue(lhs)){}
-    else
+    if(not Helper::is_lvalue(lhs))
     {
         std::cout << RValueError("assigning to", line, column);
         return false;
     }
+
     if(auto* res = table->lookup(lhs->name()))
     {
         if(res->type.isConst())

@@ -118,20 +118,6 @@ struct Helper
             throw InternalError("unknown type for conversion: " + type.string(), line, column);
     }
 
-    static bool check_const(const std::shared_ptr<SymbolTable>& table,
-                            const std::string&                  identifier,
-                            const std::string&                  operation,
-                            size_t                              line,
-                            size_t                              column)
-    {
-        if(table->lookup(identifier)->type.isConst())
-        {
-            std::cout << ConstError(operation, identifier, line, column);
-            return false;
-        }
-        return true;
-    }
-
     static bool is_lvalue(Ast::Expr* expr)
     {
         if(dynamic_cast<Ast::Variable*>(expr))

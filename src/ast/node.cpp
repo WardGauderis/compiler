@@ -5,6 +5,7 @@
 //============================================================================
 
 #include "node.h"
+#include "helper.h"
 
 namespace Ast
 {
@@ -50,5 +51,21 @@ void Node::complete (bool check, bool fold, bool output)
     {
         [[maybe_unused]] auto _ = this->fold ();
     }
+}
+
+[[nodiscard]] Literal* Node::fold()
+{
+    for(auto& child : children()) Helper::assign_fold(child);
+    return nullptr;
+};
+
+[[nodiscard]] bool Node::check() const
+{
+    return true;
+}
+
+[[nodiscard]] bool Node::unused() const
+{
+    return false;
 }
 } // namespace Ast

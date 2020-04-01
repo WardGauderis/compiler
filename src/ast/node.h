@@ -37,9 +37,11 @@ struct Node
 
   [[nodiscard]] virtual std::string color() const = 0;
 
-  [[nodiscard]] virtual Literal* fold() = 0;
+  [[nodiscard]] virtual Literal* fold();
 
-  [[nodiscard]] virtual bool check() const { return true; }
+  [[nodiscard]] virtual bool check() const;
+
+  [[nodiscard]] virtual bool unused() const;
 
   virtual void visit(IRVisitor& visitor) = 0;
 
