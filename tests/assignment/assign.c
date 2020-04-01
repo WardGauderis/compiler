@@ -1,12 +1,12 @@
 const int f = 6;
-//int g(int* f){
-//	return ++(*f);
-//}
-//
-//int main()
-//{
-//	printf(g(&f));
-//}
+int g(int* f){
+	return ++*f;
+}
+
+int main()
+{
+	printf(g(&f));
+}
 
 
 //int f = 6;

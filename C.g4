@@ -116,7 +116,7 @@ initizalizer:
     assignExpr;
 
 variableDeclaration:
-    typeName IDENTIFIER ('=' initizalizer);
+    typeName IDENTIFIER ('=' initizalizer)?;
 
 declarationParameterList:
     typeName IDENTIFIER? (',' declarationParameterList)?;
@@ -164,7 +164,7 @@ argumentList:
     expr (',' argumentList)?;
 
 functionDefinition:
-    typeName IDENTIFIER '(' parameterList? ')' scopeStatement ';'?;
+    typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 file:
     (declaration | functionDefinition | ';' )* EOF;
