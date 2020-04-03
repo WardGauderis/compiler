@@ -183,6 +183,26 @@ struct FunctionCall final : public Expr
     std::string        identifier;
 };
 
+struct SubscriptExpr final : public Expr
+{
+    SubscriptExpr(Expr* expr, std::string identifier, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Expr(std::move(table), line, column), identifier(std::move(identifier)), expr(expr)
+    {
+    }
+
+    [[nodiscard]] std::string        name() const final;
+    [[nodiscard]] std::string        value() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] Node*              fold() final;
+    [[nodiscard]] bool               check() const final;
+    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] bool               constant() const final;
+    void                             visit(IRVisitor& visitor) final;
+
+    Expr* expr;
+    std::string identifier;
+};
+
 struct PrintfStatement final : public Expr
 {
     explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)

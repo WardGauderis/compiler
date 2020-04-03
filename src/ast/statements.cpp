@@ -51,23 +51,23 @@ std::string Statement::color() const
     return " #ebcee5"; // light orange/pink
 }
 
-std::string Declaration::name() const
+std::string VariableDeclaration::name() const
 {
-    return "declaration";
+    return "variable declaration";
 }
 
-std::vector<Node*> Declaration::children() const
+std::vector<Node*> VariableDeclaration::children() const
 {
-    if(expr) return { variable, expr };
-    else return { variable };
+    if(expr) return { expr };
+    else return { };
 }
 
-Node* Declaration::fold()
+Node* VariableDeclaration::fold()
 {
     Helper::folder(expr);
     if(auto* res = dynamic_cast<Ast::Literal*>(expr))
     {
-        const auto& entry = table->lookup(variable->name());
+        const auto& entry = table->lookup(identifier);
         if(entry and entry->type.isConst())
         {
             entry->literal = res->literal;
@@ -78,7 +78,7 @@ Node* Declaration::fold()
     if(expr and expr->constant())
     {
         const auto lambda
-        = [&](const auto& val) { return Helper::fold_cast(val, vartype, table, line, column); };
+        = [&](const auto& val) { return Helper::fold_cast(val, type, table, line, column); };
 
         if(auto* res = dynamic_cast<Literal*>(expr))
         {
@@ -89,19 +89,19 @@ Node* Declaration::fold()
     return this;
 }
 
-bool Declaration::fill() const
+bool VariableDeclaration::fill() const
 {
-    if(not table->insert(variable->name(), vartype, expr))
+    if(not table->insert(identifier, type, expr))
     {
-        std::cout << RedefinitionError(variable->name(), line, column);
+        std::cout << RedefinitionError(identifier, line, column);
         return false;
     }
     return true;
 }
 
-bool Declaration::check() const
+bool VariableDeclaration::check() const
 {
-    if(vartype.isVoidType())
+    if(type.isVoidType())
     {
         std::cout << SemanticError("type declaration cannot have void type");
         return false;
@@ -111,13 +111,48 @@ bool Declaration::check() const
     {
         if(table->getType() == ScopeType::global and not expr->constant())
         {
-            std::cout << NonConstantGlobal(variable->name(), line, column);
+            std::cout << NonConstantGlobal(identifier, line, column);
             return false;
         }
-        return Type::convert(expr->type(), variable->type(), false, line, column);
+        return Type::convert(expr->type(), type, false, line, column);
     }
     else
         return true;
+}
+
+std::string ArrayDeclaration::name() const
+{
+    return "array declaration";
+}
+
+std::vector<Node*> ArrayDeclaration::children() const
+{
+    return {};
+}
+
+Node* ArrayDeclaration::fold()
+{
+    return this;
+}
+
+bool ArrayDeclaration::fill() const
+{
+    if(not table->insert(identifier, type, false))
+    {
+        std::cout << RedefinitionError(identifier, line, column);
+        return false;
+    }
+    return true;
+}
+
+bool ArrayDeclaration::check() const
+{
+    if(type.isVoidType())
+    {
+        std::cout << SemanticError("type declaration cannot have void type");
+        return false;
+    }
+    return true;
 }
 
 std::string FunctionDefinition::name() const
@@ -178,6 +213,7 @@ bool FunctionDefinition::fill() const
 bool FunctionDefinition::check() const
 {
     if(identifier == "main") return true;
+    if(returnType.isVoidType()) return true;
 
     bool found = false;
     std::function<void(Node*)> func = [&](auto* root)
@@ -197,7 +233,7 @@ bool FunctionDefinition::check() const
     };
     func(body);
 
-    if(not found and not returnType.isVoidType())
+    if(not found)
     {
         std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
     }
@@ -236,7 +272,7 @@ void FunctionDeclaration::visit(IRVisitor& visitor)
 
 }
 
-void Declaration::visit(IRVisitor& visitor)
+void VariableDeclaration::visit(IRVisitor& visitor)
 {
     visitor.visitDeclaration(*this);
 }

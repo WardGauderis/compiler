@@ -498,10 +498,56 @@ void FunctionCall::visit(IRVisitor& visitor)
     visitor.visitFunctionCall(*this);
 }
 
+std::string SubscriptExpr::name() const
+{
+    return "function call";
+}
+
+std::string SubscriptExpr::value() const
+{
+    return identifier;
+}
+
+std::vector<Node*> SubscriptExpr::children() const
+{
+    return {};
+}
+
+Node * SubscriptExpr::fold()
+{
+    Helper::folder(expr);
+    return this;
+}
+
+bool SubscriptExpr::check() const
+{
+    if(not expr->type().isIntegralType())
+    {
+        std::cout << SemanticError("index type is not integral", line, column);
+        return false;
+    }
+    return true;
+}
+
+Type SubscriptExpr::type() const
+{
+    return *table->lookup(identifier)->type.getDerefType();
+}
+
+bool SubscriptExpr::constant() const
+{
+    return false;
+}
+
+void SubscriptExpr::visit(IRVisitor& visitor)
+{
+}
+
 std::vector<Node*> PrintfStatement::children() const
 {
     return { expr };
 }
+
 
 Node* PrintfStatement::fold()
 {

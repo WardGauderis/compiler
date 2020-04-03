@@ -280,7 +280,7 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 	builder.CreateStore(rhs, ret);
 }
 
-void IRVisitor::visitDeclaration(const Ast::Declaration& declaration)
+void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 {
 	const auto& ASTType = declaration.variable->type();
 	const auto& type = convertToIR(ASTType);

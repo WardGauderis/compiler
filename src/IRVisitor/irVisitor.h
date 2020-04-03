@@ -69,7 +69,7 @@ public:
 
 	void visitAssignment(const Ast::Assignment& assignment);
 
-	void visitDeclaration(const Ast::Declaration& declaration);
+	void visitDeclaration(const Ast::VariableDeclaration& declaration);
 
 	void visitPrintfStatement(const Ast::PrintfStatement& printfStatement);
 

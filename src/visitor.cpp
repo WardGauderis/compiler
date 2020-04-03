@@ -335,11 +335,11 @@ Ast::Statement* visitVariableDeclaration(antlr4::tree::ParseTree* context, std::
 
     VisitorHelper<Ast::Statement*> visitor(context, "declaration");
     visitor(2, [&](auto* context) {
-      return new Ast::Declaration(type, var, nullptr, table, line, column);
+      return new Ast::VariableDeclaration(type, var, nullptr, table, line, column);
     });
     visitor(4, [&](auto* context) {
       auto* expr = visitAssignExpr(context->children[3]->children[0], table);
-      return new Ast::Declaration(type, var, expr, table, line, column);
+      return new Ast::VariableDeclaration(type, var, expr, table, line, column);
     });
     return visitor.result();
 }
