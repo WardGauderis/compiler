@@ -36,9 +36,6 @@ literal:
     INT|
     FLOAT;
 
-printf:
-    'printf' '(' expr ')';
-
 basicExpr:
     '(' expr ')'|
     IDENTIFIER|
@@ -47,7 +44,6 @@ basicExpr:
 postfixExpr:
     basicExpr|
     IDENTIFIER '(' argumentList? ')'|
-    printf|
     postfixExpr '++'|
     postfixExpr '--';
 
