@@ -19,6 +19,9 @@ FLOAT:
 IDENTIFIER:
     [a-zA-Z_] [a-zA-Z_0-9]*;
 
+INCLUDESTDIO:
+    '#' [ \t]* 'include' [ \t]* ('<stdio.h>' | '"stdio.h"');
+
 LINECOMMENT:
     '//' ~[\n\r]* -> skip;
 
@@ -116,10 +119,11 @@ initizalizer:
     assignExpr;
 
 variableDeclaration:
-    typeName IDENTIFIER ('=' initizalizer)?;
+    typeName IDENTIFIER ('=' initizalizer)? |
+    typeName IDENTIFIER ('[' expr ']')+;
 
 declarationParameterList:
-    typeName IDENTIFIER? (',' declarationParameterList)?;
+    typeName IDENTIFIER? ('[' expr? ']')* (',' declarationParameterList)?;
 
 functionDeclaration:
     typeName IDENTIFIER '(' declarationParameterList? ')';
@@ -158,7 +162,7 @@ statement:
     forStatement;
 
 parameterList:
-    typeName IDENTIFIER (',' parameterList)?;
+    typeName IDENTIFIER ('[' expr? ']')* (',' parameterList)?;
 
 argumentList:
     expr (',' argumentList)?;
@@ -167,7 +171,7 @@ functionDefinition:
     typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 file:
-    (declaration | functionDefinition | ';' )* EOF;
+    (declaration | functionDefinition | ';' | INCLUDESTDIO)* EOF;
 
 
 
