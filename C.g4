@@ -45,9 +45,13 @@ basicExpr:
     IDENTIFIER|
     literal;
 
+argumentList:
+    expr (',' argumentList)?;
+
 postfixExpr:
     basicExpr|
     IDENTIFIER '(' argumentList? ')'|
+    postfixExpr '[' expr ']'|
     postfixExpr '++'|
     postfixExpr '--';
 
@@ -118,15 +122,27 @@ pointerType:
 initizalizer:
     assignExpr;
 
+declarationArray:
+    '[' expr ']' declarationArray | ;
+
+parameterArray:
+    '[' expr? ']' parameterArray | ;
+
 variableDeclaration:
     typeName IDENTIFIER ('=' initizalizer)? |
-    typeName IDENTIFIER ('[' expr ']')+;
+    typeName IDENTIFIER declarationArray;
 
 declarationParameterList:
-    typeName IDENTIFIER? ('[' expr? ']')* (',' declarationParameterList)?;
+    typeName IDENTIFIER? parameterArray (',' declarationParameterList)?;
+
+parameterList:
+    typeName IDENTIFIER parameterArray (',' parameterList)?;
 
 functionDeclaration:
     typeName IDENTIFIER '(' declarationParameterList? ')';
+
+functionDefinition:
+    typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 declaration:
     variableDeclaration | functionDeclaration ';';
@@ -160,15 +176,6 @@ statement:
     ifStatement |
     whileStatement |
     forStatement;
-
-parameterList:
-    typeName IDENTIFIER ('[' expr? ']')* (',' parameterList)?;
-
-argumentList:
-    expr (',' argumentList)?;
-
-functionDefinition:
-    typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 file:
     (declaration | functionDefinition | ';' | INCLUDESTDIO)* EOF;
