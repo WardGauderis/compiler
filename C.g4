@@ -4,7 +4,7 @@ QUALIFIER:
     'const';
 
 CHAR:
-    '\'' (~['\\] | '\\' .)+ '\'';
+    '\'' (~['\\\n\r] | '\\' .)+ '\'';
 
 INT:
     [1-9] [0-9]*|
@@ -16,8 +16,14 @@ FLOAT:
     ([0-9]* '.' [0-9]+ | [0-9]+ '.') ([eE] [+-]? [0-9]+)? [fF]?|
     [0-9]+ ([eE] [+-]? [0-9]+) [fF]?;
 
+STRING:
+    ('"' (~["\\\n\r] | '\\' .)* '"');
+
 IDENTIFIER:
     [a-zA-Z_] [a-zA-Z_0-9]*;
+
+INCLUDESTDIO:
+    '#' [ \t]* 'include' [ \t]* ('<stdio.h>' | '"stdio.h"');
 
 LINECOMMENT:
     '//' ~[\n\r]* -> skip;
@@ -31,10 +37,8 @@ WS:
 literal:
     CHAR|
     INT|
-    FLOAT;
-
-printf:
-    'printf' '(' expr ')';
+    FLOAT|
+    STRING+;
 
 basicExpr:
     '(' expr ')'|
@@ -44,7 +48,6 @@ basicExpr:
 postfixExpr:
     basicExpr|
     IDENTIFIER '(' argumentList? ')'|
-    printf|
     postfixExpr '++'|
     postfixExpr '--';
 
@@ -116,10 +119,11 @@ initizalizer:
     assignExpr;
 
 variableDeclaration:
-    typeName IDENTIFIER ('=' initizalizer)?;
+    typeName IDENTIFIER ('=' initizalizer)? |
+    typeName IDENTIFIER ('[' expr ']')+;
 
 declarationParameterList:
-    typeName IDENTIFIER? (',' declarationParameterList)?;
+    typeName IDENTIFIER? ('[' expr? ']')* (',' declarationParameterList)?;
 
 functionDeclaration:
     typeName IDENTIFIER '(' declarationParameterList? ')';
@@ -158,7 +162,7 @@ statement:
     forStatement;
 
 parameterList:
-    typeName IDENTIFIER (',' parameterList)?;
+    typeName IDENTIFIER ('[' expr? ']')* (',' parameterList)?;
 
 argumentList:
     expr (',' argumentList)?;
@@ -167,7 +171,7 @@ functionDefinition:
     typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 file:
-    (declaration | functionDefinition | ';' )* EOF;
+    (declaration | functionDefinition | ';' | INCLUDESTDIO)* EOF;
 
 
 
