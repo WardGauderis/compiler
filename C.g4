@@ -4,7 +4,7 @@ QUALIFIER:
     'const';
 
 CHAR:
-    '\'' (~['\\] | '\\' .)+ '\'';
+    '\'' (~['\\\n\r] | '\\' .)+ '\'';
 
 INT:
     [1-9] [0-9]*|
@@ -15,6 +15,9 @@ INT:
 FLOAT:
     ([0-9]* '.' [0-9]+ | [0-9]+ '.') ([eE] [+-]? [0-9]+)? [fF]?|
     [0-9]+ ([eE] [+-]? [0-9]+) [fF]?;
+
+STRING:
+    ('"' (~["\\\n\r] | '\\' .)* '"');
 
 IDENTIFIER:
     [a-zA-Z_] [a-zA-Z_0-9]*;
@@ -34,7 +37,8 @@ WS:
 literal:
     CHAR|
     INT|
-    FLOAT;
+    FLOAT|
+    STRING+;
 
 basicExpr:
     '(' expr ')'|
