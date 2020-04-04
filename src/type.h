@@ -83,6 +83,8 @@ class Type
 
     [[nodiscard]] BaseType getBaseType() const;
 
+    [[nodiscard]] const ArrayType& getArrayType() const;
+
     [[nodiscard]] const FunctionType& getFunctionType() const;
 
     [[nodiscard]] Type* getDerefType() const;

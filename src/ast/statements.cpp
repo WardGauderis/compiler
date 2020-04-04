@@ -56,6 +56,11 @@ std::string VariableDeclaration::name() const
     return "variable declaration";
 }
 
+std::string VariableDeclaration::value() const
+{
+    return identifier;
+}
+
 std::vector<Node*> VariableDeclaration::children() const
 {
     if(expr) return { expr };

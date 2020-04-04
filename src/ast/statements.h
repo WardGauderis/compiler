@@ -43,6 +43,7 @@ struct VariableDeclaration final : public Statement
     }
 
     [[nodiscard]] std::string        name() const final;
+    [[nodiscard]] std::string        value() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               fill() const final;

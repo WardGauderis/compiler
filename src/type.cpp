@@ -27,7 +27,10 @@ overloaded(Ts...)->overloaded<Ts...>;
                     auto res = func.returnType->string() + '(';
                     for(const auto& elem : func.parameters) res += elem->string() + ',';
                     if(func.variadic) res += "...";
-                    res.back() = ')';
+
+                    if(res.back() == ',') res.back() = ')';
+                    else res += ')';
+
                     return res;
                 },
                 [&](const ArrayType& arr) {
@@ -38,7 +41,26 @@ overloaded(Ts...)->overloaded<Ts...>;
 
 BaseType Type::getBaseType() const
 {
-    if(isBaseType()) return std::get<BaseType>(type);
+    try
+    {
+        return std::get<BaseType>(type);
+    }
+    catch(...)
+    {
+        throw InternalError("wrong index");
+    }
+}
+
+const ArrayType& Type::getArrayType() const
+{
+    try
+    {
+        return std::get<ArrayType>(type);
+    }
+    catch(...)
+    {
+        throw InternalError("wrong index");
+    }
 }
 
 const FunctionType& Type::getFunctionType() const
