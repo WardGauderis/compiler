@@ -120,10 +120,10 @@ pointerType:
     '*' qualifier? pointerType?;
 
 declarationArray:
-    '[' expr ']' declarationArray | ;
+    declarationArray '[' expr ']' | ;
 
 parameterArray:
-    '[' expr? ']' parameterArray | ;
+    parameterArray '[' expr? ']' | ;
 
 variableDeclaration:
     typeName IDENTIFIER ('=' assignExpr)? |

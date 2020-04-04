@@ -13,7 +13,7 @@ using namespace llvm;
 
 char RemoveUnusedCodeInBlockPass::ID = 0;
 
-static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove used code");
+//static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove used code");
 
 IRVisitor::IRVisitor(const std::filesystem::path& input)
 		:module(input.string(), context), builder(context)
@@ -67,13 +67,13 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 
 void IRVisitor::visitComment(const Ast::Comment& comment)
 {
-	MDNode* m = MDNode::get(context, MDString::get(context, comment.value()));
+	MDNode::get(context, MDString::get(context, comment.value()));
 }
 
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
 	ret = *variable.table->lookupAllocaInst(variable.name());
-	if(!requiresLvalue) ret = builder.CreateLoad(ret);
+	if (!requiresLvalue) ret = builder.CreateLoad(ret);
 }
 
 void IRVisitor::visitScope(const Ast::Scope& scope)
@@ -110,8 +110,6 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 
 		builder.SetInsertPoint(landTrue);
 		binaryExpr.rhs->visit(*this);
-		auto rhs = ret;
-		const auto rhsType = rhs->getType();
 		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateBr(landEnd);
 
@@ -203,9 +201,10 @@ void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 	postFixExpr.operand->visit(*this);
 	const auto toRet = ret;
 	const auto& rhs = increaseOrDecrease(postFixExpr.operation.type==PostfixOperation::Incr, ret);
+	const auto backup = requiresLvalue;
 	requiresLvalue = true;
 	postFixExpr.operand->visit(*this);
-	requiresLvalue = false;
+	requiresLvalue = backup;
 	builder.CreateStore(rhs, ret);
 	ret = toRet;
 }
@@ -217,9 +216,10 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	{
 		if (const auto& var = dynamic_cast<Ast::Variable*>(prefixExpr.operand))
 		{
+			const auto backup = requiresLvalue;
 			requiresLvalue = true;
 			var->visit(*this);
-			requiresLvalue = false;
+			requiresLvalue = backup;
 		}
 		else if (const auto& deref = dynamic_cast<Ast::PrefixExpr*>(prefixExpr.operand))
 		{
@@ -228,13 +228,14 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 		else throw IRError(prefixExpr.type()->string());
 		return;
 	}
-	else if(opType == PrefixOperation::Incr || opType == PrefixOperation::Decr)
+	else if (opType==PrefixOperation::Incr || opType==PrefixOperation::Decr)
 	{
 		prefixExpr.operand->visit(*this);
 		const auto& rhs = increaseOrDecrease(opType==PrefixOperation::Incr, ret);
+		const auto backup = requiresLvalue;
 		requiresLvalue = true;
 		prefixExpr.operand->visit(*this);
-		requiresLvalue = false;
+		requiresLvalue = backup;
 		builder.CreateStore(rhs, ret);
 		ret = rhs;
 		return;
@@ -273,19 +274,20 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 	assignment.rhs->visit(*this);
 	auto rhs = cast(ret, convertToIR(assignment.lhs->type()));
 
+	const auto backup = requiresLvalue;
 	requiresLvalue = true;
 	assignment.lhs->visit(*this);
-	requiresLvalue = false;
+	requiresLvalue = backup;
 
 	builder.CreateStore(rhs, ret);
 }
 
 void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 {
-	const auto& ASTType = declaration.type; // CHANGED: var->type() to type
+	const auto& ASTType = declaration.type;
 	const auto& type = convertToIR(ASTType);
-	const auto& name = declaration.identifier; // CHANGED: var->name() to identifier
-	auto& allocaInst = declaration.table->lookup(name)->allocaInst; // CHANGED: var->name to name
+	const auto& name = declaration.identifier;
+	auto& allocaInst = declaration.table->lookup(name)->allocaInst;
 	bool global = !declaration.table->getParent();
 	if (global)
 	{
@@ -346,7 +348,6 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 {
 	ifStatement.condition->visit(*this);
-	const auto type = ret->getType();
 	const auto& ifTrue = BasicBlock::Create(context, "if.true", builder.GetInsertBlock()->getParent());
 	BasicBlock* ifFalse = (ifStatement.elseBody==nullptr) ? nullptr : BasicBlock::Create(context, "if.false",
 			builder.GetInsertBlock()->getParent());
@@ -384,7 +385,6 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	if (loopStatement.condition)
 	{
 		loopStatement.condition->visit(*this);
-		const auto type = ret->getType();
 		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateCondBr(ret, loopBody, loopEnd);
 	}
@@ -428,9 +428,9 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	std::vector<llvm::Type*> parameters;
 	for (const auto& parameter: functionDefinition.parameters)
 	{
-		parameters.emplace_back(convertToIR(parameter.first)); // CHANGED: is now ptr
+		parameters.emplace_back(convertToIR(parameter.first));
 	}
-	const auto& returnType = convertToIR(functionDefinition.returnType, true); // CHANGED: is now ptr
+	const auto& returnType = convertToIR(functionDefinition.returnType, true);
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
 	const auto function =
 			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
@@ -463,6 +463,24 @@ void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 		arguments.emplace_back(ret);
 	}
 	ret = builder.CreateCall(function, arguments);
+}
+
+
+void IRVisitor::visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr)
+{
+	const auto backup = requiresLvalue;
+
+	requiresLvalue = true;
+	subscriptExpr.lhs->visit(*this);
+	const auto lhs = ret;
+
+	requiresLvalue = false;
+	subscriptExpr.rhs->visit(*this);
+
+	requiresLvalue = backup;
+
+	ret = builder.CreateInBoundsGEP(lhs, {builder.getInt64(0), ret}, "sub");
+	if (!requiresLvalue) ret = builder.CreateLoad(ret);
 }
 
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
@@ -528,12 +546,16 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
 	}
 	else if (type->isPointerType())
 	{
-		return PointerType::getUnqual(convertToIR(type->getDerefType())); // CHANGED: added *, removed value*(
+		return PointerType::getUnqual(convertToIR(type->getDerefType()));
 	}
 	else if (type->isVoidType())
 	{
 		if (function) return builder.getVoidTy();
 		return builder.getInt8Ty();
+	}
+	else if (type->isArrayType())
+	{
+		return llvm::ArrayType::get(convertToIR(type->getDerefType()), type->getArrayType().first);
 	}
 	throw IRError(type->string());
 }

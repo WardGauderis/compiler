@@ -83,6 +83,8 @@ public:
 
 	void visitFunctionCall(const Ast::FunctionCall& functionCall);
 
+	void visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr);
+
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;
