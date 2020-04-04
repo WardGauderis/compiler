@@ -24,7 +24,7 @@ enum class ScopeType
 
 struct TableElement
 {
-    Type                       type;
+    Type*                       type;
     std::optional<TypeVariant> literal;
     bool                       isInitialized;
     llvm::Value*               allocaInst{};
@@ -44,7 +44,7 @@ class SymbolTable
 
     llvm::Value** lookupAllocaInst(const std::string& id);
 
-    bool insert(const std::string& id, const Type& type, bool initialized);
+    bool insert(const std::string& id, Type* type, bool initialized);
 
     std::shared_ptr<SymbolTable>& getParent();
 

@@ -56,13 +56,13 @@ void IRVisitor::print(const std::filesystem::path& output)
 void IRVisitor::visitLiteral(const Ast::Literal& literal)
 {
 	auto type = literal.type();
-	if (type.isCharacterType())
+	if (type->isCharacterType())
 		ret = ConstantInt::get(builder.getInt8Ty(), std::get<char>(literal.literal));
-	else if (type.isIntegerType())
+	else if (type->isIntegerType())
 		ret = ConstantInt::get(builder.getInt32Ty(), std::get<int>(literal.literal));
-	else if (type.isFloatType())
+	else if (type->isFloatType())
 		ret = ConstantFP::get(builder.getFloatTy(), std::get<float>(literal.literal));
-	else throw IRError(type.string());
+	else throw IRError(type->string());
 }
 
 void IRVisitor::visitComment(const Ast::Comment& comment)
@@ -225,7 +225,7 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 		{
 			deref->operand->visit(*this);
 		}
-		else throw IRError(prefixExpr.type().string());
+		else throw IRError(prefixExpr.type()->string());
 		return;
 	}
 	else if(opType == PrefixOperation::Incr || opType == PrefixOperation::Decr)
@@ -282,14 +282,14 @@ void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 
 void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 {
-	const auto& ASTType = declaration.variable->type();
+	const auto& ASTType = declaration.type; // CHANGED: var->type() to type
 	const auto& type = convertToIR(ASTType);
-	const auto& name = declaration.variable->name();
-	auto& allocaInst = declaration.table->lookup(declaration.variable->name())->allocaInst;
+	const auto& name = declaration.identifier; // CHANGED: var->name() to identifier
+	auto& allocaInst = declaration.table->lookup(name)->allocaInst; // CHANGED: var->name to name
 	bool global = !declaration.table->getParent();
 	if (global)
 	{
-		const auto& var = new GlobalVariable(module, type, ASTType.isConst(),
+		const auto& var = new GlobalVariable(module, type, ASTType->isConst(),
 				GlobalValue::LinkageTypes::ExternalLinkage,
 				Constant::getNullValue(type), name);
 		allocaInst = var;
@@ -311,37 +311,37 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 	}
 }
 
-void IRVisitor::visitPrintfStatement(const Ast::PrintfStatement& printfStatement)
-{
-	printfStatement.expr->visit(*this);
-	const auto type = ret->getType();
-
-	std::string format;
-	std::string name;
-	if (type->isPointerTy())
-	{
-		format = "%p\n";
-		name = "ptrFormat";
-	}
-	else if (type->isFloatTy())
-	{
-		ret = builder.CreateFPExt(ret, builder.getDoubleTy());
-		format = "%f\n";
-		name = "floatFormat";
-	}
-	else
-	{
-		format = "%d\n";
-		name = "intFormat";
-	}
-
-	auto string = module.getNamedGlobal(name);
-	if (!string)
-		ret = builder.CreateCall(module.getFunction("printf"), {builder.CreateGlobalStringPtr(format, name), ret});
-	else
-		ret = builder.CreateCall(module.getFunction("printf"),
-				{builder.CreateInBoundsGEP(string, {builder.getInt32(0), builder.getInt32(0)}), ret});
-}
+//void IRVisitor::visitPrintfStatement(const Ast::PrintfStatement& printfStatement)
+//{
+//	printfStatement.expr->visit(*this);
+//	const auto type = ret->getType();
+//
+//	std::string format;
+//	std::string name;
+//	if (type->isPointerTy())
+//	{
+//		format = "%p\n";
+//		name = "ptrFormat";
+//	}
+//	else if (type->isFloatTy())
+//	{
+//		ret = builder.CreateFPExt(ret, builder.getDoubleTy());
+//		format = "%f\n";
+//		name = "floatFormat";
+//	}
+//	else
+//	{
+//		format = "%d\n";
+//		name = "intFormat";
+//	}
+//
+//	auto string = module.getNamedGlobal(name);
+//	if (!string)
+//		ret = builder.CreateCall(module.getFunction("printf"), {builder.CreateGlobalStringPtr(format, name), ret});
+//	else
+//		ret = builder.CreateCall(module.getFunction("printf"),
+//				{builder.CreateInBoundsGEP(string, {builder.getInt32(0), builder.getInt32(0)}), ret});
+//}
 
 void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 {
@@ -428,9 +428,9 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	std::vector<llvm::Type*> parameters;
 	for (const auto& parameter: functionDefinition.parameters)
 	{
-		parameters.emplace_back(convertToIR(parameter.first));
+		parameters.emplace_back(convertToIR(parameter.first)); // CHANGED: is now ptr
 	}
-	const auto& returnType = convertToIR(functionDefinition.returnType, true);
+	const auto& returnType = convertToIR(functionDefinition.returnType, true); // CHANGED: is now ptr
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
 	const auto function =
 			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
@@ -510,11 +510,11 @@ llvm::Value* IRVisitor::increaseOrDecrease(const bool inc, llvm::Value* input)
 		return builder.CreateBinOp(inc ? Instruction::Add : Instruction::Sub, input, ConstantInt::get(type, 1), opName);
 }
 
-llvm::Type* IRVisitor::convertToIR(const ::Type& type, const bool function)
+llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
 {
-	if (type.isBaseType())
+	if (type->isBaseType())
 	{
-		switch (type.getBaseType())
+		switch (type->getBaseType())
 		{
 		case BaseType::Char:
 			return llvm::Type::getInt8Ty(context);
@@ -526,16 +526,16 @@ llvm::Type* IRVisitor::convertToIR(const ::Type& type, const bool function)
 			throw InternalError("type is not supported in IR");
 		}
 	}
-	else if (type.isPointerType())
+	else if (type->isPointerType())
 	{
-		return PointerType::getUnqual(convertToIR(type.getDerefType().value()));
+		return PointerType::getUnqual(convertToIR(type->getDerefType())); // CHANGED: added *, removed value*(
 	}
-	else if (type.isVoidType())
+	else if (type->isVoidType())
 	{
 		if (function) return builder.getVoidTy();
 		return builder.getInt8Ty();
 	}
-	throw IRError(type.string());
+	throw IRError(type->string());
 }
 
 llvm::AllocaInst* IRVisitor::createAlloca(llvm::Type* type, const std::string& name)

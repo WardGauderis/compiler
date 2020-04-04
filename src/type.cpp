@@ -24,9 +24,14 @@ overloaded(Ts...)->overloaded<Ts...>;
                 [&](const Type* ptr) { return ptr->string() + "*" + (isTypeConst ? " const" : ""); },
                 [&](BaseType base) { return (isTypeConst ? "const " : "") + toString(base); },
                 [&](const FunctionType& func) {
-                    auto res = func.first->string() + '(';
-                    for(const auto& elem : func.second) res += elem->string();
-                    return res += ')';
+                    auto res = func.returnType->string() + '(';
+                    for(const auto& elem : func.parameters) res += elem->string() + ',';
+                    if(func.variadic) res += "...";
+                    res.back() = ')';
+                    return res;
+                },
+                [&](const ArrayType& arr) {
+                    return arr.second->string() + '[' + (arr.first ? std::to_string(arr.first) : "") + ']';
                 } },
     type);
 }
@@ -48,11 +53,13 @@ const FunctionType& Type::getFunctionType() const
     }
 }
 
-std::optional<Type> Type::getDerefType() const
+Type* Type::getDerefType() const
 {
-    if(isPointerType()) return *std::get<Type*>(type);
+    if(isPointerType()) return std::get<Type*>(type);
+    else if(isArrayType())
+        return std::get<ArrayType>(type).second;
     else
-        return std::nullopt;
+        throw InternalError("type is not of form pointer/array type");
 }
 
 bool Type::isConst() const
@@ -100,6 +107,11 @@ bool Type::isFunctionType() const
     return type.index() == 3;
 }
 
+bool Type::isArrayType() const
+{
+    return type.index() == 4;
+}
+
 bool operator==(const Type& lhs, const Type& rhs)
 {
     if(lhs.type.index() != rhs.type.index()) return false;
@@ -129,129 +141,131 @@ std::string Type::toString(BaseType type)
     }
 }
 
-std::optional<Type>
-Type::unary(PrefixOperation operation, const Type& operand, size_t line, size_t column, bool print)
+Type* Type::unary(PrefixOperation operation, Type* operand, size_t line, size_t column, bool print)
 {
     if(operation == PrefixOperation::Deref)
     {
-        if(not operand.isPointerType())
+        if(not operand->isPointerType())
         {
-            std::cout << SemanticError("cannot dereference non-pointer type " + operand.string(), line, column);
-            return std::nullopt;
+            std::cout << SemanticError("cannot dereference non-pointer type " + operand->string(), line, column);
+            return nullptr;
         }
-        else return operand.getDerefType();
+        else
+            return operand->getDerefType();
     }
     if(operation == PrefixOperation::Addr)
     {
-        return Type(false, new Type(operand));
+        return new Type(false, operand);
     }
 
     if(operation == PrefixOperation::Not)
     {
-        return Type(false, BaseType::Int);
+        return new Type(false, BaseType::Int);
     }
-    else if((operation == PrefixOperation::Plus or operation == PrefixOperation::Neg) and operand.isPointerType())
+    else if((operation == PrefixOperation::Plus or operation == PrefixOperation::Neg) and operand->isPointerType())
     {
-        if(print) std::cout << InvalidOperands(operation.string(), operand.string(), line, column);
-        return std::nullopt;
+        if(print) std::cout << InvalidOperands(operation.string(), operand->string(), line, column);
+        return nullptr;
     }
     return operand;
 }
 
-std::optional<Type>
-Type::combine(BinaryOperation operation, const Type& lhs, const Type& rhs, size_t line, size_t column, bool print)
+Type* Type::combine(BinaryOperation operation, Type* lhs, Type* rhs, size_t line, size_t column, bool print)
 {
     if(operation.isLogicalOperator())
     {
-        return Type(false, BaseType::Int); // TODO: make this a bool
+        return new Type(false, BaseType::Int); // TODO: make this a bool
     }
 
-    if (operation.isComparisonOperator() and ((rhs.isPointerType() and lhs.isFloatType()) or (rhs.isFloatType() and lhs.isPointerType())))
+    if(operation.isComparisonOperator()
+       and ((rhs->isPointerType() and lhs->isFloatType()) or (rhs->isFloatType() and lhs->isPointerType())))
     {
         // empty statement, just go to throw
     }
-    else if(lhs.isBaseType() and rhs.isBaseType())
+    else if(lhs->isBaseType() and rhs->isBaseType())
     {
-        if(operation == BinaryOperation::Mod and (lhs.isFloatType() or rhs.isFloatType()))
+        if(operation == BinaryOperation::Mod and (lhs->isFloatType() or rhs->isFloatType()))
         {
         }
         else if(operation.isComparisonOperator())
         {
-            return Type(false, BaseType::Int); // TODO: make this a bool
+            return new Type(false, BaseType::Int); // TODO: make this a bool
         }
         else
-            return Type(false, std::max(lhs.getBaseType(), rhs.getBaseType()));
+            return new Type(false, std::max(lhs->getBaseType(), rhs->getBaseType()));
     }
-    else if(lhs.isPointerType() and rhs.isPointerType())
+    else if(lhs->isPointerType() and rhs->isPointerType())
     {
         if(operation.isComparisonOperator())
         {
-            return Type(false, BaseType::Int); // must be bool
+            return new Type(false, BaseType::Int); // must be bool
         }
     }
-    else if(lhs.isPointerType() and rhs.isIntegralType() and operation.isAdditiveOperator())
+    else if(lhs->isPointerType() and rhs->isIntegralType() and operation.isAdditiveOperator())
     {
         return lhs;
     }
-    else if(lhs.isIntegralType() and rhs.isPointerType() and operation == BinaryOperation::Add)
+    else if(lhs->isIntegralType() and rhs->isPointerType() and operation == BinaryOperation::Add)
     {
         return rhs;
     }
     if(print)
-        std::cout << InvalidOperands(operation.string(), lhs.string(), rhs.string(), line, column);
-    return std::nullopt;
+        std::cout << InvalidOperands(operation.string(), lhs->string(), rhs->string(), line, column);
+    return nullptr;
 }
 
-bool Type::convert(const Type& from, const Type& to, bool cast, size_t line, size_t column, bool print)
+bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, bool print)
 {
     std::string operation = cast ? "casting" : "assigning";
 
-    if((from.isVoidType() and not to.isVoidType()) or (not from.isVoidType() and to.isVoidType()))
+    if((from->isVoidType() and not to->isVoidType()) or (not from->isVoidType() and to->isVoidType()))
     {
-        if(print) std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+        if(print)
+            std::cout << ConversionError(operation, from->string(), to->string(), line, column);
         return false;
     }
 
-    if(from.isPointerType())
+    if(from->isPointerType())
     {
-        if (to.isFloatType())
+        if(to->isFloatType())
         {
             if(print)
-                std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+                std::cout << ConversionError(operation, from->string(), to->string(), line, column);
             return false;
         }
-        else if(to.isIntegralType() and not cast)
+        else if(to->isIntegralType() and not cast)
         {
             if(print)
                 std::cout
-                << PointerConversionWarning(operation, "from", from.string(), to.string(), line, column);
+                << PointerConversionWarning(operation, "from", from->string(), to->string(), line, column);
         }
     }
-    if(to.isPointerType())
+    if(to->isPointerType())
     {
-        if (from.isFloatType())
+        if(from->isFloatType())
         {
             if(print)
-                std::cout << ConversionError(operation, from.string(), to.string(), line, column);
+                std::cout << ConversionError(operation, from->string(), to->string(), line, column);
             return false;
         }
-        else if(from.isIntegralType() and not cast)
+        else if(from->isIntegralType() and not cast)
         {
             if(print)
-                std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
+                std::cout
+                << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
         }
     }
-    if(from.isBaseType() and to.isBaseType() and to.getBaseType() < from.getBaseType() and not cast)
+    if(from->isBaseType() and to->isBaseType() and to->getBaseType() < from->getBaseType() and not cast)
     {
-        std::cout << NarrowingConversion(operation, from.string(), to.string(), line, column);
+        std::cout << NarrowingConversion(operation, from->string(), to->string(), line, column);
     }
-    if(not cast and from.isPointerType() and to.isPointerType() and from != to)
+    if(not cast and from->isPointerType() and to->isPointerType() and from != to)
     {
-        std::cout << PointerConversionWarning(operation, "to", from.string(), to.string(), line, column);
+        std::cout << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
     }
-    if(from.isPointerType() and to.isCharacterType())
+    if(from->isPointerType() and to->isCharacterType())
     {
-        std::cout << NarrowingConversion(operation, from.string(), to.string(), line, column);
+        std::cout << NarrowingConversion(operation, from->string(), to->string(), line, column);
     }
 
     return true;

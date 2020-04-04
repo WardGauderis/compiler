@@ -22,7 +22,8 @@ struct Helper
                 elem = res;
             }
         }
-        else return true;
+        else
+            return true;
         return false;
     }
 
@@ -110,16 +111,16 @@ struct Helper
 
     template <typename Variant>
     static Ast::Literal*
-    fold_cast(Variant operand, const Type& type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    fold_cast(Variant operand, Type* type, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     {
-        if(type.isFloatType())
+        if(type->isFloatType())
             return new Ast::Literal((float)operand, std::move(table), line, column);
-        else if(type.isCharacterType())
+        else if(type->isCharacterType())
             return new Ast::Literal((char)operand, std::move(table), line, column);
-        else if(type.isIntegerType() or type.isPointerType())
+        else if(type->isIntegerType() or type->isPointerType())
             return new Ast::Literal((int)operand, std::move(table), line, column);
         else
-            throw InternalError("unknown type for conversion: " + type.string(), line, column);
+            throw InternalError("unknown type for conversion: " + type->string(), line, column);
     }
 
     static bool evaluate(Ast::Literal* literal)
@@ -138,10 +139,82 @@ struct Helper
         {
             return res->operation == PrefixOperation::Deref;
         }
-        else if(auto* res = dynamic_cast<Ast::PostfixExpr*>(expr))
+        else if(auto* res = dynamic_cast<Ast::SubscriptExpr*>(expr))
         {
-            // TODO there are some stuffs here
+            return true;
         }
         return false;
+    }
+
+    static bool fill_table_with_function(const std::vector<std::pair<Type*, std::string>>& parameters,
+                                         Type*                               returnType,
+                                         const std::string&                  identifier,
+                                         const std::shared_ptr<SymbolTable>& table,
+                                         const std::shared_ptr<SymbolTable>& scope,
+                                         size_t                              line,
+                                         size_t                              column)
+    {
+        // checking for duplicate names by inserting into bogus scope
+        for(const auto& [type, id] : parameters)
+        {
+            if(type->isVoidType())
+            {
+                std::cout << SemanticError("parameter type cannot be void", line, column);
+                return false;
+            }
+            else if(id.empty())
+            {
+                // do not try an insert if the id is empty
+            }
+            else if(not scope->insert(id, type, true))
+            {
+                std::cout << RedefinitionError(identifier, line, column);
+                return false;
+            }
+        }
+
+        // converting the parameter types
+        std::vector<Type*> types(parameters.size());
+        const auto         convert = [&](const auto& param) { return param.first; };
+        std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
+
+        // checking for alternate redefinitions
+        if(not table->insert(identifier, new Type(returnType, types), true))
+        {
+            auto* res = table->lookup(identifier);
+            if(not res->type->isFunctionType())
+            {
+                std::cout << RedefinitionError(identifier, line, column);
+                return false;
+            }
+            else if((*res->type->getFunctionType().returnType) != (*returnType))
+            {
+                std::cout << SemanticError("redefining function with different return type is not allowed", line, column);
+                return false;
+            }
+            else if(res->type->getFunctionType().variadic)
+            {
+                std::cout << SemanticError("defining similar function without variadic elements is not allowed", line, column);
+                return false;
+            }
+            else
+            {
+                if(res->type->getFunctionType().parameters.size() != types.size())
+                {
+                    std::cout << SemanticError("overloading functions is not supported", line, column);
+                    return false;
+                }
+
+                for(size_t i = 0; i < types.size(); i++)
+                {
+                    if((*res->type->getFunctionType().parameters[i]) != (*types[i]))
+                    {
+                        std::cout << SemanticError("overloading functions is not supported", line, column);
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 };

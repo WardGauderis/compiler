@@ -16,15 +16,13 @@
 #include "cst.h"
 #include "errors.h"
 
-Ast::Comment* visitComment(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
-
 Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
-
-Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
@@ -44,19 +42,27 @@ Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolT
 
 Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+size_t visitSizeExpr(antlr4::tree::ParseTree* context);
 
-Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Type* visitTypeName(antlr4::tree::ParseTree* context);
 
-Type visitPointerType(antlr4::tree::ParseTree* context, Type type, std::shared_ptr<SymbolTable>& table);
+Type* visitBasicType(antlr4::tree::ParseTree* context);
 
-Ast::Statement* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Type* visitPointerType(antlr4::tree::ParseTree* context, Type* type);
+
+Type* visitDeclarationArray(antlr4::tree::ParseTree* context, Type* type);
+
+Type* visitParameterArray(antlr4::tree::ParseTree* context, Type* type);
 
 Ast::Statement* visitVariableDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
-std::vector<Type> visitDeclarationParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4::tree::ParseTree* context);
+
+std::vector<std::pair<Type*, std::string>> visitParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Statement* visitFunctionDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+
+Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
@@ -75,12 +81,6 @@ Ast::Expr* visitExprStatement(antlr4::tree::ParseTree* context, std::shared_ptr<
 Ast::Statement* visitControlStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table, ScopeType type);
-
-std::vector<std::pair<Type, std::string>> visitParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
-
-std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
-
-Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent);
 
 Ast::Scope* visitFile(antlr4::tree::ParseTree* context);
 

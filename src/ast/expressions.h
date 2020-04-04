@@ -19,7 +19,7 @@ struct Expr : public Statement
     }
 
     [[nodiscard]] std::string  color() const override;
-    [[nodiscard]] virtual Type type() const     = 0;
+    [[nodiscard]] virtual Type*  type() const     = 0;
     [[nodiscard]] virtual bool constant() const = 0;
 };
 
@@ -34,7 +34,7 @@ struct Literal final : public Expr
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] Literal*    fold() final;
-    [[nodiscard]] Type        type() const final;
+    [[nodiscard]] Type*         type() const final;
     [[nodiscard]] bool        constant() const final;
     void                      visit(IRVisitor& visitor) final;
 
@@ -55,7 +55,7 @@ struct Variable final : public Expr
     [[nodiscard]] bool        constant() const final;
     [[nodiscard]] bool        check() const final;
 
-    [[nodiscard]] Type type() const final;
+    [[nodiscard]] Type*  type() const final;
     void               visit(IRVisitor& visitor) final;
 
     std::string identifier;
@@ -73,7 +73,7 @@ struct BinaryExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const override;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -95,7 +95,7 @@ struct PostfixExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -115,7 +115,7 @@ struct PrefixExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -125,7 +125,7 @@ struct PrefixExpr final : public Expr
 
 struct CastExpr final : public Expr
 {
-    explicit CastExpr(Type cast, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    explicit CastExpr(Type*  cast, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
     : Expr(std::move(table), line, column), cast(std::move(cast)), operand(operand)
     {
     }
@@ -135,11 +135,11 @@ struct CastExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
-    Type  cast;
+    Type*   cast;
     Expr* operand;
 };
 
@@ -154,7 +154,7 @@ struct Assignment final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -175,7 +175,7 @@ struct FunctionCall final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
@@ -185,8 +185,8 @@ struct FunctionCall final : public Expr
 
 struct SubscriptExpr final : public Expr
 {
-    SubscriptExpr(Expr* expr, std::string identifier, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), identifier(std::move(identifier)), expr(expr)
+    SubscriptExpr(Expr* lhs, Expr* rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Expr(std::move(table), line, column),lhs(lhs), rhs(rhs)
     {
     }
 
@@ -195,29 +195,12 @@ struct SubscriptExpr final : public Expr
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     [[nodiscard]] bool               check() const final;
-    [[nodiscard]] Type               type() const final;
+    [[nodiscard]] Type*                type() const final;
     [[nodiscard]] bool               constant() const final;
     void                             visit(IRVisitor& visitor) final;
 
-    Expr* expr;
-    std::string identifier;
-};
-
-struct PrintfStatement final : public Expr
-{
-    explicit PrintfStatement(Expr* expr, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), expr(expr)
-    {
-    }
-
-    [[nodiscard]] std::string        name() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
-    [[nodiscard]] Node*              fold() final;
-    [[nodiscard]] Type               type() const final;
-    [[nodiscard]] bool               constant() const final;
-    void                             visit(IRVisitor& visitor) override;
-
-    Expr* expr;
+    Expr* lhs;
+    Expr* rhs;
 };
 
 } // namespace Ast

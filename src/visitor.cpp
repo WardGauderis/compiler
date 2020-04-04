@@ -13,35 +13,6 @@
 
 namespace
 {
-template <typename Ret>
-struct VisitorHelper
-{
-    VisitorHelper(antlr4::tree::ParseTree* context, std::string name)
-    : context(context), name(std::move(name))
-    {
-    }
-
-    template <typename Func>
-    void operator()(size_t size, const Func& func)
-    {
-        if(size == context->children.size())
-        {
-            res = func(context);
-        }
-    }
-
-    Ret result()
-    {
-        if(res.has_value()) return *res;
-        else
-            throw InternalError("could not find visitor with "
-                                + std::to_string(context->children.size()) + " for " + name);
-    }
-
-    std::optional<Ret> res = std::nullopt;
-    antlr4::tree::ParseTree* context;
-    std::string name;
-};
 
 std::pair<size_t, size_t> getColumnAndLine(antlr4::tree::ParseTree* context)
 {
@@ -54,22 +25,22 @@ std::pair<size_t, size_t> getColumnAndLine(antlr4::tree::ParseTree* context)
         return std::make_pair(res->symbol->getLine(), res->symbol->getCharPositionInLine());
     }
     else
+    {
         return {};
+    }
 }
 } // namespace
 
 //============================================================================
 
-Ast::Comment* visitComment(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    const auto [line, column] = getColumnAndLine(context);
-    return new Ast::Comment(context->getText(), table, line, column);
-}
-
 Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     auto* terminal = dynamic_cast<antlr4::tree::TerminalNode*>(context->children[0]);
-    if(terminal == nullptr) throw UnexpectedContextType(context);
+    if(terminal == nullptr)
+    {
+        throw UnexpectedContextType(context);
+    }
+
 
     const auto [line, column] = getColumnAndLine(context);
 
@@ -114,265 +85,419 @@ Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_
         return new Ast::Variable(context->getText(), table, line, column);
     }
     else
+    {
         throw UnexpectedContextType(context);
+    }
 }
 
 Ast::Expr* visitBasicExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "basic expression");
-    visitor(1, [&](auto* context) -> Ast::Expr* {
+    if(context->children.size() == 1)
+    {
         return visitLiteralOrVariable(context->children[0], table);
-    });
-    visitor(3, [&](auto* context) { return visitExpr(context->children[1], table); });
-    return visitor.result();
+    }
+    else if(context->children.size() == 3)
+    {
+        return visitExpr(context->children[1], table);
+    }
+    else throw InternalError("unknown children size in basic expr");
+}
+
+std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+{
+    std::vector<Ast::Expr*> res;
+    if(context->children.size() == 3)
+    {
+        res = visitArgumentList(context->children[2], table);
+    }
+
+    auto expr = visitExpr(context->children[0], table);
+    res.emplace_back(expr);
+    return res;
 }
 
 Ast::Expr* visitPostfixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    VisitorHelper<Ast::Expr*> visitor(context, "postfix expression");
-    visitor(1, [&](auto* context)
+    if(context->children.size() == 1)
     {
-        if(auto* res = dynamic_cast<CParser::PrintfContext*>(context->children[0]))
-        {
-            return visitPrintf(context->children[0], table);
-        }
-        else return visitBasicExpr(context->children[0], table);
-    });
-    visitor(2, [&](auto* context)
+        return visitBasicExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 2)
     {
         const auto expr = visitPostfixExpr(context->children[0], table);
         return new Ast::PostfixExpr(context->children[1]->getText(), expr, table, line, column);
-    });
-    visitor(3, [&](auto* context)
+    }
+    else if(context->children.size() == 3)
     {
-      auto name = context->children[0]->getText();
-      return new Ast::FunctionCall({}, std::move(name), table, line, column);
-    });
-    visitor(4, [&](auto* context)
-    {
-        auto args = visitArgumentList(context->children[2], table);
         auto name = context->children[0]->getText();
-      return new Ast::FunctionCall(std::move(args), std::move(name), table, line, column);
-    });
-    return visitor.result();
+        return new Ast::FunctionCall({}, std::move(name), table, line, column);
+    }
+    else if(context->children.size() == 4)
+    {
+        if(dynamic_cast<CParser::ArgumentListContext*>(context->children[2]))
+        {
+            auto args = visitArgumentList(context->children[2], table);
+            auto name = context->children[0]->getText();
+            return new Ast::FunctionCall(std::move(args), std::move(name), table, line, column);
+        }
+        else
+        {
+            auto lhs = visitPostfixExpr(context->children[0], table);
+            auto rhs = visitExpr(context->children[2], table);
+            return new Ast::SubscriptExpr(lhs, rhs, table, line, column);
+        }
+    }
+    else throw InternalError("unknown children size in postfix expr");
 }
 
 Ast::Expr* visitPrefixExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    VisitorHelper<Ast::Expr*> visitor(context, "prefix expression");
-
-    visitor(1, [&](auto* context) { return visitPostfixExpr(context->children[0], table); });
-    visitor(2, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitPostfixExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 2)
+    {
         auto* rhs = visitPrefixExpr(context->children[1], table);
         return new Ast::PrefixExpr(context->children[0]->getText(), rhs, table, line, column);
-    });
-    visitor(4, [&](auto* context) {
-        const auto type = visitTypeName(context->children[1], table);
+    }
+    else if(context->children.size() == 4)
+    {
+        const auto type = visitTypeName(context->children[1]);
         const auto rhs = visitPrefixExpr(context->children[3], table);
-
         return new Ast::CastExpr(type, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in prefix expr");
 }
 
 Ast::Expr* visitMultiplicativeExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "multiplicative expression");
-    visitor(1, [&](auto* context) { return visitPrefixExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitPrefixExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
         const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitMultiplicativeExpr(context->children[0], table);
         const auto rhs = visitPrefixExpr(context->children[2], table);
         return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in multiplicative expr");
 }
 
 Ast::Expr* visitAdditiveExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    const auto [line, column] = getColumnAndLine(context);
-    VisitorHelper<Ast::Expr*> visitor(context, "additive expression");
-    visitor(1, [&](auto* context) { return visitMultiplicativeExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitMultiplicativeExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
+        const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitAdditiveExpr(context->children[0], table);
         const auto rhs = visitMultiplicativeExpr(context->children[2], table);
         return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in additive expr");
 }
 
 Ast::Expr* visitRelationalExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "relational expression");
-    visitor(1, [&](auto* context) { return visitAdditiveExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitAdditiveExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
         const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitRelationalExpr(context->children[0], table);
         const auto rhs = visitAdditiveExpr(context->children[2], table);
 
         return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in relational expr");
 }
 
 Ast::Expr* visitEqualityExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "equality expression");
-    visitor(1, [&](auto* context) { return visitRelationalExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitRelationalExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
         const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitEqualityExpr(context->children[0], table);
         const auto rhs = visitRelationalExpr(context->children[2], table);
-
         return new Ast::BinaryExpr(context->children[1]->getText(), lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in equality expr");
 }
 
 Ast::Expr* visitAndExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "and expression");
-    visitor(1, [&](auto* context) { return visitEqualityExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitEqualityExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
         const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitAndExpr(context->children[0], table);
         const auto rhs = visitEqualityExpr(context->children[2], table);
-
         return new Ast::BinaryExpr("&&", lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in or expr");
 }
 
 Ast::Expr* visitOrExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    const auto [line, column] = getColumnAndLine(context);
-    VisitorHelper<Ast::Expr*> visitor(context, "or expression");
-    visitor(1, [&](auto* context) { return visitAndExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitAndExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
+        const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitOrExpr(context->children[0], table);
         const auto rhs = visitAndExpr(context->children[2], table);
         return new Ast::BinaryExpr("||", lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in or expr");
 }
 
 Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "assign expression");
-    visitor(1, [&](auto* context) { return visitOrExpr(context->children[0], table); });
-    visitor(3, [&](auto* context) {
+    if(context->children.size() == 1)
+    {
+        return visitOrExpr(context->children[0], table);
+    }
+    else if(context->children.size() == 3)
+    {
         const auto [line, column] = getColumnAndLine(context);
         const auto lhs = visitPrefixExpr(context->children[0], table);
         const auto rhs = visitAssignExpr(context->children[2], table);
-
         return new Ast::Assignment(lhs, rhs, table, line, column);
-    });
-    return visitor.result();
+    }
+    else throw InternalError("unknown children size in assign expr");
 }
 
 Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    VisitorHelper<Ast::Expr*> visitor(context, "expression");
-    visitor(1, [&](auto* context) { return visitAssignExpr(context->children[0], table); });
-    return visitor.result();
+    return visitAssignExpr(context->children[0], table);
 }
 
-Type visitTypeName(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+size_t visitSizeExpr(antlr4::tree::ParseTree* context)
 {
-    const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitBasicType(context->children[0], table);
-
-    VisitorHelper<Type> visitor(context, "expression");
-    visitor(1, [&](auto* context) { return type; });
-    visitor(2, [&](auto* context) { return visitPointerType(context->children[1], type, table); });
-    return visitor.result();
-}
-
-Type visitBasicType(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    bool isConst = context->children.size() != 1;
-    antlr4::tree::ParseTree* specifier
-    = *std::find_if(context->children.begin(), context->children.end(), [](const auto& context) {
-          return typeid(*context) == typeid(CParser::SpecifierContext);
-      });
-    return Type(isConst, specifier->getText());
-}
-
-Type visitPointerType(antlr4::tree::ParseTree* context, Type type, std::shared_ptr<SymbolTable>& table)
-{
-    Type* ptr = new Type(type);
-    if(context->children.size() == 1)
+    auto table = std::make_shared<SymbolTable>(ScopeType::plain);
+    auto expr = visitExpr(context, table);
+    if( not expr->constant())
     {
-        return Type(false, ptr);
+        std::cout << SemanticError("expression in array type should have constexpr size");
+        throw CompilationError("could not create ast because of above reasons");
     }
-    else if(context->children.size() == 3)
+    else if(not expr->type()->isIntegralType())
     {
-        return visitPointerType(context->children[2], Type(true, ptr), table);
-    }
-    else if(typeid(*context->children[1]) == typeid(CParser::QualifierContext))
-    {
-        return Type(true, ptr);
+        std::cout << SemanticError("expression in array type should be integral");
+        throw CompilationError("could not create ast because of above reasons");
     }
     else
     {
-        return visitPointerType(context->children[1], Type(false, ptr), table);
+        if(auto* res = dynamic_cast<Ast::Literal*>(expr->fold()))
+        {
+            if(res->literal.index() == static_cast<size_t>(BaseType::Int))
+            {
+                return std::get<static_cast<size_t>(BaseType::Int)>(res->literal);
+            }
+            else if(res->literal.index() == static_cast<size_t>(BaseType::Char))
+            {
+                return  std::get<static_cast<size_t>(BaseType::Char)>(res->literal);
+            }
+            else throw InternalError("problems retrieving size from literal");
+        }
+        else throw InternalError("constexpr size of array could not be folded");
     }
 }
 
-Ast::Statement* visitInitializer(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+Type* visitTypeName(antlr4::tree::ParseTree* context)
 {
-    return visitAssignExpr(context->children[0], table);
+    const auto type = visitBasicType(context->children[0]);
+
+    if(context->children.size() == 1)
+    {
+        return type;
+    }
+    else if(context->children.size() == 2)
+    {
+        return visitPointerType(context->children[1], type);
+    }
+    else throw;
+}
+
+Type* visitBasicType(antlr4::tree::ParseTree* context)
+{
+    bool isConst = context->children.size() != 1;
+    auto* specifier
+    = *std::find_if(context->children.begin(), context->children.end(), [](const auto& context) {
+          return typeid(*context) == typeid(CParser::SpecifierContext);
+      });
+    return new Type(isConst, specifier->getText());
+}
+
+Type* visitPointerType(antlr4::tree::ParseTree* context, Type* type)
+{
+    if(context->children.size() == 1)
+    {
+        return new Type(false, type);
+    }
+    else if(context->children.size() == 3)
+    {
+        return visitPointerType(context->children[2], new Type(true, type));
+    }
+    else if(dynamic_cast<CParser::QualifierContext*>(context->children[1]))
+    {
+        return new Type(true, type);
+    }
+    else
+    {
+        return visitPointerType(context->children[1], new Type(false, type));
+    }
+}
+
+Type* visitDeclarationArray(antlr4::tree::ParseTree* context, Type* type)
+{
+    if(context->children.empty())
+    {
+        return type;
+    }
+    else if(context->children.size() == 4)
+    {
+        const auto size = visitSizeExpr(context->children[1]);
+        return new Type(size, type);
+    }
+    else throw InternalError("wrong children size for parameter array");
+}
+
+Type* visitParameterArray(antlr4::tree::ParseTree* context, Type* type)
+{
+    if(context->children.empty())
+    {
+        return type;
+    }
+    else if(context->children.size() == 3)
+    {
+        return new Type(static_cast<size_t>(0), type);
+    }
+    else if(context->children.size() == 4)
+    {
+        const auto size = visitSizeExpr(context->children[1]);
+        return new Type(size, type);
+    }
+    else throw InternalError("wrong children size for parameter array");
 }
 
 Ast::Statement* visitVariableDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitTypeName(context->children[0], table);
+    const auto type = visitTypeName(context->children[0]);
     const auto name = context->children[1]->getText();
-    auto* var = new Ast::Variable(name, table, line, column);
 
-    VisitorHelper<Ast::Statement*> visitor(context, "declaration");
-    visitor(2, [&](auto* context) {
-      return new Ast::VariableDeclaration(type, var, nullptr, table, line, column);
-    });
-    visitor(4, [&](auto* context) {
-      auto* expr = visitAssignExpr(context->children[3]->children[0], table);
-      return new Ast::VariableDeclaration(type, var, expr, table, line, column);
-    });
-    return visitor.result();
-}
-
-std::vector<Type> visitDeclarationParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitTypeName(context->children[0], table);
-    auto res = std::vector<Type>();
-    if(context->children.size() == 3)
+    if(context->children.size() == 2)
     {
-        res = visitDeclarationParameterList(context->children[2], table);
+        return new Ast::VariableDeclaration(type, name, nullptr, table, line, column);
+    }
+    else if(context->children.size() == 3)
+    {
+        auto temp = visitDeclarationArray(context->children[2], type);
+        return new Ast::VariableDeclaration(temp, name, nullptr, table, line, column);
     }
     else if(context->children.size() == 4)
     {
-        res = visitDeclarationParameterList(context->children[3], table);
+        auto* expr = visitAssignExpr(context->children[3], table);
+        return new Ast::VariableDeclaration(type, name, expr, table, line, column);
     }
-    res.emplace_back(type);
-    return res;
+    else throw InternalError("unknown children size for declaration");
 }
+
+std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4::tree::ParseTree* context)
+{
+    const auto type = visitTypeName(context->children[0]);
+
+    if(context->children.size() == 2)
+    {
+        return {std::make_pair(type, "")};
+    }
+    if(context->children.size() == 3)
+    {
+        return {std::make_pair(type, context->children[1]->getText())};
+    }
+    if(context->children.size() == 4)
+    {
+        auto res = visitDeclarationParameterList(context->children[3]);
+        res.emplace_back(std::make_pair(type, ""));
+        return res;
+    }
+    else if(context->children.size() == 5)
+    {
+        auto res = visitDeclarationParameterList(context->children[4]);
+        res.emplace_back(std::make_pair(type, context->children[1]->getText()));
+        return res;
+    }
+    else throw InternalError("unknown children size for declaration param list");
+}
+
+std::vector<std::pair<Type*, std::string>> visitParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+{
+    auto type = visitTypeName(context->children[0]);
+    auto name = context->children[1]->getText();
+    type = visitParameterArray(context->children[2], type);
+
+    if (context->children.size() == 3)
+    {
+        return { std::make_pair(type, name) };
+    }
+    else if(context->children.size() == 5)
+    {
+        auto res = visitParameterList(context->children[4], table);
+        res.emplace_back(type, name);
+        return res;
+    }
+    else throw InternalError("parameter list visitor error");
+}
+
 
 Ast::Statement* visitFunctionDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
-    const Type type = visitTypeName(context->children[0], table);
+    const auto type = visitTypeName(context->children[0]);
     const auto id = context->children[1]->getText();
 
-    std::vector<Type> types;
+    std::vector<std::pair<Type*, std::string>> types;
     if(auto* res = dynamic_cast<CParser::DeclarationParameterListContext*>(context->children[3]))
     {
-        types = visitDeclarationParameterList(context->children[3], table);
+        types = visitDeclarationParameterList(res);
     }
     return new Ast::FunctionDeclaration(type, id, types, table, line, column);
+}
+
+Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+{
+    auto ret = visitTypeName(context->children[0]);
+
+    auto scopeIndex = 4;
+    std::vector<std::pair<Type*, std::string>> params;
+    if(auto* res = dynamic_cast<CParser::ParameterListContext*>(context->children[3]))
+    {
+        params = visitParameterList(res, table);
+        scopeIndex = 5;
+    }
+    auto* body = visitScopeStatement(context->children[scopeIndex], table, ScopeType::function);
+    const auto [line, column] = getColumnAndLine(context);
+    auto name = context->children[1]->getText();
+    return new Ast::FunctionDefinition(ret, std::move(name), params, body, table, line, column);
 }
 
 Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -381,7 +506,7 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
     {
         return visitVariableDeclaration(res, table);
     }
-    else if(auto* res = dynamic_cast<CParser::FunctionDefinitionContext*>(context->children[0]))
+    else if(auto* res = dynamic_cast<CParser::FunctionDeclarationContext*>(context->children[0]))
     {
         return visitFunctionDeclaration(res, table);
     }
@@ -389,13 +514,6 @@ Ast::Statement* visitDeclaration(antlr4::tree::ParseTree* context, std::shared_p
     {
         throw InternalError("unknown declaration type");
     }
-}
-
-Ast::Expr* visitPrintf(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    const auto [line, column] = getColumnAndLine(context);
-    auto* expr = visitExpr(context->children[2], table);
-    return new Ast::PrintfStatement(expr, table, line, column);
 }
 
 Ast::Scope* visitScopeStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent, ScopeType type)
@@ -426,34 +544,34 @@ Ast::Statement* visitIfStatement(antlr4::tree::ParseTree* context, std::shared_p
     auto* condition = visitExpr(context->children[2], table);
     auto* ifBody = visitStatement(context->children[4], table, ScopeType::condition);
 
-    VisitorHelper<Ast::Statement*> helper(context, "if");
-    helper(5, [&](auto* context)
+    if(context->children.size() == 5)
     {
         return new Ast::IfStatement(condition, ifBody, nullptr, table, line, column);
-    });
-    helper(7, [&](auto* context) {
+    }
+    else if(context->children.size() == 7){
         auto* elseBody = visitStatement(context->children[6], table, ScopeType::condition);
         return new Ast::IfStatement(condition, ifBody, elseBody, table, line, column);
-    });
-    return helper.result();
+    }
+    else throw InternalError("unknown child size for if statement");
 }
 
 Ast::Statement* visitWhileStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     const auto [line, column] = getColumnAndLine(context);
 
-    VisitorHelper<Ast::Statement*> helper(context, "while");
-    helper(5, [&](auto* context) {
+    if(context->children.size() == 5)
+    {
         auto* condition = visitExpr(context->children[2], table);
         auto* body = visitStatement(context->children[4], table, ScopeType::loop);
         return new Ast::LoopStatement(nullptr, condition, nullptr, body, false, table, line, column);
-    });
-    helper(7, [&](auto* context) {
+    }
+    else if(context->children.size() == 7)
+    {
         auto* body = visitStatement(context->children[1], table, ScopeType::loop);
         auto* condition = visitExpr(context->children[4], table);
         return new Ast::LoopStatement(nullptr, condition, nullptr, body, true, table, line, column);
-    });
-    return helper.result();
+    }
+    else throw;
 }
 
 Ast::Statement* visitForStatement(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& parent)
@@ -546,54 +664,10 @@ Ast::Statement* visitStatement(antlr4::tree::ParseTree* context, std::shared_ptr
     {
         return visitForStatement(child, table);
     }
-    else throw UnexpectedContextType(context);
-}
-
-std::vector<std::pair<Type, std::string>> visitParameterList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    auto type = visitTypeName(context->children[0], table);
-    auto name = context->children[1]->getText();
-
-    if (context->children.size() == 4)
-    {
-        auto res = visitParameterList(context->children[3], table);
-        res.emplace_back(type, name);
-        return res;
-    }
     else
     {
-        return { std::make_pair(type, name) };
+        throw UnexpectedContextType(context);
     }
-}
-
-std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    std::vector<Ast::Expr*> res;
-    if(context->children.size() == 3)
-    {
-        res = visitArgumentList(context->children[2], table);
-    }
-
-    auto expr = visitExpr(context->children[0], table);
-    res.emplace_back(expr);
-    return res;
-}
-
-Ast::Statement* visitFunctionDefinition(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
-{
-    auto ret = visitTypeName(context->children[0], table);
-
-    auto scopeIndex = 4;
-    std::vector<std::pair<Type, std::string>> params;
-    if(auto* res = dynamic_cast<CParser::ParameterListContext*>(context->children[3]))
-    {
-        params = visitParameterList(res, table);
-        scopeIndex = 5;
-    }
-    auto* body = visitScopeStatement(context->children[scopeIndex], table, ScopeType::function);
-    const auto [line, column] = getColumnAndLine(context);
-    auto name = context->children[1]->getText();
-    return new Ast::FunctionDefinition(ret, std::move(name), params, body, table, line, column);
 }
 
 Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
@@ -613,6 +687,13 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
         else if(dynamic_cast<CParser::FunctionDefinitionContext*>(child))
         {
             statements.emplace_back(visitFunctionDefinition(child, global));
+        }
+        else if(auto* res = dynamic_cast<antlr4::tree::TerminalNode*>(child))
+        {
+            if(res->getSymbol()->getType() == CParser::INCLUDESTDIO)
+            {
+                throw InternalError("does not support include yet");
+            }
         }
     }
     return new Ast::Scope(statements, global, line, column);

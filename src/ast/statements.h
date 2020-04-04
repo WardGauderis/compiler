@@ -31,7 +31,7 @@ struct Scope final : public Statement
 
 struct VariableDeclaration final : public Statement
 {
-    explicit VariableDeclaration(Type                         type,
+    explicit VariableDeclaration(Type*                         type,
                                  std::string                  identifier,
                                  Expr*                        expr,
                                  std::shared_ptr<SymbolTable> table,
@@ -49,47 +49,22 @@ struct VariableDeclaration final : public Statement
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
-    Type        type;
+    Type*        type;
     std::string identifier;
     Expr*       expr; // can be nullptr
 };
 
-struct ArrayDeclaration final : public Statement
-{
-    explicit ArrayDeclaration(Type                         type,
-                              std::string                  identifier,
-                              size_t                       size,
-                              std::shared_ptr<SymbolTable> table,
-                              size_t                       line,
-                              size_t                       column)
-    : Statement(std::move(table), line, column), type(std::move(type)),
-      identifier(std::move(identifier)), size(size)
-    {
-    }
-
-    [[nodiscard]] std::string        name() const final;
-    [[nodiscard]] std::vector<Node*> children() const final;
-    [[nodiscard]] Node*              fold() final;
-    [[nodiscard]] bool               fill() const final;
-    [[nodiscard]] bool               check() const final;
-    void                             visit(IRVisitor& visitor) final;
-
-    Type        type;
-    std::string identifier;
-    size_t      size;
-};
-
 struct FunctionDefinition : public Statement
 {
-    FunctionDefinition(Type                                      returnType,
-                       std::string                               identifier,
-                       std::vector<std::pair<Type, std::string>> parameters,
-                       Scope*                                    body,
-                       std::shared_ptr<SymbolTable>              table,
-                       size_t                                    line,
-                       size_t                                    column)
-    : returnType(std::move(returnType)), identifier(std::move(identifier)),
-      parameters(std::move(parameters)), body(body), Statement(std::move(table), line, column)
+    FunctionDefinition(Type*                                      returnType,
+                       std::string                                identifier,
+                       std::vector<std::pair<Type*, std::string>> parameters,
+                       Scope*                                     body,
+                       std::shared_ptr<SymbolTable>               table,
+                       size_t                                     line,
+                       size_t                                     column)
+    : returnType(returnType), identifier(std::move(identifier)), parameters(std::move(parameters)),
+      body(body), Statement(std::move(table), line, column)
     {
     }
 
@@ -101,33 +76,34 @@ struct FunctionDefinition : public Statement
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
-    Type                                      returnType;
-    std::string                               identifier;
-    std::vector<std::pair<Type, std::string>> parameters;
-    Scope*                                    body;
+    Type*                                      returnType;
+    std::string                                identifier;
+    std::vector<std::pair<Type*, std::string>> parameters;
+    Scope*                                     body;
 };
 
 struct FunctionDeclaration : public Statement
 {
-    FunctionDeclaration(Type                         returnType,
-                        std::string                  identifier,
-                        std::vector<Type>            parameters,
-                        std::shared_ptr<SymbolTable> table,
-                        size_t                       line,
-                        size_t                       column)
-    : returnType(std::move(returnType)), identifier(std::move(identifier)),
-      parameters(std::move(parameters)), Statement(std::move(table), line, column)
+    FunctionDeclaration(Type*                                      returnType,
+                        std::string                                identifier,
+                        std::vector<std::pair<Type*, std::string>> parameters,
+                        std::shared_ptr<SymbolTable>               table,
+                        size_t                                     line,
+                        size_t                                     column)
+    : returnType(returnType), identifier(std::move(identifier)), parameters(std::move(parameters)),
+      Statement(std::move(table), line, column)
     {
     }
 
     [[nodiscard]] std::string name() const final;
     [[nodiscard]] std::string value() const final;
     [[nodiscard]] Node*       fold() final;
+    [[nodiscard]] bool        fill() const final;
     void                      visit(IRVisitor& visitor) final;
 
-    Type              returnType;
-    std::string       identifier;
-    std::vector<Type> parameters;
+    Type*                                      returnType;
+    std::string                                identifier;
+    std::vector<std::pair<Type*, std::string>> parameters;
 };
 
 struct LoopStatement final : public Statement
@@ -208,7 +184,22 @@ struct ReturnStatement final : public Statement
     [[nodiscard]] Node*              fold() final;
     void                             visit(IRVisitor& visitor) final;
 
-    Expr* expr; // cna be nullptr
+    Expr* expr; // can be nullptr
+};
+
+struct IncludeStdioStatement final : public Statement
+{
+    explicit IncludeStdioStatement(std::shared_ptr<SymbolTable> table, size_t line, size_t column)
+    : Statement(std::move(table), line, column)
+    {
+    }
+
+    [[nodiscard]] std::string        name() const final;
+    [[nodiscard]] std::vector<Node*> children() const final;
+    [[nodiscard]] bool               check() const final;
+    [[nodiscard]] bool               fill() const final;
+    [[nodiscard]] Node*              fold() final;
+    void                             visit(IRVisitor& visitor) final;
 };
 
 } // namespace Ast

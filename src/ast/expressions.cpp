@@ -54,9 +54,9 @@ Literal* Literal::fold()
     return this;
 }
 
-Type Literal::type() const
+Type* Literal::type() const
 {
-    return Type(true, static_cast<BaseType>(literal.index()));
+    return new Type(true, static_cast<BaseType>(literal.index()));
 }
 
 bool Literal::constant() const
@@ -76,7 +76,7 @@ std::string Variable::name() const
 
 std::string Variable::value() const
 {
-    return table->lookup(identifier)->type.string();
+    return table->lookup(identifier)->type->string();
 }
 
 std::string Variable::color() const
@@ -113,11 +113,11 @@ bool Variable::check() const
     return true;
 }
 
-Type Variable::type() const
+Type* Variable::type() const
 {
     if(auto* res = table->lookup(identifier)) return res->type;
     else
-        return Type();
+        return new Type;
 }
 
 bool Variable::constant() const
@@ -155,8 +155,7 @@ Node* BinaryExpr::fold()
 
     if(res0 and res1)
     {
-        const auto lambda = [&](const auto& val0, const auto& val1)
-        {
+        const auto lambda = [&](const auto& val0, const auto& val1) {
             return Helper::fold_binary(val0, val1, operation, table, line, column);
         };
         return std::visit(lambda, res0->literal, res1->literal);
@@ -166,18 +165,18 @@ Node* BinaryExpr::fold()
 
 bool BinaryExpr::check() const
 {
-    return Type::combine(operation, lhs->type(), rhs->type(), line, column).has_value();
+    return Type::combine(operation, lhs->type(), rhs->type(), line, column) != nullptr;
 }
 
-Type BinaryExpr::type() const
+Type* BinaryExpr::type() const
 {
     try
     {
-        return Type::combine(operation, lhs->type(), rhs->type(), 0, 0, false).value();
+        return Type::combine(operation, lhs->type(), rhs->type(), 0, 0, false);
     }
     catch(...)
     {
-        return Type();
+        return new Type;
     }
 }
 bool BinaryExpr::constant() const
@@ -215,7 +214,8 @@ Node* PrefixExpr::fold()
 
     if(auto* res = dynamic_cast<Ast::Literal*>(operand))
     {
-        const auto lambda = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
+        const auto lambda
+        = [&](const auto& val) { return Helper::fold_prefix(val, operation, table, line, column); };
         return std::visit(lambda, res->literal);
     }
     return this;
@@ -223,7 +223,7 @@ Node* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    if(operation.isIncrDecr() and operand->type().isConst())
+    if(operation.isIncrDecr() and operand->type()->isConst())
     {
         std::cout << ConstError("prefix operator", operand->name(), line, column);
         return false;
@@ -238,18 +238,18 @@ bool PrefixExpr::check() const
         }
     }
 
-    return Type::unary(operation, operand->type(), line, column).has_value();
+    return Type::unary(operation, operand->type(), line, column) != nullptr;
 }
 
-Type PrefixExpr::type() const
+Type* PrefixExpr::type() const
 {
     try
     {
-        return Type::unary(operation, operand->type(), 0, 0, false).value();
+        return Type::unary(operation, operand->type(), 0, 0, false);
     }
     catch(...)
     {
-        return Type();
+        return new Type;
     }
 }
 
@@ -299,7 +299,7 @@ bool PostfixExpr::check() const
         return false;
     }
 
-    if(operand->type().isConst())
+    if(operand->type()->isConst())
     {
         std::cout << ConstError("postfix expr", operand->name(), line, column);
         return false;
@@ -307,7 +307,7 @@ bool PostfixExpr::check() const
     return true;
 }
 
-Type PostfixExpr::type() const
+Type* PostfixExpr::type() const
 {
     return operand->type();
 }
@@ -328,7 +328,7 @@ std::string CastExpr::name() const
 
 std::string CastExpr::value() const
 {
-    return '(' + cast.string() + ')';
+    return '(' + cast->string() + ')';
 }
 
 std::vector<Node*> CastExpr::children() const
@@ -354,7 +354,7 @@ bool CastExpr::check() const
     return Type::convert(operand->type(), cast, true, line, column);
 }
 
-Type CastExpr::type() const
+Type* CastExpr::type() const
 {
     return cast;
 }
@@ -394,7 +394,7 @@ bool Assignment::check() const
 
     if(auto* res = table->lookup(lhs->name()))
     {
-        if(res->type.isConst())
+        if(res->type->isConst())
         {
             std::cout << ConstError("assignment", lhs->name(), line, column);
             return false;
@@ -405,7 +405,7 @@ bool Assignment::check() const
     return Type::convert(rhs->type(), lhs->type(), false, line, column);
 }
 
-Type Assignment::type() const
+Type* Assignment::type() const
 {
     return lhs->type();
 }
@@ -417,11 +417,6 @@ bool Assignment::constant() const
 void Assignment::visit(IRVisitor& visitor)
 {
     visitor.visitAssignment(*this);
-}
-
-std::string PrintfStatement::name() const
-{
-    return "printf";
 }
 
 std::string FunctionCall::name() const
@@ -439,7 +434,7 @@ std::vector<Node*> FunctionCall::children() const
     return std::vector<Node*>(arguments.begin(), arguments.end());
 }
 
-Node * FunctionCall::fold()
+Node* FunctionCall::fold()
 {
     for(auto& child : arguments) Helper::folder(child);
     return this;
@@ -449,23 +444,28 @@ bool FunctionCall::check() const
 {
     if(auto* res = table->lookup(identifier))
     {
-        if(not res->type.isFunctionType())
+        if(not res->isInitialized)
+        {
+            std::cout << SemanticError("function " + identifier + " declared but not yet defined", line, column);
+            return false;
+        }
+        if(not res->type->isFunctionType())
         {
             std::cout << SemanticError("calling non function object: " + identifier, line, column);
             return false;
         }
 
-        const auto& func = res->type.getFunctionType();
-        if(func.second.size() != arguments.size())
+        const auto& func = res->type->getFunctionType();
+        if(not func.variadic and func.parameters.size() != arguments.size())
         {
-            std::cout << WrongArgumentCount(identifier, func.second.size(), arguments.size(), line, column);
+            std::cout << WrongArgumentCount(identifier, func.parameters.size(), arguments.size(), line, column);
             return false;
         }
 
         bool error = false;
         for(size_t i = 0; i < arguments.size(); i++)
         {
-            error &= Type::convert(arguments[i]->type(), *func.second[i], false, line, column, true);
+            error &= Type::convert(arguments[i]->type(), func.parameters[i], false, line, column, true);
         }
         return not error;
     }
@@ -476,11 +476,11 @@ bool FunctionCall::check() const
     }
 }
 
-Type FunctionCall::type() const
+Type* FunctionCall::type() const
 {
     if(auto* res = table->lookup(identifier))
     {
-        return *res->type.getFunctionType().first;
+        return res->type->getFunctionType().returnType;
     }
     else
     {
@@ -500,12 +500,12 @@ void FunctionCall::visit(IRVisitor& visitor)
 
 std::string SubscriptExpr::name() const
 {
-    return "function call";
+    return "subscript expression";
 }
 
 std::string SubscriptExpr::value() const
 {
-    return identifier;
+    return lhs->value() + '[' + rhs->value() + ']';
 }
 
 std::vector<Node*> SubscriptExpr::children() const
@@ -513,15 +513,16 @@ std::vector<Node*> SubscriptExpr::children() const
     return {};
 }
 
-Node * SubscriptExpr::fold()
+Node* SubscriptExpr::fold()
 {
-    Helper::folder(expr);
+    Helper::folder(lhs);
+    Helper::folder(rhs);
     return this;
 }
 
 bool SubscriptExpr::check() const
 {
-    if(not expr->type().isIntegralType())
+    if(not rhs->type()->isIntegralType())
     {
         std::cout << SemanticError("index type is not integral", line, column);
         return false;
@@ -529,9 +530,9 @@ bool SubscriptExpr::check() const
     return true;
 }
 
-Type SubscriptExpr::type() const
+Type* SubscriptExpr::type() const
 {
-    return *table->lookup(identifier)->type.getDerefType();
+    return lhs->type()->getDerefType();
 }
 
 bool SubscriptExpr::constant() const
@@ -539,34 +540,5 @@ bool SubscriptExpr::constant() const
     return false;
 }
 
-void SubscriptExpr::visit(IRVisitor& visitor)
-{
-}
-
-std::vector<Node*> PrintfStatement::children() const
-{
-    return { expr };
-}
-
-
-Node* PrintfStatement::fold()
-{
-    Helper::folder(expr);
-    return this;
-}
-
-Type PrintfStatement::type() const
-{
-    return Type(false, BaseType::Int);
-}
-
-bool PrintfStatement::constant() const
-{
-    return false;
-}
-
-void PrintfStatement::visit(IRVisitor& visitor)
-{
-    visitor.visitPrintfStatement(*this);
-}
+void SubscriptExpr::visit(IRVisitor& visitor) {}
 } // namespace Ast

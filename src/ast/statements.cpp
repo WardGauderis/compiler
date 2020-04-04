@@ -59,7 +59,8 @@ std::string VariableDeclaration::name() const
 std::vector<Node*> VariableDeclaration::children() const
 {
     if(expr) return { expr };
-    else return { };
+    else
+        return {};
 }
 
 Node* VariableDeclaration::fold()
@@ -68,7 +69,7 @@ Node* VariableDeclaration::fold()
     if(auto* res = dynamic_cast<Ast::Literal*>(expr))
     {
         const auto& entry = table->lookup(identifier);
-        if(entry and entry->type.isConst())
+        if(entry and entry->type->isConst())
         {
             entry->literal = res->literal;
         }
@@ -93,15 +94,37 @@ bool VariableDeclaration::fill() const
 {
     if(not table->insert(identifier, type, expr))
     {
-        std::cout << RedefinitionError(identifier, line, column);
-        return false;
+        if(table->getType() == ScopeType::global)
+        {
+            if(table->lookup(identifier)->isInitialized)
+            {
+                std::cout
+                << SemanticError("redefinition of already defined variable in global scope");
+                return false;
+            }
+            else
+            {
+                table->lookup(identifier)->isInitialized &= static_cast<bool>(expr);
+            }
+
+            if(table->lookup(identifier)->type != type)
+            {
+                std::cout
+                << SemanticError("redefinition of variable with different type in global scope", line, column);
+            }
+        }
+        else
+        {
+            std::cout << RedefinitionError(identifier, line, column);
+            return false;
+        }
     }
     return true;
 }
 
 bool VariableDeclaration::check() const
 {
-    if(type.isVoidType())
+    if(type->isVoidType())
     {
         std::cout << SemanticError("type declaration cannot have void type");
         return false;
@@ -117,42 +140,9 @@ bool VariableDeclaration::check() const
         return Type::convert(expr->type(), type, false, line, column);
     }
     else
+    {
         return true;
-}
-
-std::string ArrayDeclaration::name() const
-{
-    return "array declaration";
-}
-
-std::vector<Node*> ArrayDeclaration::children() const
-{
-    return {};
-}
-
-Node* ArrayDeclaration::fold()
-{
-    return this;
-}
-
-bool ArrayDeclaration::fill() const
-{
-    if(not table->insert(identifier, type, false))
-    {
-        std::cout << RedefinitionError(identifier, line, column);
-        return false;
     }
-    return true;
-}
-
-bool ArrayDeclaration::check() const
-{
-    if(type.isVoidType())
-    {
-        std::cout << SemanticError("type declaration cannot have void type");
-        return false;
-    }
-    return true;
 }
 
 std::string FunctionDefinition::name() const
@@ -162,12 +152,7 @@ std::string FunctionDefinition::name() const
 
 std::string FunctionDefinition::value() const
 {
-    std::string res = returnType.string() + ' ' + identifier + '(';
-    for(const auto& elem : parameters)
-    {
-        res += elem.first.string() + " " + elem.second;
-    }
-    return res + ')';
+return table->lookup(identifier)->type->string();
 }
 
 std::vector<Node*> FunctionDefinition::children() const
@@ -183,53 +168,30 @@ Node* FunctionDefinition::fold()
 
 bool FunctionDefinition::fill() const
 {
-    for(const auto& elem : parameters)
-    {
-        if(elem.first.isVoidType())
-        {
-            std::cout << SemanticError("parameter type cannot be void", line, column);
-            return false;
-        }
-        if(not body->table->insert(elem.second, elem.first, true))
-        {
-            std::cout << RedefinitionError(identifier, line, column);
-            return false;
-        }
-    }
-
-    std::vector<Type*> types(parameters.size());
-    const auto         convert = [&](const auto& param) { return new Type(param.first); };
-    std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
-
-    const auto inserted = table->insert(identifier, Type(new Type(returnType), std::move(types)), true);
-    if(not inserted)
-    {
-        std::cout << RedefinitionError(identifier, line, column);
-        return false;
-    }
-    return true;
+    auto res = Helper::fill_table_with_function(parameters, returnType, identifier, table, body->table, line, column);
+    table->lookup(identifier)->isInitialized = true;
+    return res;
 }
 
 bool FunctionDefinition::check() const
 {
     if(identifier == "main") return true;
-    if(returnType.isVoidType()) return true;
+    if(returnType->isVoidType()) return true;
 
-    bool found = false;
-    std::function<void(Node*)> func = [&](auto* root)
-    {
-      for(auto* child : root->children())
-      {
-          if(auto* res = dynamic_cast<ReturnStatement*>(child))
-          {
-              found = true;
-              auto type = (res->expr) ? res->expr->type() : Type();
-              const auto worked = Type::convert(type, returnType, false, line, column, true);
-              if(not worked) return false;
-          }
-          func(child);
-      }
-      return true;
+    bool                       found = false;
+    std::function<void(Node*)> func  = [&](auto* root) {
+        for(auto* child : root->children())
+        {
+            if(auto* res = dynamic_cast<ReturnStatement*>(child))
+            {
+                found             = true;
+                auto       type   = (res->expr) ? res->expr->type() : new Type;
+                const auto worked = Type::convert(type, returnType, false, line, column, true);
+                if(not worked) return false;
+            }
+            func(child);
+        }
+        return true;
     };
     func(body);
 
@@ -253,13 +215,7 @@ std::string FunctionDeclaration::name() const
 
 std::string FunctionDeclaration::value() const
 {
-    std::string res = returnType.string() + ' ' + identifier + '(';
-    for(const auto& elem : parameters)
-    {
-        res += elem.string() + " ";
-    }
-    res.back() = ')';
-    return res;
+    return table->lookup(identifier)->type->string();
 }
 
 Node* FunctionDeclaration::fold()
@@ -267,10 +223,13 @@ Node* FunctionDeclaration::fold()
     return this;
 }
 
-void FunctionDeclaration::visit(IRVisitor& visitor)
+bool FunctionDeclaration::fill() const
 {
-
+    return Helper::fill_table_with_function(parameters, returnType, identifier, table,
+                                     std::make_shared<SymbolTable>(ScopeType::plain, table), line, column);
 }
+
+void FunctionDeclaration::visit(IRVisitor& visitor) {}
 
 void VariableDeclaration::visit(IRVisitor& visitor)
 {
@@ -328,8 +287,10 @@ Node* IfStatement::fold()
     if(auto* res = dynamic_cast<Ast::Literal*>(condition))
     {
         if(Helper::evaluate(res)) return ifBody;
-        else if(elseBody) return elseBody;
-        else return nullptr;
+        else if(elseBody)
+            return elseBody;
+        else
+            return nullptr;
     }
 
     Helper::folder(ifBody);
@@ -361,9 +322,14 @@ bool ControlStatement::check() const
     }
 }
 
-Node * ControlStatement::fold()
+Node* ControlStatement::fold()
 {
     return this;
+}
+
+void ControlStatement::visit(IRVisitor& visitor)
+{
+    visitor.visitControlStatement(*this);
 }
 
 std::string ReturnStatement::name() const
@@ -374,7 +340,8 @@ std::string ReturnStatement::name() const
 std::vector<Node*> ReturnStatement::children() const
 {
     if(expr) return { expr };
-    else return {};
+    else
+        return {};
 }
 
 bool ReturnStatement::check() const
@@ -401,9 +368,37 @@ void ReturnStatement::visit(IRVisitor& visitor)
     visitor.visitReturnStatement(*this);
 }
 
-void ControlStatement::visit(IRVisitor& visitor)
+std::string IncludeStdioStatement::name() const
 {
-    visitor.visitControlStatement(*this);
+    return "#include <stdio.h>";
+}
+
+std::vector<Node*> IncludeStdioStatement::children() const
+{
+    return {};
+}
+
+bool IncludeStdioStatement::check() const
+{
+    return true;
+}
+
+bool IncludeStdioStatement::fill() const
+{
+    auto returnType = new Type(false, BaseType::Int);
+    auto strType = new Type(true, new Type(false, BaseType::Char));
+    auto funcType = new Type(returnType, {strType}, true);
+
+    table->insert("printf", funcType, false);
+}
+
+Node* IncludeStdioStatement::fold()
+{
+    return this;
+}
+
+void IncludeStdioStatement::visit(IRVisitor& visitor)
+{
 }
 
 } // namespace Ast

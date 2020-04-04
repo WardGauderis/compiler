@@ -71,8 +71,6 @@ public:
 
 	void visitDeclaration(const Ast::VariableDeclaration& declaration);
 
-	void visitPrintfStatement(const Ast::PrintfStatement& printfStatement);
-
 	void visitIfStatement(const Ast::IfStatement& ifStatement);
 
 	void visitLoopStatement(const Ast::LoopStatement& loopStatement);
@@ -100,7 +98,7 @@ private:
 
 	llvm::Value* increaseOrDecrease(bool inc, llvm::Value* input);
 
-	llvm::Type* convertToIR(const Type& type, bool function = false);
+	llvm::Type* convertToIR(Type* type, bool function = false);
 
 	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
 };

@@ -119,9 +119,6 @@ basicType:
 pointerType:
     '*' qualifier? pointerType?;
 
-initizalizer:
-    assignExpr;
-
 declarationArray:
     '[' expr ']' declarationArray | ;
 
@@ -129,7 +126,7 @@ parameterArray:
     '[' expr? ']' parameterArray | ;
 
 variableDeclaration:
-    typeName IDENTIFIER ('=' initizalizer)? |
+    typeName IDENTIFIER ('=' assignExpr)? |
     typeName IDENTIFIER declarationArray;
 
 declarationParameterList:
