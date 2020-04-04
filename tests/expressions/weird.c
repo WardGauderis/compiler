@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main()
 {
     int   x = (10 == 6 >= (5 * 3 + 1) - -3 + 3);

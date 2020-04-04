@@ -1,5 +1,7 @@
 // constant folding and constant propagation
 
+#include <stdio.h>
+
 int main()
 {
     const int a = 5;

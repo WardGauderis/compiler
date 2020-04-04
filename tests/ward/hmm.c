@@ -1,4 +1,5 @@
 int f = 6;
+#include <stdio.h>
 
 int g(int* f){
     return (*f)++;

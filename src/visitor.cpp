@@ -375,8 +375,8 @@ Type* visitDeclarationArray(antlr4::tree::ParseTree* context, Type* type)
     }
     else if(context->children.size() == 4)
     {
-        const auto size = visitSizeExpr(context->children[1]);
-        return new Type(size, type);
+        auto* temp = new Type(visitSizeExpr(context->children[1]), type);
+        return visitDeclarationArray(context->children[3], temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }
@@ -389,12 +389,13 @@ Type* visitParameterArray(antlr4::tree::ParseTree* context, Type* type)
     }
     else if(context->children.size() == 3)
     {
-        return new Type(static_cast<size_t>(0), type);
+        auto* temp = new Type(static_cast<size_t>(0), type);
+        return visitParameterArray(context->children[2], temp);
     }
     else if(context->children.size() == 4)
     {
-        const auto size = visitSizeExpr(context->children[1]);
-        return new Type(size, type);
+        auto* temp = new Type(visitSizeExpr(context->children[1]), type);
+        return visitParameterArray(context->children[3], temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }
@@ -692,7 +693,7 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
         {
             if(res->getSymbol()->getType() == CParser::INCLUDESTDIO)
             {
-                throw InternalError("does not support include yet");
+                statements.emplace_back(new Ast::IncludeStdioStatement(global, line, column));
             }
         }
     }
@@ -701,8 +702,7 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
 
 std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root, bool fold)
 {
-
-    auto res = std::unique_ptr<Ast::Scope>(visitFile(root->file));
+    auto res = std::unique_ptr<Ast::Node>(visitFile(root->file));
     res->complete(true, fold, true);
     return res;
 }

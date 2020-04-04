@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int f = 10;
 
 float g(int f){

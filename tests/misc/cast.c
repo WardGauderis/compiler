@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main()
 {
     float y = 5 + (int)4.5f;

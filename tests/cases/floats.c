@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 float a = 5. / 2.;
 float b = 5. / 2;
 float c = 5 / 2.;

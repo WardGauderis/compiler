@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int g(int* f)
 {
     return (*f)++;
