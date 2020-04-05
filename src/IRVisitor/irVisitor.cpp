@@ -58,9 +58,12 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 		ret = ConstantInt::get(builder.getInt32Ty(), std::get<int>(literal.literal));
 	else if (type->isFloatType())
 		ret = ConstantFP::get(builder.getFloatTy(), std::get<float>(literal.literal));
-//	else if (type->isArrayType())
-//		ret = builder.CreateGlobalString();
 	else throw IRError(type->string());
+}
+
+void IRVisitor::visitStringLiteral(const Ast::StringLiteral& stringLiteral)
+{
+	ret = builder.CreateGlobalString(stringLiteral.value());
 }
 
 void IRVisitor::visitComment(const Ast::Comment& comment)

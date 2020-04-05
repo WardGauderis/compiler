@@ -53,6 +53,8 @@ public:
 
 	void visitLiteral(const Ast::Literal& literal);
 
+	void visitStringLiteral(const Ast::StringLiteral& stringLiteral);
+
 	void visitComment(const Ast::Comment& comment);
 
 	void visitVariable(const Ast::Variable& variable);
