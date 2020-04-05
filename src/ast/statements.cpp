@@ -191,7 +191,7 @@ bool FunctionDefinition::check() const
             {
                 found             = true;
                 auto       type   = (res->expr) ? res->expr->type() : new Type;
-                const auto worked = Type::convert(type, returnType, false, line, column, true);
+                const auto worked = Type::convert(type, returnType, false, res->line, res->column, true);
                 if(not worked) return false;
             }
             func(child);
