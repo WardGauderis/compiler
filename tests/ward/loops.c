@@ -1,3 +1,4 @@
+#include <stdio.h>
 int main()
 {
     int x[10][5];
@@ -13,7 +14,7 @@ int main()
     {
         for (int j = 0; j<5; ++j)
         {
-            y = y + x[i][j];
+            printf("%d\n", x[i][j]);
         }
     }
     return y;

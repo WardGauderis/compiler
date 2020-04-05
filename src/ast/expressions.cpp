@@ -497,7 +497,7 @@ void StringLiteral::visit(IRVisitor& visitor)
 			}
 
 			bool error = false;
-			for (size_t i = 0; i<arguments.size(); i++)
+			for (size_t i = 0; i< func.parameters.size(); i++)
 			{
 				error &= Type::convert(arguments[i]->type(), func.parameters[i], false, line, column, true);
 			}

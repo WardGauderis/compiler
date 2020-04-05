@@ -1,5 +1,5 @@
 
 int main()
 {
-    const char[5] = "aaaaa";
+    const char[5] = "aaaaa"; //error
 }
