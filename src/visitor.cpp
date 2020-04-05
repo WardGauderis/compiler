@@ -115,7 +115,7 @@ std::vector<Ast::Expr*> visitArgumentList(antlr4::tree::ParseTree* context, std:
     }
 
     auto expr = visitExpr(context->children[0], table);
-    res.emplace_back(expr);
+    res.emplace(res.begin(), expr);
     return res;
 }
 
@@ -447,7 +447,7 @@ std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4:
     else if(context->children.size() == 5)
     {
         auto res = visitDeclarationParameterList(context->children[4]);
-        res.emplace_back(std::make_pair(type, context->children[1]->getText()));
+        res.emplace(res.begin(), std::make_pair(type, context->children[1]->getText()));
         return res;
     }
     else throw InternalError("unknown children size for declaration param list");

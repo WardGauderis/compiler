@@ -1,5 +1,9 @@
 
 int main()
 {
-    const char[5] = "aaaaa"; //error
+    int a[4];
+    a[0] = 5;
+
+    int c[2]
+    int* b = a;
 }
