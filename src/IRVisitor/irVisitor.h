@@ -85,6 +85,8 @@ public:
 
 	void visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr);
 
+	void visitIncludeStdioStatement(const Ast::IncludeStdioStatement& includeStdioStatement);
+
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;

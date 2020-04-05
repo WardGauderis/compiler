@@ -16,11 +16,7 @@ char RemoveUnusedCodeInBlockPass::ID = 0;
 //static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove used code");
 
 IRVisitor::IRVisitor(const std::filesystem::path& input)
-		:module(input.string(), context), builder(context)
-{
-	module.getOrInsertFunction("printf",
-			llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true));
-}
+		:module(input.string(), context), builder(context) { }
 
 void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 {
@@ -62,6 +58,8 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 		ret = ConstantInt::get(builder.getInt32Ty(), std::get<int>(literal.literal));
 	else if (type->isFloatType())
 		ret = ConstantFP::get(builder.getFloatTy(), std::get<float>(literal.literal));
+//	else if (type->isArrayType())
+//		ret = builder.CreateGlobalString();
 	else throw IRError(type->string());
 }
 
@@ -313,38 +311,6 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 	}
 }
 
-//void IRVisitor::visitPrintfStatement(const Ast::PrintfStatement& printfStatement)
-//{
-//	printfStatement.expr->visit(*this);
-//	const auto type = ret->getType();
-//
-//	std::string format;
-//	std::string name;
-//	if (type->isPointerTy())
-//	{
-//		format = "%p\n";
-//		name = "ptrFormat";
-//	}
-//	else if (type->isFloatTy())
-//	{
-//		ret = builder.CreateFPExt(ret, builder.getDoubleTy());
-//		format = "%f\n";
-//		name = "floatFormat";
-//	}
-//	else
-//	{
-//		format = "%d\n";
-//		name = "intFormat";
-//	}
-//
-//	auto string = module.getNamedGlobal(name);
-//	if (!string)
-//		ret = builder.CreateCall(module.getFunction("printf"), {builder.CreateGlobalStringPtr(format, name), ret});
-//	else
-//		ret = builder.CreateCall(module.getFunction("printf"),
-//				{builder.CreateInBoundsGEP(string, {builder.getInt32(0), builder.getInt32(0)}), ret});
-//}
-
 void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 {
 	ifStatement.condition->visit(*this);
@@ -391,8 +357,8 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	else builder.CreateBr(loopBody);
 
 	builder.SetInsertPoint(loopBody);
-	const auto& breakBackup = breakBlock;
-	const auto& continueBackup = continueBlock; //TODO
+	const auto breakBackup = breakBlock;
+	const auto continueBackup = continueBlock;
 	breakBlock = loopEnd;
 	continueBlock = loopIter ? loopIter : loopCond;
 	loopStatement.body->visit(*this);
@@ -465,7 +431,6 @@ void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 	ret = builder.CreateCall(function, arguments);
 }
 
-
 void IRVisitor::visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr)
 {
 	const auto backup = requiresLvalue;
@@ -481,6 +446,17 @@ void IRVisitor::visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr)
 
 	ret = builder.CreateInBoundsGEP(lhs, {builder.getInt64(0), ret}, "sub");
 	if (!requiresLvalue) ret = builder.CreateLoad(ret);
+}
+
+void IRVisitor::visitIncludeStdioStatement(const Ast::IncludeStdioStatement& includeStdioStatement)
+{
+	auto names = {"printf", "scanf"};
+	for (const auto& name: names)
+	{
+		const auto& printf = module.getOrInsertFunction(name,
+				llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true)).getCallee();
+		includeStdioStatement.table->lookup(name)->allocaInst = printf;
+	}
 }
 
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
