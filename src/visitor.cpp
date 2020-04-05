@@ -441,7 +441,7 @@ std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4:
     if(context->children.size() == 4)
     {
         auto res = visitDeclarationParameterList(context->children[3]);
-        res.emplace_back(std::make_pair(type, ""));
+        res.emplace(res.begin(), std::make_pair(type, ""));
         return res;
     }
     else if(context->children.size() == 5)
@@ -466,7 +466,7 @@ std::vector<std::pair<Type*, std::string>> visitParameterList(antlr4::tree::Pars
     else if(context->children.size() == 5)
     {
         auto res = visitParameterList(context->children[4], table);
-        res.emplace_back(type, name);
+        res.emplace(res.begin(), type, name);
         return res;
     }
     else throw InternalError("parameter list visitor error");
