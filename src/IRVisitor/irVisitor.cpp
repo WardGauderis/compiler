@@ -63,7 +63,7 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 
 void IRVisitor::visitStringLiteral(const Ast::StringLiteral& stringLiteral)
 {
-	ret = builder.CreateGlobalString(stringLiteral.value());
+	ret = builder.CreateGlobalStringPtr(stringLiteral.value());
 }
 
 void IRVisitor::visitComment(const Ast::Comment& comment)
@@ -299,7 +299,7 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 		if (declaration.expr)
 		{
 			declaration.expr->visit(*this);
-			var->setInitializer(::cast<Constant>(ret));
+			var->setInitializer(llvm::cast<Constant>(ret));
 		}
 	}
 	else
@@ -402,7 +402,7 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 	const auto& returnType = convertToIR(functionDefinition.returnType, true);
 	const auto& functionType = llvm::FunctionType::get(returnType, parameters, false);
 	const auto function =
-			::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
+			llvm::cast<Function>(module.getOrInsertFunction(functionDefinition.identifier, functionType).getCallee());
 	functionDefinition.table->lookup(functionDefinition.identifier)->allocaInst = function;
 	const auto& block = BasicBlock::Create(context, "entry", function);
 	builder.SetInsertPoint(block);
@@ -424,11 +424,14 @@ void IRVisitor::visitFunctionDefinition(const Ast::FunctionDefinition& functionD
 
 void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 {
-	const auto& function = *functionCall.table->lookupAllocaInst(functionCall.value());
+	const auto& function = llvm::cast<Function>(*functionCall.table->lookupAllocaInst(functionCall.value()));
 	std::vector<Value*> arguments;
-	for (const auto& argument: functionCall.arguments)
+	for (int i = 0; i<functionCall.arguments.size(); ++i)
 	{
+		const auto& argument = functionCall.arguments[i];
+		const auto& type = function->args().begin()[i].getType();
 		argument->visit(*this);
+		ret = cast(ret, type);
 		arguments.emplace_back(ret);
 	}
 	ret = builder.CreateCall(function, arguments);
