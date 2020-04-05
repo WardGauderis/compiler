@@ -47,7 +47,7 @@ BaseType Type::getBaseType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting base type");
     }
 }
 
@@ -59,7 +59,7 @@ const ArrayType& Type::getArrayType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting array type");
     }
 }
 
@@ -71,7 +71,7 @@ const FunctionType& Type::getFunctionType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting function type");
     }
 }
 

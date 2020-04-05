@@ -514,7 +514,11 @@ void StringLiteral::visit(IRVisitor& visitor)
 	{
 		if (auto* res = table->lookup(identifier))
 		{
-			return res->type->getFunctionType().returnType;
+		    if(res->type->isFunctionType())
+		    {
+                return res->type->getFunctionType().returnType;
+		    }
+			else return new Type;
 		}
 		else
 		{
