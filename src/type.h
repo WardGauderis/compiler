@@ -45,11 +45,11 @@ enum class BaseType
 class Type; // stupid predeclaration but oh well
 struct FunctionType
 {
-    Type* returnType;
+    Type*              returnType;
     std::vector<Type*> parameters;
-    bool variadic;
+    bool               variadic;
 };
-using ArrayType    = std::pair<size_t, Type*>;
+using ArrayType = std::pair<size_t, Type*>;
 
 class Type
 {
@@ -71,11 +71,14 @@ class Type
     }
 
     explicit Type(Type* ret, std::vector<Type*> params, bool variadic = false)
-    : isTypeConst(true), type(FunctionType{ret, std::move(params), variadic})
+    : isTypeConst(true), type(FunctionType{ ret, std::move(params), variadic })
     {
     }
 
-    explicit Type(size_t size, Type* base) : isTypeConst(false), type(std::make_pair(size, base)) {}
+    explicit Type(bool isConst, size_t size, Type* base)
+    : isTypeConst(isConst), type(std::make_pair(size, base))
+    {
+    }
 
     explicit Type(bool isConst, BaseType baseType) : isTypeConst(isConst), type(baseType) {}
 

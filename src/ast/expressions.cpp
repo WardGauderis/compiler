@@ -82,7 +82,8 @@ Node* StringLiteral::fold()
 
 Type* StringLiteral::type() const
 {
-    return new Type(val.size(), new Type(true, BaseType::Char));
+	    // +1 is for the null terminator
+    return new Type(true, val.size() + 1, new Type(true, BaseType::Char));
 }
 
 bool StringLiteral::constant() const
