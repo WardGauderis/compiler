@@ -14,8 +14,10 @@ DotVisitor::DotVisitor(std::ofstream& stream, const std::vector<std::string>& na
 
 void DotVisitor::linkWithParent(antlr4::tree::ParseTree* context, const std::string& name)
 {
+    auto temp = name;
+    temp.erase(std::remove(temp.begin(), temp.end(), '"'), temp.end());
     stream << '"' << context->parent << "\" -> \"" << context << "\";\n";
-    stream << '"' << context << "\"[label=\"" + name + "\"];\n";
+    stream << '"' << context << "\"[label=\"" + temp + "\"];\n";
 }
 
 antlrcpp::Any DotVisitor::visitChildren(antlr4::tree::ParseTree* node)

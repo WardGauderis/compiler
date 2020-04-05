@@ -33,7 +33,7 @@ std::pair<size_t, size_t> getColumnAndLine(antlr4::tree::ParseTree* context)
 
 //============================================================================
 
-Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
+Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
     auto* terminal = dynamic_cast<antlr4::tree::TerminalNode*>(context->children[0]);
     if(terminal == nullptr)
@@ -43,31 +43,34 @@ Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
 
 
     const auto [line, column] = getColumnAndLine(context);
-
+    auto str = context->getText();
     switch(terminal->getSymbol()->getType())
     {
     case CParser::FLOAT:
         try
         {
-            return new Ast::Literal(std::stof(terminal->getText()), table, line, column);
+            return new Ast::Literal(std::stof(str), table, line, column);
         }
         catch(const std::out_of_range& ex)
         {
-            std::cout << LiteralOutOfRange(terminal->getText(), line, column);
+            std::cout << LiteralOutOfRange(str, line, column);
             return new Ast::Literal(std::numeric_limits<float>::infinity(), table, line, column);
         }
     case CParser::INT:
         try
         {
-            return new Ast::Literal(std::stoi(terminal->getText()), table, line, column);
+            return new Ast::Literal(std::stoi(str), table, line, column);
         }
         catch(const std::out_of_range& ex)
         {
-            std::cout << LiteralOutOfRange(terminal->getText(), line, column);
+            std::cout << LiteralOutOfRange(str, line, column);
             return new Ast::Literal(std::numeric_limits<int>::max(), table, line, column);
         }
     case CParser::CHAR:
-        return new Ast::Literal(terminal->getText()[1], table, line, column);
+        return new Ast::Literal(str[1], table, line, column);
+    case CParser::STRING:
+        str.erase(std::remove(str.begin(), str.end(), '"'), str.end());
+        return new Ast::StringLiteral(str, table, line, column);
     default:
         throw InternalError("unknown literal type, probably not yet implemented", line, column);
     }
@@ -375,8 +378,8 @@ Type* visitDeclarationArray(antlr4::tree::ParseTree* context, Type* type)
     }
     else if(context->children.size() == 4)
     {
-        auto* temp = new Type(visitSizeExpr(context->children[1]), type);
-        return visitDeclarationArray(context->children[3], temp);
+        auto* temp = visitDeclarationArray(context->children[0], type);
+        return new Type(visitSizeExpr(context->children[2]), temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }
@@ -389,13 +392,13 @@ Type* visitParameterArray(antlr4::tree::ParseTree* context, Type* type)
     }
     else if(context->children.size() == 3)
     {
-        auto* temp = new Type(static_cast<size_t>(0), type);
-        return visitParameterArray(context->children[2], temp);
+        auto* temp = visitParameterArray(context->children[0], type);
+        return new Type(static_cast<size_t>(0), temp);
     }
     else if(context->children.size() == 4)
     {
-        auto* temp = new Type(visitSizeExpr(context->children[1]), type);
-        return visitParameterArray(context->children[3], temp);
+        auto* temp = visitParameterArray(context->children[0], type);
+        return new Type(visitSizeExpr(context->children[2]), temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }

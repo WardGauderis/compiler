@@ -16,7 +16,7 @@
 #include "cst.h"
 #include "errors.h"
 
-Ast::Literal* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
+Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 
 Ast::Expr* visitLiteralOrVariable(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table);
 

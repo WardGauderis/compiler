@@ -65,6 +65,35 @@ namespace Ast {
 		visitor.visitLiteral(*this);
 	}
 
+std::string StringLiteral::name() const
+{
+    return "literal";
+}
+
+std::string StringLiteral::value() const
+{
+    return val;
+}
+
+Node* StringLiteral::fold()
+{
+    return this;
+}
+
+Type* StringLiteral::type() const
+{
+    return new Type(val.size(), new Type(true, BaseType::Char));
+}
+
+bool StringLiteral::constant() const
+{
+    return true;
+}
+
+void StringLiteral::visit(IRVisitor& visitor)
+{
+}
+
 	std::string Variable::name() const
 	{
 		return identifier;
