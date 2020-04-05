@@ -404,6 +404,7 @@ Node* IncludeStdioStatement::fold()
 
 void IncludeStdioStatement::visit(IRVisitor& visitor)
 {
+	visitor.visitIncludeStdioStatement(*this);
 }
 
 } // namespace Ast
