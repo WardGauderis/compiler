@@ -47,7 +47,7 @@ BaseType Type::getBaseType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting base type");
     }
 }
 
@@ -59,7 +59,7 @@ const ArrayType& Type::getArrayType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting array type");
     }
 }
 
@@ -71,7 +71,7 @@ const FunctionType& Type::getFunctionType() const
     }
     catch(...)
     {
-        throw InternalError("wrong index");
+        throw InternalError("wrong index when getting function type");
     }
 }
 
@@ -240,6 +240,14 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
 {
     std::string operation = cast ? "casting" : "assigning";
 
+    // cannot convert to array type
+    if(to->isArrayType())
+    {
+        if(print) std::cout << ConversionError(operation, from->string(), to->string(), line, column);
+        return false;
+    }
+
+    // cannot convert from or to void
     if((from->isVoidType() and not to->isVoidType()) or (not from->isVoidType() and to->isVoidType()))
     {
         if(print)
@@ -247,6 +255,13 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
         return false;
     }
 
+    if(from->isArrayType() and not to->isPointerType())
+    {
+        if(print) std::cout << ConversionError(operation, from->string(), to->string(), line, column);
+        return false;
+    }
+
+    // cannot convert float to ptr
     if(from->isPointerType())
     {
         if(to->isFloatType())
@@ -262,6 +277,8 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
                 << PointerConversionWarning(operation, "from", from->string(), to->string(), line, column);
         }
     }
+
+    //cannot convert float to ptr
     if(to->isPointerType())
     {
         if(from->isFloatType())
@@ -277,14 +294,18 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
                 << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
         }
     }
+    // casting to narrower type
     if(from->isBaseType() and to->isBaseType() and to->getBaseType() < from->getBaseType() and not cast)
     {
         std::cout << NarrowingConversion(operation, from->string(), to->string(), line, column);
     }
+    // casting to narrower basetype
     if(not cast and from->isPointerType() and to->isPointerType() and from != to)
     {
         std::cout << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
     }
+
+    // converting ptr to char is very narrowing
     if(from->isPointerType() and to->isCharacterType())
     {
         std::cout << NarrowingConversion(operation, from->string(), to->string(), line, column);

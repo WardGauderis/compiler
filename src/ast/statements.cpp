@@ -395,6 +395,12 @@ bool IncludeStdioStatement::fill() const
     auto funcType = new Type(returnType, {strType}, true);
 
     table->insert("printf", funcType, false);
+    table->insert("scanf", funcType, false);
+
+    table->lookup("printf")->isInitialized = true;
+    table->lookup("scanf")->isInitialized = true;
+
+    return true;
 }
 
 Node* IncludeStdioStatement::fold()

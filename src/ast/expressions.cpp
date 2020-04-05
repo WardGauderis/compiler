@@ -65,35 +65,35 @@ namespace Ast {
 		visitor.visitLiteral(*this);
 	}
 
-	std::string StringLiteral::name() const
-	{
-		return "literal";
-	}
+std::string StringLiteral::name() const
+{
+    return "literal";
+}
 
-	std::string StringLiteral::value() const
-	{
-		return val;
-	}
+std::string StringLiteral::value() const
+{
+    return val;
+}
 
-	Node* StringLiteral::fold()
-	{
-		return this;
-	}
+Node* StringLiteral::fold()
+{
+    return this;
+}
 
-	Type* StringLiteral::type() const
-	{
-		return new Type(val.size(), new Type(true, BaseType::Char));
-	}
+Type* StringLiteral::type() const
+{
+	    // +1 is for the null terminator
+    return new Type(true, val.size() + 1, new Type(true, BaseType::Char));
+}
 
-	bool StringLiteral::constant() const
-	{
-		return true;
-	}
+bool StringLiteral::constant() const
+{
+    return true;
+}
 
-	void StringLiteral::visit(IRVisitor& visitor)
-	{
-		visitor.visitStringLiteral(*this);
-	}
+void StringLiteral::visit(IRVisitor& visitor)
+{
+}
 
 	std::string Variable::name() const
 	{
@@ -514,7 +514,11 @@ namespace Ast {
 	{
 		if (auto* res = table->lookup(identifier))
 		{
-			return res->type->getFunctionType().returnType;
+		    if(res->type->isFunctionType())
+		    {
+                return res->type->getFunctionType().returnType;
+		    }
+			else return new Type;
 		}
 		else
 		{

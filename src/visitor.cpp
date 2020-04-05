@@ -379,7 +379,7 @@ Type* visitDeclarationArray(antlr4::tree::ParseTree* context, Type* type)
     else if(context->children.size() == 4)
     {
         auto* temp = visitDeclarationArray(context->children[0], type);
-        return new Type(visitSizeExpr(context->children[2]), temp);
+        return new Type(false, visitSizeExpr(context->children[2]), temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }
@@ -393,12 +393,12 @@ Type* visitParameterArray(antlr4::tree::ParseTree* context, Type* type)
     else if(context->children.size() == 3)
     {
         auto* temp = visitParameterArray(context->children[0], type);
-        return new Type(static_cast<size_t>(0), temp);
+        return new Type(false, 0, temp);
     }
     else if(context->children.size() == 4)
     {
         auto* temp = visitParameterArray(context->children[0], type);
-        return new Type(visitSizeExpr(context->children[2]), temp);
+        return new Type(false, visitSizeExpr(context->children[2]), temp);
     }
     else throw InternalError("wrong children size for parameter array");
 }
