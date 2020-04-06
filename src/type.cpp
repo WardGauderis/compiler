@@ -178,6 +178,21 @@ Type* Type::decay(Type* type)
     return type;
 }
 
+Type* Type::invert(Type* type)
+{
+    std::vector<size_t> vec;
+    while(type->isArrayType())
+    {
+        vec.emplace_back(type->getArrayType().first);
+        type = type->getArrayType().second;
+    }
+    for(const auto& elem : vec)
+    {
+        type = new Type(false, elem, type);
+    }
+    return type;
+}
+
 Type* Type::unary(PrefixOperation operation, Type* operand, size_t line, size_t column, bool print)
 {
     if(operation == PrefixOperation::Deref)

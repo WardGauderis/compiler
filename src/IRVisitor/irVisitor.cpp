@@ -470,8 +470,9 @@ llvm::Value* IRVisitor::increaseOrDecrease(const bool inc, llvm::Value* input)
 		return builder.CreateBinOp(inc ? Instruction::Add : Instruction::Sub, input, ConstantInt::get(type, 1), opName);
 }
 
-llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
+llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function, const bool first)
 {
+    if(first) type = ::Type::invert(type);
 	if (type->isBaseType())
 	{
 		switch (type->getBaseType())
@@ -488,7 +489,7 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
 	}
 	else if (type->isPointerType())
 	{
-		return PointerType::getUnqual(convertToIR(type->getDerefType()));
+		return PointerType::getUnqual(convertToIR(type->getDerefType(), false, false));
 	}
 	else if (type->isVoidType())
 	{
@@ -497,7 +498,7 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
 	}
 	else if (type->isArrayType())
 	{
-		return llvm::ArrayType::get(convertToIR(type->getDerefType()), type->getArrayType().first);
+		return llvm::ArrayType::get(convertToIR(type->getDerefType(), false, false), type->getArrayType().first);
 	}
 	throw IRError(type->string());
 }

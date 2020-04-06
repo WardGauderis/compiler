@@ -122,6 +122,8 @@ class Type
 
     [[nodiscard]] static Type* decay(Type* type);
 
+    [[nodiscard]] static Type* invert(Type* type);
+
     [[nodiscard]] static Type*
     unary(PrefixOperation operation, Type* operand, size_t line = 0, size_t column = 0, bool print = true);
 

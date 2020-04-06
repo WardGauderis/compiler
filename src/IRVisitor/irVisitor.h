@@ -104,7 +104,7 @@ private:
 
 	llvm::Value* increaseOrDecrease(bool inc, llvm::Value* input);
 
-	llvm::Type* convertToIR(Type* type, bool function = false);
+	llvm::Type* convertToIR(Type* type, bool function = false, bool first = true);
 
 	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
 
