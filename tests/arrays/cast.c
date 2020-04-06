@@ -3,6 +3,13 @@ int func(int** a, int* b[1], int* c[], int d[][5])
     return 5;
 }
 
+int y(int[]);
+
+int y(int* a)
+{
+    return 5;
+}
+
 
 int main()
 {
@@ -17,4 +24,5 @@ int main()
     d = e;
 
     func(e,e,e,e);
+    y(1);
 }

@@ -118,13 +118,15 @@ class Type
 
     static std::string toString(BaseType type);
 
-    static Type*
+    [[nodiscard]] static Type* decay(Type* type);
+
+    [[nodiscard]] static Type*
     unary(PrefixOperation operation, Type* operand, size_t line = 0, size_t column = 0, bool print = true);
 
-    static Type*
+    [[nodiscard]] static Type*
     combine(BinaryOperation operation, Type* lhs, Type* rhs, size_t line = 0, size_t column = 0, bool print = true);
 
-    static bool convert(Type* from, Type* to, bool cast, size_t line = 0, size_t column = 0, bool print = true);
+    [[nodiscard]] static bool convert(Type* from, Type* to, bool cast, size_t line = 0, size_t column = 0, bool print = true);
 
     private:
     bool isTypeConst;

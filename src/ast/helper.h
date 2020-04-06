@@ -175,7 +175,7 @@ struct Helper
 
         // converting the parameter types
         std::vector<Type*> types(parameters.size());
-        const auto         convert = [&](const auto& param) { return param.first; };
+        const auto         convert = [&](const auto& param) { return Type::decay(param.first); };
         std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
         // checking for alternate redefinitions

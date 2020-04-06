@@ -434,22 +434,26 @@ std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4:
 
     if(context->children.size() == 2)
     {
-        return {std::make_pair(type, "")};
+        auto temp = visitParameterArray(context->children[1], type);
+        return {std::make_pair(temp, "")};
     }
     if(context->children.size() == 3)
     {
-        return {std::make_pair(type, context->children[1]->getText())};
+        auto temp = visitParameterArray(context->children[2], type);
+        return {std::make_pair(temp, context->children[1]->getText())};
     }
     if(context->children.size() == 4)
     {
+        auto temp = visitParameterArray(context->children[1], type);
         auto res = visitDeclarationParameterList(context->children[3]);
-        res.emplace(res.begin(), std::make_pair(type, ""));
+        res.emplace(res.begin(), std::make_pair(temp, ""));
         return res;
     }
     else if(context->children.size() == 5)
     {
+        auto temp = visitParameterArray(context->children[2], type);
         auto res = visitDeclarationParameterList(context->children[4]);
-        res.emplace(res.begin(), std::make_pair(type, context->children[1]->getText()));
+        res.emplace(res.begin(), std::make_pair(temp, context->children[1]->getText()));
         return res;
     }
     else throw InternalError("unknown children size for declaration param list");

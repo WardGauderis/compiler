@@ -163,6 +163,16 @@ std::string Type::toString(BaseType type)
     }
 }
 
+Type* Type::decay(Type* type)
+{
+    if(type->isArrayType() or type->isPointerType())
+    {
+        Type* temp = decay(type->getDerefType());
+        return new Type(type->isTypeConst, temp);
+    }
+    return type;
+}
+
 Type* Type::unary(PrefixOperation operation, Type* operand, size_t line, size_t column, bool print)
 {
     if(operation == PrefixOperation::Deref)
