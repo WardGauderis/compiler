@@ -11,18 +11,6 @@
 
 std::string CompilationError::file;
 
-std::filesystem::path swap_top_folder(const std::filesystem::path& path, const std::string& new_name)
-{
-	const auto string = path.string();
-	const auto begin = string.find_first_of('/');
-	const auto end = string.find_last_of('.');
-
-	if (begin==std::string::npos or end==std::string::npos)
-		throw std::runtime_error("malformed path: "+string);
-
-	return std::filesystem::path("output")/string.substr(begin+1, end-begin-1);
-}
-
 template<typename Type>
 void make_dot(const Type& elem, const std::filesystem::path& path)
 {
@@ -41,141 +29,104 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 	system(("("+make_png+" ; "+remove_dot+" ) &").c_str());
 }
 
-void compileFile(const std::filesystem::path& input, bool printCst, bool printAst, bool optimised)
+void compileFile(const std::filesystem::path& input, std::filesystem::path output, bool printCst, bool printAst,
+		bool optimised)
 {
-	const auto name = input.stem().string();
-	const auto cstPath = name+"-cst.png";
-	const auto astPath = name+"-ast.png";
-	const auto llPath = name+".ll";
-	CompilationError::file = input;
-
-	std::ifstream stream(input);
-	if (!stream.good()) throw CompilationError("file could not be read");
-
-	std::stringstream buffer;
-	std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
-	const auto cst = std::make_unique<Cst::Root>(stream);
-	std::cerr.rdbuf(old);
-	std::string error = buffer.str();
-
-	if (not error.empty())
+	try
 	{
-		const auto index0 = error.find(':');
-		if (index0==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+		const auto llPath = output.replace_extension("ll");
+		const auto cstPath = output.replace_extension("cst.png");
+		output.replace_extension("");
+		const auto astPath = output.replace_extension("ast.png");
+		CompilationError::file = input;
 
-		const auto index1 = error.find(' ', index0);
-		if (index1==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+		std::ifstream stream(input);
+		if (!stream.good()) throw CompilationError("file could not be read");
 
-		const auto index2 = error.find('\n', index0);
-		if (index2==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
+		std::stringstream buffer;
+		std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
+		const auto cst = std::make_unique<Cst::Root>(stream);
+		std::cerr.rdbuf(old);
+		std::string error = buffer.str();
 
-		try
+		if (not error.empty())
 		{
-			const auto line = std::stoi(error.substr(5, index0-5));
-			const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
-			throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
-		}
-		catch (std::invalid_argument& ex)
-		{
-			throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
-		}
-	}
+			const auto index0 = error.find(':');
+			if (index0==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
 
-	if (printCst) make_dot(cst, cstPath);
+			const auto index1 = error.find(' ', index0);
+			if (index1==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
 
-	const auto ast = Ast::from_cst(cst, true);
+			const auto index2 = error.find('\n', index0);
+			if (index2==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
 
-	if (printAst) make_dot(ast, astPath);
-
-	IRVisitor visitor(input);
-	visitor.convertAST(ast);
-	if (optimised) visitor.LLVMOptimize();
-	visitor.print(llPath);
-
-	std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
-}
-
-void output_all_tests(bool redo_existing)
-{
-	for (const auto& entry : std::filesystem::recursive_directory_iterator("tests"))
-	{
-		try
-		{
-			if (not std::filesystem::is_regular_file(entry)) continue;
-
-			const auto& input = entry.path();
-
-			auto base = swap_top_folder(input, "output");
-			const auto name = base.stem().string();
-			base = base.parent_path();
-
-			const auto cst_path = base/(name+"-cst.png");
-			const auto ast_path = base/(name+"-ast.png");
-			const auto ll_path = base/(name+".ll");
-
-			if (redo_existing or not std::filesystem::exists(cst_path) or not std::filesystem::exists(ast_path)
-					or not std::filesystem::exists(ll_path))
+			try
 			{
-				CompilationError::file = input;
-				std::filesystem::create_directories(base);
-
-				std::ifstream stream(input);
-				if (!stream.good()) throw CompilationError("file could not be read");
-
-				std::stringstream buffer;
-				std::streambuf* old = std::cerr.rdbuf(buffer.rdbuf());
-				const auto cst = std::make_unique<Cst::Root>(stream);
-				std::cerr.rdbuf(old);
-				std::string error = buffer.str();
-
-				if (not error.empty())
-				{
-					const auto index0 = error.find(':');
-					if (index0==std::string::npos) break;
-
-					const auto index1 = error.find(' ', index0);
-					if (index1==std::string::npos) break;
-
-					const auto index2 = error.find('\n', index0);
-					if (index2==std::string::npos) break;
-
-					try
-					{
-						const auto line = std::stoi(error.substr(5, index0-5));
-						const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
-						throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
-					}
-					catch (std::invalid_argument& ex)
-					{
-						throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
-					}
-				}
-
-				make_dot(cst, cst_path);
-
-				const auto ast = Ast::from_cst(cst, true);
-
-				make_dot(ast, ast_path);
-
-				IRVisitor visitor(input);
-				visitor.convertAST(ast);
-				visitor.print(ll_path);
-
-				std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
+				const auto line = std::stoi(error.substr(5, index0-5));
+				const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
+				throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
+			}
+			catch (std::invalid_argument& ex)
+			{
+				throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
 			}
 		}
-		catch (const SyntaxError& ex)
-		{
-			std::cout << ex << CompilationError("could not complete compilation due to above errors") << std::endl;
-		}
-		catch (const InternalError& ex)
-		{
-			std::cout << ex << CompilationError("could not complete compilation due to above errors") << std::endl;
-		}
-		catch (const std::exception& ex)
-		{
-			std::cout << ex.what() << std::endl;
-		}
+
+		if (printCst) make_dot(cst, cstPath);
+
+		const auto ast = Ast::from_cst(cst, true);
+
+		if (printAst) make_dot(ast, astPath);
+
+		IRVisitor visitor(input);
+		visitor.convertAST(ast);
+
+		if (optimised) visitor.LLVMOptimize();
+
+		visitor.print(llPath);
+		std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
+	}
+	catch (const SyntaxError& ex)
+	{
+		std::cout << ex << CompilationError("could not complete compilation due to above errors")
+		          << std::endl;
+	}
+	catch (const InternalError& ex)
+	{
+		std::cout << ex << CompilationError("could not complete compilation due to above errors")
+		          << std::endl;
+	}
+	catch (const std::exception& ex)
+	{
+		std::cout << ex.what() << std::endl;
+	}
+
+}
+
+std::filesystem::path changeTopFolder(const std::filesystem::path& path, const std::string& new_name)
+{
+	std::filesystem::path newPath;
+	newPath = new_name;
+	auto i = path.begin();
+	++i;
+	while (i!=path.end())
+	{
+		newPath /= *i;
+		++i;
+	}
+	return newPath;
+}
+
+void runTests(const std::filesystem::path& path)
+{
+	for (const auto& entry: std::filesystem::recursive_directory_iterator(path))    //TODO file
+	{
+		if (!entry.is_regular_file()) continue;
+		std::filesystem::path newPath = changeTopFolder(entry.path(), "output");
+		if (newPath.extension() != ".c") continue;
+		std::cout << newPath << std::endl;
+		std::filesystem::create_directories(newPath.parent_path());
+		compileFile(entry.path(), newPath, false, false, false);
 	}
 }
 
@@ -191,7 +142,7 @@ int main(int argc, const char** argv)
 			("ast,a", "Print the ast to dot")
 			("optimised,o", "Run llvm optimisation passes")
 			("test,t",
-					"Run compiler tests ('tests' folder must be in working directory, new tests may be added there)");
+					"Compile all files in the given folder and place them in the folder 'output'");
 	po::options_description hidden;
 	hidden.add_options()
 			("files", po::value<std::vector<std::filesystem::path>>(&files), "files to compile");
@@ -213,19 +164,19 @@ int main(int argc, const char** argv)
 	}
 	if (vm.count("test"))
 	{
-		if (!std::filesystem::exists("tests"))
+		if (files.size()!=1 || !std::filesystem::is_directory(files[0]))
 		{
 			std::cout << desc;
 			return 1;
 		}
-		output_all_tests(true);
+		runTests(files[0]);
 		return 0;
 	}
 	if (!files.empty())
 	{
 		for (const auto& file: files)
 		{
-			if (not std::filesystem::is_regular_file(file))
+			if (!std::filesystem::is_regular_file(file))
 			{
 				std::cout << desc;
 				return 1;
@@ -233,24 +184,7 @@ int main(int argc, const char** argv)
 
 			for (const auto& file :files)
 			{
-				try
-				{
-					compileFile(file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
-				}
-				catch (const SyntaxError& ex)
-				{
-					std::cout << ex << CompilationError("could not complete compilation due to above errors")
-					          << std::endl;
-				}
-				catch (const InternalError& ex)
-				{
-					std::cout << ex << CompilationError("could not complete compilation due to above errors")
-					          << std::endl;
-				}
-				catch (const std::exception& ex)
-				{
-					std::cout << ex.what() << std::endl;
-				}
+				compileFile(file, file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
 			}
 			return 0;
 		}

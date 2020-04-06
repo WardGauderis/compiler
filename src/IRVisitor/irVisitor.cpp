@@ -518,8 +518,8 @@ Value* IRVisitor::LRValue(Ast::Node* ASTValue, const bool rvalue, Ast::Node* inc
 	auto value = ret;
 	const auto& type = value->getType();
 
-	errs() << "in: " << *type << "\t";
-	errs().flush();
+//	errs() << "in: " << *type << "\t";
+//	errs().flush();
 
 	if (type->isPointerTy())
 	{
@@ -538,7 +538,7 @@ Value* IRVisitor::LRValue(Ast::Node* ASTValue, const bool rvalue, Ast::Node* inc
 		}
 	}
 	addressOf = false;
-	errs() << "out: " << *value->getType() << '\n';
-	errs().flush();
+//	errs() << "out: " << *value->getType() << '\n';
+//	errs().flush();
 	return value;
 }
