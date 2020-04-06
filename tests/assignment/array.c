@@ -1,4 +1,5 @@
 // this is a test for the assign arrays feature
+#include <stdio.h>
 
 int main()
 {

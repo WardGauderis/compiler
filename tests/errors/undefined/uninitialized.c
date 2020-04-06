@@ -5,8 +5,8 @@
 int main()
 {
     int a;
-    printf(a);
+    printf("%i", a);
     a = a + 5;
-    printf(a);
+    printf("%i", a);
     a + 5;
 }

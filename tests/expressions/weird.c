@@ -7,9 +7,9 @@ int main()
     int   z = (5 && 3 || 7 < (-3 + 5) * (5));
     int   a = (5 - 3 / 8 != 8 < 5 % 3) && (5 - 3 / 8 == 8 < 5 % 3) || 5555555;
     float b = 5.0 / 0.0;
-    printf(x);
-    printf(y);
-    printf(z);
-    printf(a);
-    printf(b);
+    printf("%i", x);
+    printf("%i", y);
+    printf("%i", z);
+    printf("%i", a);
+    printf("%i", b);
 }

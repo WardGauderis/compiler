@@ -8,6 +8,6 @@ int g(int* f)
 int main()
 {
     const int f = 10;
-    printf(g(&f));
-    printf(f);
+    printf("%i", g(&f));
+    printf("%i", f);
 }

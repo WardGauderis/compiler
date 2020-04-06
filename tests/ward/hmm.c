@@ -7,6 +7,6 @@ int g(int* f){
 
 int main()
 {
-    printf(g(&f));
-    printf(f);
+    printf("%i", g(&f));
+    printf("%i", f);
 }

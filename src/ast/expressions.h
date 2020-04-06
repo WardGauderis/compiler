@@ -143,7 +143,7 @@ struct PrefixExpr final : public Expr
 struct CastExpr final : public Expr
 {
     explicit CastExpr(Type* cast, Expr* operand, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
-    : Expr(std::move(table), line, column), cast(std::move(cast)), operand(operand)
+    : Expr(std::move(table), line, column), cast(cast), operand(operand)
     {
     }
 

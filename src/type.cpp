@@ -140,7 +140,7 @@ bool operator==(const Type& lhs, const Type& rhs)
     else if(lhs.isBaseType())
         return lhs.getBaseType() == rhs.getBaseType();
     else
-        return *lhs.getDerefType() == *rhs.getDerefType();
+        return (*lhs.getDerefType()) == (*rhs.getDerefType());
 }
 
 bool operator!=(const Type& lhs, const Type& rhs)
@@ -167,13 +167,19 @@ Type* Type::unary(PrefixOperation operation, Type* operand, size_t line, size_t 
 {
     if(operation == PrefixOperation::Deref)
     {
-        if(not operand->isPointerType())
+        if(operand->isPointerType())
+        {
+            return operand->getDerefType();
+        }
+        else if(operand->isArrayType())
+        {
+            return operand->getArrayType().second;
+        }
+        else
         {
             std::cout << SemanticError("cannot dereference non-pointer type " + operand->string(), line, column);
             return nullptr;
         }
-        else
-            return operand->getDerefType();
     }
     if(operation == PrefixOperation::Addr)
     {
@@ -300,9 +306,9 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
         std::cout << NarrowingConversion(operation, from->string(), to->string(), line, column);
     }
     // casting to narrower basetype
-    if(not cast and from->isPointerType() and to->isPointerType() and from != to)
+    if(not cast and from->isPointerType() and to->isPointerType() and (*from) != (*to))
     {
-        std::cout << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
+        if(print) std::cout << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
     }
 
     // converting ptr to char is very narrowing

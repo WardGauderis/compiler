@@ -14,10 +14,10 @@ int main()
 
     (4 + 6) / 2;
     (3 + 5) / 0; //! will not fold
-    printf(a);
-    printf(b);
-    printf(c);
-    printf(d);
-    printf(e);
-    printf(f);
+    printf("%i", a);
+    printf("%i", b);
+    printf("%i", c);
+    printf("%i", d);
+    printf("%i", e);
+    printf("%i", f);
 }

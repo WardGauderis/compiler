@@ -157,9 +157,9 @@ void output_all_tests(bool redo_existing)
 
 				make_dot(ast, ast_path);
 
-				IRVisitor visitor(input);
-				visitor.convertAST(ast);
-				visitor.print(ll_path);
+//				IRVisitor visitor(input);
+//				visitor.convertAST(ast);
+//				visitor.print(ll_path);
 
 				std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 			}

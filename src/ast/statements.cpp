@@ -97,7 +97,7 @@ Node* VariableDeclaration::fold()
 
 bool VariableDeclaration::fill() const
 {
-    if(not table->insert(identifier, type, expr))
+    if(not table->insert(identifier, type, expr or type->isArrayType()))
     {
         if(table->getType() == ScopeType::global)
         {
