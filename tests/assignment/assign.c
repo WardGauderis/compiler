@@ -1,6 +1,6 @@
 //void f(int);
 //
-//int main()
+//int main()    //TODO internal error
 //{
 //	int a = 5;
 //	printf("%d", a);
@@ -15,10 +15,10 @@
 //}
 
 //////////////////////////////////////////////////////////
-
+//
 //#include <stdio.h>
 //int main(){
-//	int array[10][5];   //verkeerde volgorde
+//	int array[10][5];   //verkeerde volgorde    //TODO
 //	for (int i = 0; i<10; ++i)
 //	{
 //		for (int j = 0; j<5; ++j)
@@ -32,7 +32,7 @@
 //////////////////////////////////////////////////////////
 
 //int main(){
-//	const int a = 10;   //variabele wordt niet verwijderd uit ast in folding
+//	const int a = 10;   //variabele wordt niet verwijderd uit ast in folding    //TODO
 //	int b = 5 + a;
 //	int c= b + a;
 //}
@@ -44,7 +44,7 @@
 //}
 //
 //int main(){
-//	int x = printf(5);     //printf wordt gezien als variabele
+//	int x = printf(5);     //printf wordt gezien als variabele  //TODO
 //}
 
 //////////////////////////////////////////////////////////
@@ -59,8 +59,8 @@
 //	return x;
 //}
 //
-//#include <stdio.h>    //meerdere defenitions
-
+//#include <stdio.h>    //meerdere defenitions  //TODO
+//
 //////////////////////////////////////////////////////////
 
 //#include <stdio.h>
@@ -68,7 +68,7 @@
 //	int x[10];
 //	int* a = x;
 //
-//	*x = 5;     //cannot dereference non-pointer type
+//	*x = 5;
 //	printf("%d", x[0]);
 //}
 
@@ -110,6 +110,8 @@
 //	5+**b;
 //}
 
+//////////////////////////////////////////////////////////
+
 //#include <stdio.h>
 //int main()
 //{
@@ -121,8 +123,10 @@
 //	*(&(*a[10])[5]) = &b[3];
 //}
 
-int main(){
-	int x[10];
-	int y[5];
-	x[2] = y[2];
-}
+//////////////////////////////////////////////////////////
+
+//int main(){
+//	int x[10];
+//	int y[5];
+//	x[2] = y[2];
+//}
