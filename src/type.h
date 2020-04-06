@@ -98,6 +98,8 @@ class Type
 
     [[nodiscard]] bool isPointerType() const;
 
+    [[nodiscard]] bool isPointerLikeType() const;
+
     [[nodiscard]] bool isCharacterType() const;
 
     [[nodiscard]] bool isIntegralType() const;

@@ -99,6 +99,11 @@ bool Type::isPointerType() const
     return type.index() == 1;
 }
 
+bool Type::isPointerLikeType() const
+{
+    return isPointerType() or isArrayType();
+}
+
 bool Type::isCharacterType() const
 {
     return isBaseType() and getBaseType() == BaseType::Char;
@@ -232,18 +237,18 @@ Type* Type::combine(BinaryOperation operation, Type* lhs, Type* rhs, size_t line
         else
             return new Type(false, std::max(lhs->getBaseType(), rhs->getBaseType()));
     }
-    else if(lhs->isPointerType() and rhs->isPointerType())
+    else if(lhs->isPointerLikeType() and rhs->isPointerLikeType())
     {
         if(operation.isComparisonOperator())
         {
             return new Type(false, BaseType::Int); // must be bool
         }
     }
-    else if(lhs->isPointerType() and rhs->isIntegralType() and operation.isAdditiveOperator())
+    else if(lhs->isPointerLikeType() and rhs->isIntegralType() and operation.isAdditiveOperator())
     {
         return lhs;
     }
-    else if(lhs->isIntegralType() and rhs->isPointerType() and operation == BinaryOperation::Add)
+    else if(lhs->isIntegralType() and rhs->isPointerLikeType() and operation == BinaryOperation::Add)
     {
         return rhs;
     }
