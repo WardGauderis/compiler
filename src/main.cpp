@@ -242,15 +242,15 @@ int main(int argc, const char** argv)
 					std::cout << ex << CompilationError("could not complete compilation due to above errors")
 					          << std::endl;
 				}
-//				catch (const InternalError& ex)
-//				{
-//					std::cout << ex << CompilationError("could not complete compilation due to above errors")
-//					          << std::endl;
-//				}
-//				catch (const std::exception& ex)
-//				{
-//					std::cout << ex.what() << std::endl;
-//				}
+				catch (const InternalError& ex)
+				{
+					std::cout << ex << CompilationError("could not complete compilation due to above errors")
+					          << std::endl;
+				}
+				catch (const std::exception& ex)
+				{
+					std::cout << ex.what() << std::endl;
+				}
 			}
 			return 0;
 		}

@@ -108,9 +108,7 @@ private:
 
 	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
 
-	inline llvm::Value* LRValue(Ast::Node* value, bool rvalue, Ast::Node* incrementer = nullptr);
-
-	llvm::Value* LRValue(llvm::Value* value, bool rvalue, Ast::Node* incrementer = nullptr);
+	llvm::Value* LRValue(Ast::Node* ASTValue, bool rvalue, Ast::Node* incrementer = nullptr);
 };
 
 #endif //COMPILER_IRVISITOR_H
