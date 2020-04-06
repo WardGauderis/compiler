@@ -98,7 +98,7 @@ private:
 	llvm::Value* ret{};
 	llvm::BasicBlock* breakBlock{};
 	llvm::BasicBlock* continueBlock{};
-	bool requiresLvalue = false;
+	bool addressOf = false;
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to);
 
@@ -107,6 +107,10 @@ private:
 	llvm::Type* convertToIR(Type* type, bool function = false);
 
 	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
+
+	inline llvm::Value* LRValue(Ast::Node* value, bool rvalue, Ast::Node* incrementer = nullptr);
+
+	llvm::Value* LRValue(llvm::Value* value, bool rvalue, Ast::Node* incrementer = nullptr);
 };
 
 #endif //COMPILER_IRVISITOR_H

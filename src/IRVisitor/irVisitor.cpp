@@ -63,7 +63,7 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 
 void IRVisitor::visitStringLiteral(const Ast::StringLiteral& stringLiteral)
 {
-	ret = builder.CreateGlobalStringPtr(stringLiteral.value());
+	ret = builder.CreateGlobalString(stringLiteral.value());
 }
 
 void IRVisitor::visitComment(const Ast::Comment& comment)
@@ -74,7 +74,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
 	ret = *variable.table->lookupAllocaInst(variable.name());
-	if (!requiresLvalue) ret = builder.CreateLoad(ret);
+
 }
 
 void IRVisitor::visitScope(const Ast::Scope& scope)
@@ -87,8 +87,7 @@ void IRVisitor::visitScope(const Ast::Scope& scope)
 
 void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 {
-	binaryExpr.lhs->visit(*this);
-	auto lhs = ret;
+	auto lhs = LRValue(binaryExpr.lhs, true);
 	ret = nullptr;
 
 	const auto targetType = convertToIR(binaryExpr.type());
@@ -110,7 +109,7 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 		builder.CreateCondBr(ret, landTrue, landEnd);
 
 		builder.SetInsertPoint(landTrue);
-		binaryExpr.rhs->visit(*this);
+		ret = LRValue(binaryExpr.rhs, true);
 		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateBr(landEnd);
 
@@ -121,8 +120,7 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 		return;
 	}
 
-	binaryExpr.rhs->visit(*this);
-	auto rhs = ret;
+	auto rhs = LRValue(binaryExpr.rhs, true);
 	const auto rhsType = rhs->getType();
 
 	if (binaryExpr.operation.isComparisonOperator())
@@ -199,15 +197,13 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 
 void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 {
-	postFixExpr.operand->visit(*this);
-	const auto toRet = ret;
-	const auto& rhs = increaseOrDecrease(postFixExpr.operation.type==PostfixOperation::Incr, ret);
-	const auto backup = requiresLvalue;
-	requiresLvalue = true;
-	postFixExpr.operand->visit(*this);
-	requiresLvalue = backup;
-	builder.CreateStore(rhs, ret);
-	ret = toRet;
+	const auto lvalue = LRValue(postFixExpr.operand, false);
+	const auto rvalue = builder.CreateLoad(lvalue);
+
+	const auto& rhs = increaseOrDecrease(postFixExpr.operation.type==PostfixOperation::Incr, rvalue);
+	builder.CreateStore(rhs, lvalue);
+
+	ret = rvalue;
 }
 
 void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
@@ -215,34 +211,21 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	const auto& opType = prefixExpr.operation.type;
 	if (opType==PrefixOperation::Addr)
 	{
-		if (const auto& var = dynamic_cast<Ast::Variable*>(prefixExpr.operand))
-		{
-			const auto backup = requiresLvalue;
-			requiresLvalue = true;
-			var->visit(*this);
-			requiresLvalue = backup;
-		}
-		else if (const auto& deref = dynamic_cast<Ast::PrefixExpr*>(prefixExpr.operand))
-		{
-			deref->operand->visit(*this);
-		}
-		else throw IRError(prefixExpr.type()->string());
+		addressOf = true;
+		ret = LRValue(prefixExpr.operand, false);
 		return;
 	}
 	else if (opType==PrefixOperation::Incr || opType==PrefixOperation::Decr)
 	{
-		prefixExpr.operand->visit(*this);
-		const auto& rhs = increaseOrDecrease(opType==PrefixOperation::Incr, ret);
-		const auto backup = requiresLvalue;
-		requiresLvalue = true;
-		prefixExpr.operand->visit(*this);
-		requiresLvalue = backup;
-		builder.CreateStore(rhs, ret);
-		ret = rhs;
+		const auto lvalue = LRValue(prefixExpr.operand, false);
+		const auto rvalue = builder.CreateLoad(lvalue);
+
+		ret = increaseOrDecrease(opType==PrefixOperation::Incr, rvalue);
+		builder.CreateStore(ret, lvalue);
 		return;
 	}
 
-	prefixExpr.operand->visit(*this);
+	ret = LRValue(prefixExpr.operand, true);
 	const auto type = ret->getType();
 
 	if (opType==PrefixOperation::Plus) return;
@@ -257,29 +240,20 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 		ret = cast(ret, builder.getInt1Ty());
 		ret = builder.CreateXor(ret, builder.getTrue(), "not");
 	}
-	else if (opType==PrefixOperation::Deref)
-	{
-		ret = builder.CreateLoad(ret, "deref");
-	}
 }
 
 void IRVisitor::visitCastExpr(const Ast::CastExpr& castExpr)
 {
-	castExpr.operand->visit(*this);
+	ret = LRValue(castExpr.operand, true);
 	auto to = convertToIR(castExpr.type());
 	ret = cast(ret, to);
 }
 
 void IRVisitor::visitAssignment(const Ast::Assignment& assignment)
 {
-	assignment.rhs->visit(*this);
+	ret = LRValue(assignment.rhs, true);
 	auto rhs = cast(ret, convertToIR(assignment.lhs->type()));
-
-	const auto backup = requiresLvalue;
-	requiresLvalue = true;
-	assignment.lhs->visit(*this);
-	requiresLvalue = backup;
-
+	ret = LRValue(assignment.lhs, false);
 	builder.CreateStore(rhs, ret);
 }
 
@@ -298,7 +272,7 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 		allocaInst = var;
 		if (declaration.expr)
 		{
-			declaration.expr->visit(*this);
+			ret = LRValue(declaration.expr, true);
 			var->setInitializer(llvm::cast<Constant>(ret));
 		}
 	}
@@ -307,7 +281,7 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 		allocaInst = createAlloca(type, name);
 		if (declaration.expr)
 		{
-			declaration.expr->visit(*this);
+			ret = LRValue(declaration.expr, true);
 			ret = cast(ret, type);
 			builder.CreateStore(ret, allocaInst);
 		}
@@ -316,7 +290,7 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 
 void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 {
-	ifStatement.condition->visit(*this);
+	ret = LRValue(ifStatement.condition, true);
 	const auto& ifTrue = BasicBlock::Create(context, "if.true", builder.GetInsertBlock()->getParent());
 	BasicBlock* ifFalse = (ifStatement.elseBody==nullptr) ? nullptr : BasicBlock::Create(context, "if.false",
 			builder.GetInsertBlock()->getParent());
@@ -353,7 +327,7 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	builder.SetInsertPoint(loopCond);
 	if (loopStatement.condition)
 	{
-		loopStatement.condition->visit(*this);
+		ret = LRValue(loopStatement.condition, true);
 		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateCondBr(ret, loopBody, loopEnd);
 	}
@@ -387,7 +361,7 @@ void IRVisitor::visitControlStatement(const Ast::ControlStatement& controlStatem
 
 void IRVisitor::visitReturnStatement(const Ast::ReturnStatement& returnStatement)
 {
-	returnStatement.expr->visit(*this);
+	ret = LRValue(returnStatement.expr, true);
 	ret = cast(ret, builder.getCurrentFunctionReturnType());
 	builder.CreateRet(ret);
 }
@@ -429,29 +403,16 @@ void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 	for (int i = 0; i<functionCall.arguments.size(); ++i)
 	{
 		const auto& argument = functionCall.arguments[i];
-		const auto& type = function->args().begin()[i].getType();
-		argument->visit(*this);
-		ret = cast(ret, type);
+		ret = LRValue(argument, true);
+		if (i<function->arg_size()) ret = cast(ret, function->args().begin()[i].getType());
 		arguments.emplace_back(ret);
 	}
-	ret = builder.CreateCall(function, arguments);
+	ret = builder.CreateCall(function, arguments, functionCall.identifier);
 }
 
 void IRVisitor::visitSubscriptExpr(const Ast::SubscriptExpr& subscriptExpr)
 {
-	const auto backup = requiresLvalue;
-
-	requiresLvalue = true;
-	subscriptExpr.lhs->visit(*this);
-	const auto lhs = ret;
-
-	requiresLvalue = false;
-	subscriptExpr.rhs->visit(*this);
-
-	requiresLvalue = backup;
-
-	ret = builder.CreateInBoundsGEP(lhs, {builder.getInt64(0), ret}, "sub");
-	if (!requiresLvalue) ret = builder.CreateLoad(ret);
+	ret = LRValue(subscriptExpr.lhs, true, subscriptExpr.rhs);
 }
 
 void IRVisitor::visitIncludeStdioStatement(const Ast::IncludeStdioStatement& includeStdioStatement)
@@ -494,7 +455,6 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 		else if (to->isIntegerTy()) return builder.CreatePtrToInt(value, to);
 		else if (to->isPointerTy()) return builder.CreatePointerCast(value, to);
 	}
-
 	throw InternalError("Invalid cast expression in LLVM IR");
 }
 
@@ -542,9 +502,40 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function)
 	throw IRError(type->string());
 }
 
-llvm::AllocaInst* IRVisitor::createAlloca(llvm::Type* type, const std::string& name)
+AllocaInst* IRVisitor::createAlloca(llvm::Type* type, const std::string& name)
 {
 	auto& block = builder.GetInsertBlock()->getParent()->getEntryBlock();
 	IRBuilder tmpBuilder(&block, block.begin());
 	return tmpBuilder.CreateAlloca(type, nullptr, name);
+}
+
+Value* IRVisitor::LRValue(Value* value, const bool rvalue, Ast::Node* incrementer)
+{
+	const auto inc = incrementer ? LRValue(incrementer, true) : nullptr;
+
+	const auto& type = value->getType();
+	errs() << *type << '\n';
+	errs().flush();
+
+	if (type->isPointerTy())
+	{
+		const auto& containedType = type->getContainedType(0);
+		if (containedType->isArrayTy())
+		{
+			value = builder.CreateInBoundsGEP(value, {builder.getInt64(0), inc ? inc : builder.getInt64(0)});
+		}
+		else
+		{
+			if (rvalue && !addressOf) value = builder.CreateLoad(value);
+			if (inc) value = builder.CreateInBoundsGEP(value, inc);
+		}
+	}
+	addressOf = false;
+	return value;
+}
+
+llvm::Value* IRVisitor::LRValue(Ast::Node* value, bool rvalue, Ast::Node* incrementer)
+{
+	value->visit(*this);
+	return LRValue(ret, rvalue, incrementer);
 }
