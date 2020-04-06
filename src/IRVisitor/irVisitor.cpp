@@ -211,8 +211,8 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 	const auto& opType = prefixExpr.operation.type;
 	if (opType==PrefixOperation::Addr)
 	{
-		addressOf = true;
 		ret = LRValue(prefixExpr.operand, false);
+		addressOf = true;
 		return;
 	}
 	else if (opType==PrefixOperation::Incr || opType==PrefixOperation::Decr)
@@ -509,12 +509,15 @@ AllocaInst* IRVisitor::createAlloca(llvm::Type* type, const std::string& name)
 	return tmpBuilder.CreateAlloca(type, nullptr, name);
 }
 
-Value* IRVisitor::LRValue(Value* value, const bool rvalue, Ast::Node* incrementer)
+Value* IRVisitor::LRValue(Ast::Node* ASTValue, const bool rvalue, Ast::Node* incrementer)
 {
 	const auto inc = incrementer ? LRValue(incrementer, true) : nullptr;
 
+	ASTValue->visit(*this);
+	auto value = ret;
 	const auto& type = value->getType();
-	errs() << *type << '\n';
+
+	errs() << "in: " << *type << "\t";
 	errs().flush();
 
 	if (type->isPointerTy())
@@ -522,20 +525,19 @@ Value* IRVisitor::LRValue(Value* value, const bool rvalue, Ast::Node* incremente
 		const auto& containedType = type->getContainedType(0);
 		if (containedType->isArrayTy())
 		{
-			value = builder.CreateInBoundsGEP(value, {builder.getInt64(0), inc ? inc : builder.getInt64(0)});
+			if (rvalue && !addressOf)
+				value = builder.CreateInBoundsGEP(value, {builder.getInt64(0), inc ? inc : builder.getInt64(0)});
 		}
 		else
 		{
-			if (rvalue && !addressOf) value = builder.CreateLoad(value);
-			if (inc) value = builder.CreateInBoundsGEP(value, inc);
+			if (rvalue && !addressOf)
+				value = builder.CreateLoad(value);
+			if (inc)
+				value = builder.CreateInBoundsGEP(value, inc);
 		}
 	}
 	addressOf = false;
+	errs() << "out: " << *value->getType() << '\n';
+	errs().flush();
 	return value;
-}
-
-llvm::Value* IRVisitor::LRValue(Ast::Node* value, bool rvalue, Ast::Node* incrementer)
-{
-	value->visit(*this);
-	return LRValue(ret, rvalue, incrementer);
 }
