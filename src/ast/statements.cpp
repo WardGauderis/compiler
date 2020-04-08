@@ -77,6 +77,7 @@ Node* VariableDeclaration::fold()
         if(entry and entry->type->isConst())
         {
             entry->literal = res->literal;
+//            return nullptr;
         }
     }
 
@@ -174,7 +175,7 @@ Node* FunctionDefinition::fold()
 bool FunctionDefinition::fill() const
 {
     auto res = Helper::fill_table_with_function(parameters, returnType, identifier, table, body->table, line, column);
-    table->lookup(identifier)->isInitialized = true;
+    if(res) table->lookup(identifier)->isInitialized = true;
     return res;
 }
 
@@ -396,8 +397,16 @@ bool IncludeStdioStatement::fill() const
     auto strType = new Type(true, new Type(false, BaseType::Char));
     auto funcType = new Type(returnType, {strType}, true);
 
-    table->insert("printf", funcType, false);
-    table->insert("scanf", funcType, false);
+    if(not table->insert("printf", funcType, false))
+    {
+      std::cout << SemanticError("cannot include stdio.h: printf already declared with a different signature", line, column);
+      return false;
+    }
+    if(not table->insert("scanf", funcType, false))
+    {
+      std::cout << SemanticError("cannot include stdio.h: scanf already declared with a different signature", line, column);
+      return false;
+    }
 
     table->lookup("printf")->isInitialized = true;
     table->lookup("scanf")->isInitialized = true;

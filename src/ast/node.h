@@ -26,7 +26,7 @@ struct Node
 
     friend std::ofstream& operator<<(std::ofstream& stream, const std::unique_ptr<Node>& root);
 
-    void complete(bool check, bool fold, bool output);
+    void complete();
 
     [[nodiscard]] virtual std::string name() const = 0;
 

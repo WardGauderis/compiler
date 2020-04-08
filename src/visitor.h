@@ -86,5 +86,5 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context);
 
 namespace Ast
 {
-std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root, bool fold);
+std::unique_ptr<Ast::Node> from_cst(const std::unique_ptr<Cst::Root>& root);
 }

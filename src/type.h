@@ -75,8 +75,8 @@ class Type
     {
     }
 
-    explicit Type(bool isConst, size_t size, Type* base)
-    : isTypeConst(isConst), type(std::make_pair(size, base))
+    explicit Type([[maybe_unused]] bool isConst, size_t size, Type* base)
+    : isTypeConst(base->isConst()), type(std::make_pair(size, base))
     {
     }
 

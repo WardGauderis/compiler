@@ -3,5 +3,5 @@ int printf(int a){
 }
 
 int main(){
-	int x = f(5);     //functie wordt gezien als variabele  //TODO
+	int x = printf(5);     //functie wordt gezien als variabele  //TODO
 }

@@ -1,5 +1,5 @@
 int main(){
-	printf("%d", 5);	//should throw
+	printf("%d", 5);
 }
 
 #include <stdio.h>

@@ -5,5 +5,5 @@ int main()
 	int b = a +5;	//TODO
 
 	int *c[10][5];
-	int d = *&(5+c)[2];      //TODO
+	int d = *&(5+c)[2];//TODO
 }

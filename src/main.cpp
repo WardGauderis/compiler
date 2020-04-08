@@ -74,7 +74,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 
 		if (printCst) make_dot(cst, cstPath);
 
-		const auto ast = Ast::from_cst(cst, true);
+		const auto ast = Ast::from_cst(cst);
 
 		if (printAst) make_dot(ast, astPath);
 

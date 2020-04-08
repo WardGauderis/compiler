@@ -144,6 +144,10 @@ bool operator==(const Type& lhs, const Type& rhs)
     if(lhs.type.index() != rhs.type.index()) return false;
     else if(lhs.isBaseType())
         return lhs.getBaseType() == rhs.getBaseType();
+    else if(lhs.isVoidType())
+    {
+      return rhs.isVoidType();
+    }
     else
         return (*lhs.getDerefType()) == (*rhs.getDerefType());
 }
@@ -170,6 +174,16 @@ std::string Type::toString(BaseType type)
 
 Type* Type::decay(Type* type)
 {
+  std::vector<bool> consts;
+  while(type->isArrayType())
+  {
+    consts.emplace_back(type->isTypeConst);
+    type = type->getDerefType();
+  }
+  for(size_t i = 0; i < consts.size(); i++)
+  {
+    type = new Type();
+  }
     if(type->isArrayType() or type->isPointerType())
     {
         Type* temp = decay(type->getDerefType());
@@ -291,14 +305,8 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
         return false;
     }
 
-    if(from->isArrayType() and not to->isPointerType())
-    {
-        if(print) std::cout << ConversionError(operation, from->string(), to->string(), line, column);
-        return false;
-    }
-
     // cannot convert float to ptr
-    if(from->isPointerType())
+    if(from->isPointerLikeType())
     {
         if(to->isFloatType())
         {
@@ -312,10 +320,15 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
                 std::cout
                 << PointerConversionWarning(operation, "from", from->string(), to->string(), line, column);
         }
+      else if(from->isArrayType() and not to->isPointerType())
+      {
+        if(print) std::cout << ConversionError(operation, from->string(), to->string(), line, column);
+        return false;
+      }
     }
 
     //cannot convert float to ptr
-    if(to->isPointerType())
+    if(to->isPointerLikeType())
     {
         if(from->isFloatType())
         {
@@ -330,6 +343,8 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
                 << PointerConversionWarning(operation, "to", from->string(), to->string(), line, column);
         }
     }
+
+
     // casting to narrower type
     if(from->isBaseType() and to->isBaseType() and to->getBaseType() < from->getBaseType() and not cast)
     {

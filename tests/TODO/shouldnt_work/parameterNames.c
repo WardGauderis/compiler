@@ -1,4 +1,4 @@
-int f(int a, float b, char a){	// TODO verkeerde error en segfault
+int f(int a, float b, char a){
 	return b;
 }
 

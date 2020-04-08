@@ -426,14 +426,15 @@ namespace Ast {
 			return false;
 		}
 
-		if (auto* res = table->lookup(lhs->name()))
+		if(auto* res = dynamic_cast<Variable*>(lhs))
 		{
-			if (res->type->isConst())
-			{
-				std::cout << ConstError("assignment", lhs->name(), line, column);
-				return false;
-			}
-			table->lookup(lhs->name())->isInitialized = true;
+                  table->lookup(res->identifier)->isInitialized = true;
+		}
+
+		if(lhs->type()->isConst())
+		{
+                  std::cout << ConstError("assigning to", lhs->name(), line, column);
+		  return false;
 		}
 
 		return Type::convert(rhs->type(), lhs->type(), false, line, column);
@@ -539,7 +540,7 @@ namespace Ast {
 
 	std::string SubscriptExpr::name() const
 	{
-		return "subscript expression";
+		return lhs->name() + "[]";
 	}
 
 	std::string SubscriptExpr::value() const

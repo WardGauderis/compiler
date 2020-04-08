@@ -70,6 +70,11 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
         return new Ast::Literal(str[1], table, line, column);
     case CParser::STRING:
         str.erase(std::remove(str.begin(), str.end(), '"'), str.end());
+        for(auto iter = std::find(str.begin(), str.end(), '\\'); iter < str.end();)
+        {
+          iter = str.insert(iter, '\\') + 3;
+        }
+
         return new Ast::StringLiteral(str, table, line, column);
     default:
         throw InternalError("unknown literal type, probably not yet implemented", line, column);
@@ -709,9 +714,9 @@ Ast::Scope* visitFile(antlr4::tree::ParseTree* context)
     return new Ast::Scope(statements, global, line, column);
 }
 
-std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root, bool fold)
+std::unique_ptr<Ast::Node> Ast::from_cst(const std::unique_ptr<Cst::Root>& root)
 {
     auto res = std::unique_ptr<Ast::Node>(visitFile(root->file));
-    res->complete(true, fold, true);
+    res->complete();
     return res;
 }
