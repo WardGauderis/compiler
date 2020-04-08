@@ -124,7 +124,6 @@ void runTests(const std::filesystem::path& path)
 		if (!entry.is_regular_file()) continue;
 		std::filesystem::path newPath = changeTopFolder(entry.path(), "output");
 		if (newPath.extension() != ".c") continue;
-		std::cout << newPath << std::endl;
 		std::filesystem::create_directories(newPath.parent_path());
 		compileFile(entry.path(), newPath, false, false, false);
 	}
@@ -142,7 +141,7 @@ int main(int argc, const char** argv)
 			("ast,a", "Print the ast to dot")
 			("optimised,o", "Run llvm optimisation passes")
 			("test,t",
-					"Compile all files in the given folder and place them in the folder 'output'");
+					"Compile all files in the given folder recursively and place them in the folder 'output'");
 	po::options_description hidden;
 	hidden.add_options()
 			("files", po::value<std::vector<std::filesystem::path>>(&files), "files to compile");
@@ -184,11 +183,11 @@ int main(int argc, const char** argv)
 
 			for (const auto& file :files)
 			{
-				compileFile(file, file, vm.count("cst"), vm.count("ast"), vm.count("optimised"));
+				compileFile(file, file.filename(), vm.count("cst"), vm.count("ast"), vm.count("optimised"));
 			}
 			return 0;
 		}
-		std::cout << desc;
-		return 1;
 	}
+	std::cout << desc;
+	return 1;
 }

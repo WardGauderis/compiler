@@ -234,7 +234,9 @@ bool FunctionDeclaration::fill() const
                                      std::make_shared<SymbolTable>(ScopeType::plain, table), line, column);
 }
 
-void FunctionDeclaration::visit(IRVisitor& visitor) {}
+void FunctionDeclaration::visit(IRVisitor& visitor) {
+	visitor.visitFunctionDeclaration(*this);
+}
 
 void VariableDeclaration::visit(IRVisitor& visitor)
 {

@@ -89,6 +89,8 @@ public:
 
 	void visitIncludeStdioStatement(const Ast::IncludeStdioStatement& includeStdioStatement);
 
+	void visitFunctionDeclaration(const Ast::FunctionDeclaration& functionDeclaration);
+
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;
@@ -98,7 +100,7 @@ private:
 	llvm::Value* ret{};
 	llvm::BasicBlock* breakBlock{};
 	llvm::BasicBlock* continueBlock{};
-	bool addressOf = false;
+	bool isRvalue = true;
 
 	llvm::Value* cast(llvm::Value* value, llvm::Type* to);
 
@@ -108,7 +110,10 @@ private:
 
 	llvm::AllocaInst* createAlloca(llvm::Type* type, const std::string& name);
 
-	llvm::Value* LRValue(Ast::Node* ASTValue, bool rvalue, Ast::Node* incrementer = nullptr);
+	llvm::Value* LRValue(Ast::Node* ASTValue, bool requiresRvalue, llvm::Value* inc = nullptr);
+
+	llvm::Function* getOrCreateFunction(const std::string& identifier, Type* returnType,
+			const std::vector<std::pair<Type*, std::string>>& parameters, std::shared_ptr<SymbolTable> table);
 };
 
 #endif //COMPILER_IRVISITOR_H
