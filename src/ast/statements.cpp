@@ -255,8 +255,7 @@ std::string LoopStatement::name() const
 
 std::vector<Node*> LoopStatement::children() const
 {
-    std::vector<Node*> res;
-    if(init) res.emplace_back(init);
+    auto res = std::vector<Node*>(init.begin(), init.end());
     if(condition) res.emplace_back(condition);
     if(iteration) res.emplace_back(iteration);
     res.emplace_back(body);
@@ -265,7 +264,7 @@ std::vector<Node*> LoopStatement::children() const
 
 Node* LoopStatement::fold()
 {
-    Helper::folder(init);
+    Helper::fold_children(init);
     Helper::folder(condition);
     Helper::folder(iteration);
     return this;

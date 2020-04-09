@@ -126,7 +126,7 @@ void runTests(const std::filesystem::path& path)
 		std::cout << entry << '\n';
 		if (newPath.extension() != ".c") continue;
 		std::filesystem::create_directories(newPath.parent_path());
-		compileFile(entry.path(), newPath, false, true, false);
+		compileFile(entry.path(), newPath, true, true, false);
 	}
 }
 

@@ -207,7 +207,6 @@ struct Helper
 
           for(size_t i = 0; i < types.size(); i++)
           {
-            std::cout << types[i]->string() << '\n';
             if((*res->type->getFunctionType().parameters[i]) != (*types[i]))
             {
               std::cout << SemanticError("overloading functions is not supported", line, column);

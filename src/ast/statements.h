@@ -31,7 +31,7 @@ struct Scope final : public Statement
 
 struct VariableDeclaration final : public Statement
 {
-    explicit VariableDeclaration(Type*                         type,
+    explicit VariableDeclaration(Type*                        type,
                                  std::string                  identifier,
                                  Expr*                        expr,
                                  std::shared_ptr<SymbolTable> table,
@@ -50,7 +50,7 @@ struct VariableDeclaration final : public Statement
     [[nodiscard]] bool               check() const final;
     void                             visit(IRVisitor& visitor) final;
 
-    Type*        type;
+    Type*       type;
     std::string identifier;
     Expr*       expr; // can be nullptr
 };
@@ -109,7 +109,7 @@ struct FunctionDeclaration : public Statement
 
 struct LoopStatement final : public Statement
 {
-    explicit LoopStatement(Statement*                   init, // may only be declaration or expr
+    explicit LoopStatement(std::vector<Statement*>      init,
                            Expr*                        condition,
                            Expr*                        iteration,
                            Statement*                   body,
@@ -117,22 +117,21 @@ struct LoopStatement final : public Statement
                            std::shared_ptr<SymbolTable> table,
                            size_t                       line,
                            size_t                       column)
-    : Statement(std::move(table), line, column), init(init), condition(condition),
+    : Statement(std::move(table), line, column), init(std::move(init)), condition(condition),
       iteration(iteration), body(body), doWhile(doWhile)
     {
     }
-
 
     [[nodiscard]] std::string        name() const final;
     [[nodiscard]] std::vector<Node*> children() const final;
     [[nodiscard]] Node*              fold() final;
     void                             visit(IRVisitor& visitor) final;
 
-    Statement* init;      // can be nullptr
-    Expr*      condition; // can be nullptr
-    Expr*      iteration; // can be nullptr
-    Statement* body;
-    bool       doWhile;
+    std::vector<Statement*> init;
+    Expr*                   condition; // can be nullptr
+    Expr*                   iteration; // can be nullptr
+    Statement*              body;
+    bool                    doWhile;
 };
 
 struct IfStatement final : public Statement
