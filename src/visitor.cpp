@@ -312,7 +312,9 @@ Ast::Expr* visitAssignExpr(antlr4::tree::ParseTree* context, std::shared_ptr<Sym
         return new Ast::Assignment(lhs, rhs, table, line, column);
     }
     else
+    {
         throw InternalError("unknown children size in assign expr");
+    }
 }
 
 Ast::Expr* visitExpr(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
@@ -461,8 +463,8 @@ visitVariableList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>
     }
     else if(context->children.size() == 5)
     {
-        auto* expr = visitAssignExpr(context->children[3], table);
-        auto  res  = visitVariableList(context->children[3], table, type);
+        auto* expr = visitAssignExpr(context->children[2], table);
+        auto  res  = visitVariableList(context->children[4], table, type);
         res.emplace(res.begin(), new Ast::VariableDeclaration(type, name, expr, table, line, column));
         return res;
     }
