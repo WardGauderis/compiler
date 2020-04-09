@@ -74,7 +74,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
 	const auto tmp = variable.table->lookupAllocaInst(variable.name());
-	if(!tmp) throw InternalError("Seems like the compiler folded a bit too much");
+	if(!tmp) throw InternalError("'" + variable.name() +"' undeclared in LLVM IR");
 	ret = *tmp;
 	isRvalue = false;
 }
