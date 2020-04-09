@@ -29,6 +29,22 @@ struct Helper
         return false;
     }
 
+    template<typename Type>
+    static void fold_children(std::vector<Type*>& children)
+    {
+      for(auto iter = children.begin(); iter != children.end();)
+      {
+        if(Helper::folder(*iter))
+        {
+          iter = children.erase(iter);
+        }
+        else
+        {
+          iter++;
+        }
+      }
+    }
+
     template <typename Type0, typename Type1>
     static Ast::Literal*
     fold_modulo(Type0 lhs, Type1 rhs, std::shared_ptr<SymbolTable> table, size_t line, size_t column)
@@ -191,6 +207,7 @@ struct Helper
 
           for(size_t i = 0; i < types.size(); i++)
           {
+            std::cout << types[i]->string() << '\n';
             if((*res->type->getFunctionType().parameters[i]) != (*types[i]))
             {
               std::cout << SemanticError("overloading functions is not supported", line, column);

@@ -115,9 +115,14 @@ namespace Ast {
 	{
 		if (auto* res = table->lookup(identifier))
 		{
-			if (not res->literal.has_value()) return this;
+			if (not res->literal.has_value())
+			{
+                return this;
+			}
 			else
-				return new Ast::Literal(res->literal.value(), table, line, column);
+            {
+                return new Ast::Literal(res->literal.value(), table, line, column);
+            }
 		}
 		throw InternalError("variable not found while folding");
 	}
@@ -472,7 +477,7 @@ namespace Ast {
 
 	Node* FunctionCall::fold()
 	{
-		for (auto& child : arguments) Helper::folder(child);
+		for(auto& child : arguments) Helper::folder(child);
 		return this;
 	}
 

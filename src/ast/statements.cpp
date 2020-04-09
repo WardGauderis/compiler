@@ -27,17 +27,20 @@ std::string Scope::color() const
 }
 Node* Scope::fold()
 {
-    for(auto iter = statements.begin(); iter != statements.end();)
+  // this removes the statements after a return fucntion
+  if(table->getType() == ScopeType::function)
+  {
+    for(size_t i = 0; i < statements.size(); i++)
     {
-        if(Helper::folder(*iter))
-        {
-            iter = statements.erase(iter);
-        }
-        else
-        {
-            iter++;
-        }
+      if(dynamic_cast<ReturnStatement*>(statements[i]))
+      {
+        statements.resize(i+1);
+        break;
+      }
     }
+  }
+
+    Helper::fold_children(statements);
     return this;
 }
 
@@ -77,7 +80,6 @@ Node* VariableDeclaration::fold()
         if(entry and entry->type->isConst())
         {
             entry->literal = res->literal;
-//            return nullptr;
         }
     }
 
@@ -294,11 +296,20 @@ Node* IfStatement::fold()
 
     if(auto* res = dynamic_cast<Ast::Literal*>(condition))
     {
-        if(Helper::evaluate(res)) return ifBody;
+        if(Helper::evaluate(res))
+        {
+          Helper::folder(ifBody);
+          return ifBody;
+        }
         else if(elseBody)
-            return elseBody;
+        {
+          Helper::folder(elseBody);
+          return elseBody;
+        }
         else
-            return nullptr;
+        {
+          return nullptr;
+        }
     }
 
     Helper::folder(ifBody);

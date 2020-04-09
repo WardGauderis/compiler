@@ -48,7 +48,7 @@ void Node::complete ()
     {
         throw CompilationError ("could not complete compilation due to above errors");
     }
-    [[maybe_unused]] auto _ = this->fold ();
+    [[maybe_unused]] auto _ = this->fold();
 }
 
 std::string Node::value() const

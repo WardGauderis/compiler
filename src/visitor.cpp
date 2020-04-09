@@ -40,8 +40,6 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
     {
         throw UnexpectedContextType(context);
     }
-
-
     const auto [line, column] = getLineAndColumn(context);
     auto str = context->getText();
     switch(terminal->getSymbol()->getType())
@@ -70,11 +68,25 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
         return new Ast::Literal(str[1], table, line, column);
     case CParser::STRING:
         str.erase(std::remove(str.begin(), str.end(), '"'), str.end());
-        for(auto iter = std::find(str.begin(), str.end(), '\\'); iter < str.end();)
+        // replaces "\n" by 'newline'
+        for(size_t i = 0; i < str.size(); i++)
         {
-          iter = str.insert(iter, '\\') + 3;
+          if(str[i] == '\\' and str[i+1] == 'n')
+          {
+            str.erase(str.begin() + i);
+            str[i++] = '\n';
+          }
+          else if(str[i] == '\\' and str[i+1] == 't')
+          {
+            str.erase(str.begin() + i);
+            str[i++] = '\t';
+          }
+          else if(str[i] == '\\' and str[i+1] == '\\')
+          {
+            str.erase(str.begin() + i);
+            str[i++] = '\\';
+          }
         }
-
         return new Ast::StringLiteral(str, table, line, column);
     default:
         throw InternalError("unknown literal type, probably not yet implemented", line, column);

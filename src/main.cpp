@@ -123,9 +123,10 @@ void runTests(const std::filesystem::path& path)
 	{
 		if (!entry.is_regular_file()) continue;
 		std::filesystem::path newPath = changeTopFolder(entry.path(), "output");
+		std::cout << entry << '\n';
 		if (newPath.extension() != ".c") continue;
 		std::filesystem::create_directories(newPath.parent_path());
-		compileFile(entry.path(), newPath, false, false, false);
+		compileFile(entry.path(), newPath, false, true, false);
 	}
 }
 
