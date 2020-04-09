@@ -131,6 +131,7 @@ namespace Ast {
 	{
 		if (auto* res = table->lookup(identifier))
 		{
+		    res->isUsed = true;
 			if (not res->isInitialized)
 			{
 				std::cout << UninitializedWarning(identifier, line, column);

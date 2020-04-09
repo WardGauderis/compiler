@@ -34,16 +34,24 @@ void Node::complete ()
     bool check_result = true;
     bool fill_result = true;
 
-    std::function<void (Ast::Node*)> recursion = [&] (Ast::Node* root) {
+    std::function<void (Ast::Node*)> fill_recursion = [&] (Ast::Node* root) {
         fill_result &= root->fill();
-        check_result &= root->check ();
       for (const auto child : root->children ())
       {
-        recursion (child);
+          fill_recursion (child);
       }
     };
 
-    recursion(this);
+    std::function<void (Ast::Node*)> check_recursion = [&] (Ast::Node* root) {
+      check_result &= root->check ();
+      for (const auto child : root->children ())
+      {
+          check_recursion (child);
+      }
+    };
+
+    fill_recursion(this);
+    check_recursion(this);
     if (not check_result or not fill_result)
     {
         throw CompilationError ("could not complete compilation due to above errors");

@@ -73,11 +73,13 @@ std::vector<Node*> VariableDeclaration::children() const
 
 Node* VariableDeclaration::fold()
 {
+    const auto& entry = table->lookup(identifier);
+    if(not entry->isUsed) return nullptr;
+
     Helper::folder(expr);
     if(auto* res = dynamic_cast<Ast::Literal*>(expr))
     {
-        const auto& entry = table->lookup(identifier);
-        if(entry and entry->type->isConst())
+        if(entry->type->isConst())
         {
             entry->literal = res->literal;
             if(not entry->isDerefed) return nullptr;
@@ -171,6 +173,9 @@ std::vector<Node*> FunctionDefinition::children() const
 
 Node* FunctionDefinition::fold()
 {
+    const auto pred = [](auto& elem){ return dynamic_cast<ReturnStatement*>(elem); };
+    Helper::remove_dead(body->statements, pred);
+
     Helper::folder(body);
     return this;
 }
@@ -184,11 +189,10 @@ bool FunctionDefinition::fill() const
 
 bool FunctionDefinition::check() const
 {
-    if(identifier == "main") return true;
     if(returnType->isVoidType()) return true;
 
     bool                       found = false;
-    std::function<void(Node*)> func  = [&](auto* root) {
+    std::function<bool(Node*)> func  = [&](auto* root) {
         for(auto* child : root->children())
         {
             if(auto* res = dynamic_cast<ReturnStatement*>(child))
@@ -202,9 +206,9 @@ bool FunctionDefinition::check() const
         }
         return true;
     };
-    func(body);
+    if(not func(body)) return false;
 
-    if(not found)
+    if(identifier != "main" and not found)
     {
         std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
     }
@@ -265,6 +269,13 @@ std::vector<Node*> LoopStatement::children() const
 
 Node* LoopStatement::fold()
 {
+    // removes the dead code after continue or breaks
+    if(auto* res = dynamic_cast<Scope*>(body))
+    {
+        const auto pred = [](auto& elem){ return dynamic_cast<ControlStatement*>(elem); };
+        Helper::remove_dead(res->statements, pred);
+    }
+
     Helper::fold_children(init);
     Helper::folder(condition);
     Helper::folder(iteration);

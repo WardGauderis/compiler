@@ -29,6 +29,19 @@ struct Helper
         return false;
     }
 
+    template<typename Type, typename Func>
+    static void remove_dead(std::vector<Type*>& children, Func&& pred)
+    {
+        for(size_t i = 0; i < children.size(); i++)
+        {
+            if(pred(children[i]))
+            {
+                children.resize(i + 1);
+                return;
+            }
+        }
+    }
+
     template<typename Type>
     static void fold_children(std::vector<Type*>& children)
     {

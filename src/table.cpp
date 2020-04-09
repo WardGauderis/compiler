@@ -34,7 +34,7 @@ llvm::Value** SymbolTable::lookupAllocaInst(const std::string& id)
 
 bool SymbolTable::insert(const std::string& id, Type* type, bool initialized)
 {
-    return table.emplace(id, TableElement{ type, std::nullopt, initialized, false }).second;
+    return table.emplace(id, TableElement{ type, std::nullopt, initialized, false, false }).second;
 }
 
 std::shared_ptr<SymbolTable>& SymbolTable::getParent()
