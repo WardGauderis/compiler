@@ -73,6 +73,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
+	const auto temp = variable.table->lookupAllocaInst(variable.name());
 	ret = *variable.table->lookupAllocaInst(variable.name());
 	isRvalue = false;
 }
@@ -425,15 +426,15 @@ void IRVisitor::visitReturnStatement(
 		ret = LRValue(returnStatement.expr, true);
 		ret = cast(ret, builder.getCurrentFunctionReturnType());
 		builder.CreateRet(ret);
-	} else builder.CreateRetVoid();
+	}
+	else builder.CreateRetVoid();
 }
 
 void IRVisitor::visitFunctionDefinition(
 		const Ast::FunctionDefinition& functionDefinition)
 {
 	const auto& function = getOrCreateFunction(
-			functionDefinition.identifier, functionDefinition.returnType,
-			functionDefinition.parameters, functionDefinition.table);
+			functionDefinition.identifier, functionDefinition.table);
 	const auto& returnType = function->getReturnType();
 	const auto& block = BasicBlock::Create(context, "entry", function);
 	builder.SetInsertPoint(block);
@@ -493,9 +494,7 @@ void IRVisitor::visitIncludeStdioStatement(
 void IRVisitor::visitFunctionDeclaration(
 		const Ast::FunctionDeclaration& functionDeclaration)
 {
-	getOrCreateFunction(
-			functionDeclaration.identifier, functionDeclaration.returnType,
-			functionDeclaration.parameters, functionDeclaration.table);
+	getOrCreateFunction(functionDeclaration.identifier, functionDeclaration.table);
 }
 
 llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
@@ -643,25 +642,23 @@ Value* IRVisitor::LRValue(Ast::Node* ASTValue, const bool requiresRvalue,
 	return value;
 }
 
-llvm::Function* IRVisitor::getOrCreateFunction(
-		const std::string& identifier, ::Type* returnType,
-		const std::vector<std::pair<::Type*, std::string>>& parameters,
-		const std::shared_ptr<SymbolTable> table)
+llvm::Function* IRVisitor::getOrCreateFunction(const std::string& identifier, const std::shared_ptr<SymbolTable> table)
 {
-	if (const auto& function = table->lookup(identifier)->allocaInst)
-		return llvm::cast<Function>(function);
+	const auto& ASTFunction = table->lookup(identifier);
+	if (ASTFunction->allocaInst)
+		return llvm::cast<Function>(ASTFunction->allocaInst);
 
 	std::vector<llvm::Type*> llvmParameters;
-	for (const auto& parameter : parameters)
+	const auto& type = ASTFunction->type->getFunctionType();
+	for (const auto& parameter : type.parameters)
 	{
-		llvmParameters.emplace_back(convertToIR(parameter.first));
+		llvmParameters.emplace_back(convertToIR(parameter));
 	}
-	const auto& llvmReturnType = convertToIR(returnType, true);
+	const auto& llvmReturnType = convertToIR(type.returnType, true);
 	const auto& functionType =
 			llvm::FunctionType::get(llvmReturnType, llvmParameters, false);
 	const auto function = llvm::cast<Function>(
 			module.getOrInsertFunction(identifier, functionType).getCallee());
 	table->lookup(identifier)->allocaInst = function;
-
 	return function;
 }

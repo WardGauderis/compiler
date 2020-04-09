@@ -112,8 +112,7 @@ private:
 
 	llvm::Value* LRValue(Ast::Node* ASTValue, bool requiresRvalue, llvm::Value* inc = nullptr);
 
-	llvm::Function* getOrCreateFunction(const std::string& identifier, Type* returnType,
-			const std::vector<std::pair<Type*, std::string>>& parameters, std::shared_ptr<SymbolTable> table);
+	llvm::Function* getOrCreateFunction(const std::string& identifier, std::shared_ptr<SymbolTable> table);
 };
 
 #endif //COMPILER_IRVISITOR_H
