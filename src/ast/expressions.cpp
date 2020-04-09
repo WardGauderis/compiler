@@ -264,6 +264,15 @@ namespace Ast {
 			return false;
 		}
 
+		// check when a variable is dereferenced
+		if(operation.type == PrefixOperation::Deref or  operation.type == PrefixOperation::Addr)
+		{
+		    if(auto* res = dynamic_cast<Variable*>(operand))
+		    {
+		        table->lookup(res->identifier)->isDerefed = true;
+		    }
+		}
+
 		if (not Helper::is_lvalue(operand))
 		{
 			if (operation.isIncrDecr())

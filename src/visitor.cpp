@@ -449,7 +449,7 @@ visitVariableList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>
     }
     else if(context->children.size() == 3)
     {
-        auto* expr = visitAssignExpr(context->children[3], table);
+        auto* expr = visitAssignExpr(context->children[2], table);
         return { new Ast::VariableDeclaration(type, name, expr, table, line, column) };
     }
     else if(context->children.size() == 4)
@@ -473,7 +473,6 @@ visitVariableList(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>
 std::vector<Ast::Statement*>
 visitVariableDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<SymbolTable>& table)
 {
-    const auto [line, column] = getLineAndColumn(context);
     const auto type           = visitTypeName(context->children[0]);
     const auto name           = context->children[1]->getText();
 
@@ -483,10 +482,12 @@ visitVariableDeclaration(antlr4::tree::ParseTree* context, std::shared_ptr<Symbo
     }
     else if(context->children.size() == 2)
     {
-        return visitVariableList(context->children[1], table);
+        return visitVariableList(context->children[1], table, type);
     }
     else
+    {
         throw InternalError("unknown children size for declaration");
+    }
 }
 
 std::vector<std::pair<Type*, std::string>> visitDeclarationParameterList(antlr4::tree::ParseTree* context)

@@ -80,6 +80,7 @@ Node* VariableDeclaration::fold()
         if(entry and entry->type->isConst())
         {
             entry->literal = res->literal;
+            if(not entry->isDerefed) return nullptr;
         }
     }
 

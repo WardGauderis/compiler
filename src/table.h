@@ -24,9 +24,10 @@ enum class ScopeType
 
 struct TableElement
 {
-    Type*                       type;
+    Type*                      type;
     std::optional<TypeVariant> literal;
     bool                       isInitialized;
+    bool                       isDerefed;
     llvm::Value*               allocaInst{};
 };
 
