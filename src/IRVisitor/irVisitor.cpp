@@ -420,9 +420,12 @@ void IRVisitor::visitControlStatement(
 void IRVisitor::visitReturnStatement(
 		const Ast::ReturnStatement& returnStatement)
 {
-	ret = LRValue(returnStatement.expr, true);
-	ret = cast(ret, builder.getCurrentFunctionReturnType());
-	builder.CreateRet(ret);
+	if (returnStatement.expr)
+	{
+		ret = LRValue(returnStatement.expr, true);
+		ret = cast(ret, builder.getCurrentFunctionReturnType());
+		builder.CreateRet(ret);
+	} else builder.CreateRetVoid();
 }
 
 void IRVisitor::visitFunctionDefinition(
