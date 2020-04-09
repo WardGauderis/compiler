@@ -73,8 +73,9 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
-	const auto temp = variable.table->lookupAllocaInst(variable.name());
-	ret = *variable.table->lookupAllocaInst(variable.name());
+	const auto tmp = variable.table->lookupAllocaInst(variable.name());
+	if(!tmp) throw InternalError("Seems like the compiler folded a bit too much.");
+	ret = *tmp;
 	isRvalue = false;
 }
 

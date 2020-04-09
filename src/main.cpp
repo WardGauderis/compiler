@@ -117,16 +117,16 @@ std::filesystem::path changeTopFolder(const std::filesystem::path& path, const s
 	return newPath;
 }
 
-void runTests(const std::filesystem::path& path)
+void runTests(const std::filesystem::path& path, bool cst, bool ast, bool optimised)
 {
 	for (const auto& entry: std::filesystem::recursive_directory_iterator(path))    //TODO file
 	{
 		if (!entry.is_regular_file()) continue;
 		std::filesystem::path newPath = changeTopFolder(entry.path(), "output");
 		std::cout << entry << '\n';
-		if (newPath.extension() != ".c") continue;
+		if (newPath.extension()!=".c") continue;
 		std::filesystem::create_directories(newPath.parent_path());
-		compileFile(entry.path(), newPath, true, true, false);
+		compileFile(entry.path(), newPath, cst, ast, optimised);
 	}
 }
 
@@ -169,7 +169,7 @@ int main(int argc, const char** argv)
 			std::cout << desc;
 			return 1;
 		}
-		runTests(files[0]);
+		runTests(files[0], vm.count("cst"), vm.count("ast"), vm.count("optimised"));
 		return 0;
 	}
 	if (!files.empty())
