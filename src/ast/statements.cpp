@@ -410,6 +410,9 @@ std::vector<Node*> IncludeStdioStatement::children() const
 
 bool IncludeStdioStatement::check() const
 {
+    table->lookup("printf")->isInitialized = true;
+    table->lookup("scanf")->isInitialized = true;
+
     return true;
 }
 
@@ -429,9 +432,6 @@ bool IncludeStdioStatement::fill() const
       std::cout << SemanticError("cannot include stdio.h: scanf already declared with a different signature", line, column);
       return false;
     }
-
-    table->lookup("printf")->isInitialized = true;
-    table->lookup("scanf")->isInitialized = true;
 
     return true;
 }

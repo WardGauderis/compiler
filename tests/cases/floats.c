@@ -10,11 +10,11 @@ float g = (int)5.7;
 
 int main()
 {
-    printf(a);
-    printf(b);
-    printf(c);
-    printf(d);
-    printf(e);
-    printf(f);
-    printf(g);
+    printf("%f", a);
+    printf("%f", b);
+    printf("%f", c);
+    printf("%f", d);
+    printf("%f", e);
+    printf("%f", f);
+    printf("%f", g);
 }

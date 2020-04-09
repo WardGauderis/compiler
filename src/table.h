@@ -28,7 +28,7 @@ struct TableElement
     std::optional<TypeVariant> literal;
     bool                       isInitialized;
     bool                       isDerefed;
-    bool isUsed;
+    bool                       isUsed;
     llvm::Value*               allocaInst{};
 };
 

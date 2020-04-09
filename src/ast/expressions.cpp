@@ -565,7 +565,7 @@ namespace Ast {
 
 	std::vector<Node*> SubscriptExpr::children() const
 	{
-		return {};
+		return {lhs, rhs};
 	}
 
 	Node* SubscriptExpr::fold()
