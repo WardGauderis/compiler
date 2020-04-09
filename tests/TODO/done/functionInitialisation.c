@@ -1,7 +1,10 @@
-int printf(int a){
+int f(int a){
 	return a+5;
 }
 
+#include <stdio.h>
+
 int main(){
-	int x = printf(5);
+	int x = f(5);
+	printf("%d\n", x);
 }

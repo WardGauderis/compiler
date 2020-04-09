@@ -140,7 +140,7 @@ int main(int argc, const char** argv)
 			("help,h", "Display this help message")
 			("cst,c", "Print the cst to dot")
 			("ast,a", "Print the ast to dot")
-			("optimised,o", "Run llvm optimisation passes")
+			("optimised,o", "Run LLVM optimisation passes")
 			("test,t",
 					"Compile all files in the given folder recursively and place them in the folder 'output'");
 	po::options_description hidden;
