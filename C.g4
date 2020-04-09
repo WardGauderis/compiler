@@ -125,9 +125,11 @@ declarationArray:
 parameterArray:
     parameterArray '[' expr? ']' | ;
 
+variableList:
+    IDENTIFIER (('=' assignExpr) | declarationArray) (',' variableList)?;
+
 variableDeclaration:
-    typeName IDENTIFIER ('=' assignExpr)? |
-    typeName IDENTIFIER declarationArray;
+    typeName variableList?;
 
 declarationParameterList:
     typeName IDENTIFIER? parameterArray (',' declarationParameterList)?;
