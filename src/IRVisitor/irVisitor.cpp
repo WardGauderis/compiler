@@ -372,8 +372,10 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 					builder.GetInsertBlock()->getParent())
 			: nullptr;
 
-	if (loopStatement.init)
-		loopStatement.init->visit(*this);
+	for (const auto& init: loopStatement.init)
+	{
+		init->visit(*this);
+	}
 	builder.CreateBr(loopCond);
 
 	builder.SetInsertPoint(loopCond);
