@@ -144,7 +144,7 @@ functionDefinition:
     typeName IDENTIFIER '(' parameterList? ')' scopeStatement;
 
 declaration:
-    variableDeclaration | functionDeclaration ';';
+    (variableDeclaration | functionDeclaration)';';
 
 expr:
     assignExpr;
