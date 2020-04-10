@@ -1,4 +1,4 @@
-// this is a test for the assign arrays feature
+// this is a test for the assign arrays feature and multidimensional arrays
 #include <stdio.h>
 
 int main()

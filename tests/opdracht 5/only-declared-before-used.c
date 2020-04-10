@@ -1,6 +1,6 @@
 void f(int);
 
-int main()    //TODO internal error
+int main()
 {
 	int a = 5;
 	f(a);

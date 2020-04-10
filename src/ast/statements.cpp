@@ -223,16 +223,12 @@ bool FunctionDefinition::check() const
 
     if(returnType->isVoidType() or identifier == "main")
     {
-        return true;
     }
     else if(not found)
     {
         std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
     }
-    else
-    {
-        return true;
-    }
+    return true;
 }
 
 void FunctionDefinition::visit(IRVisitor& visitor)

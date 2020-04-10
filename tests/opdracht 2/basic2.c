@@ -9,6 +9,6 @@ int main()
 
     b = a + 2;
 
-    printf(a);
-    printf(b);
+    printf("%i", (int)a);
+    printf("%i", (int)b);
 }

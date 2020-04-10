@@ -10,6 +10,4 @@ int main()
     float f = 4.99;
     int   z = t < f;
     printf("%i", z);
-
-    int q[10][5];
 }
