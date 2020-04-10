@@ -17,11 +17,11 @@
 
 #### Tests
 File structure:
- - test	*folder containing tests*
- 	 - benchmarkTests	*provided tests*
- 	 - customTests	*tests written by ourselves about the required functionality*
- 	 - optionalTests	*tests about the opional functionality*
- 	 - extraTests	*tests about extra functionality (that was neither required or optional)*
+ - test
+ 	 - benchmarkTests -	*provided tests*
+ 	 - customTests -	*tests written by ourselves about the required functionality*
+ 	 - optionalTests -	*tests about the opional functionality*
+ 	 - extraTests -	*tests about extra functionality (that was neither required or optional)*
 
 #### Execution of tests:
  - ./test.sh
