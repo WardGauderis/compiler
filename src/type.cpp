@@ -142,15 +142,22 @@ bool Type::isArrayType() const
 
 bool operator==(const Type& lhs, const Type& rhs)
 {
-    if(lhs.type.index() != rhs.type.index()) return false;
+    if(lhs.type.index() != rhs.type.index())
+    {
+        return false;
+    }
     else if(lhs.isBaseType())
+    {
         return lhs.getBaseType() == rhs.getBaseType();
+    }
     else if(lhs.isVoidType())
     {
         return rhs.isVoidType();
     }
     else
+    {
         return (*lhs.getDerefType()) == (*rhs.getDerefType());
+    }
 }
 
 bool operator!=(const Type& lhs, const Type& rhs)
@@ -295,7 +302,7 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
     }
 
     // cannot convert from or to void
-    if((from->isVoidType() and not to->isVoidType()) or (not from->isVoidType() and to->isVoidType()))
+    if(from->isVoidType() or to->isVoidType())
     {
         if(print)
             std::cout << ConversionError(operation, from->string(), to->string(), line, column);

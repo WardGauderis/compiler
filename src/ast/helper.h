@@ -193,9 +193,10 @@ struct Helper
         std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
         // checking for alternate redefinitions
-        if(not table->insert(identifier, new Type(returnType, types), true))
+        if(not table->insert(identifier, new Type(returnType, types), false))
         {
             auto* res = table->lookup(identifier);
+
             if(not res->type->isFunctionType())
             {
                 std::cout << RedefinitionError(identifier, line, column);

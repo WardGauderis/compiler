@@ -107,21 +107,23 @@ bool VariableDeclaration::fill() const
     {
         if(table->getType() == ScopeType::global)
         {
-            if(table->lookup(identifier)->isInitialized)
+            const auto& entry = table->lookup(identifier);
+            if(entry->isInitialized)
             {
                 std::cout
-                << SemanticError("redefinition of already defined variable in global scope");
+                << SemanticError("redefinition of already defined variable in global scope", line, column);
                 return false;
             }
             else
             {
-                table->lookup(identifier)->isInitialized &= static_cast<bool>(expr);
+                entry->isInitialized |= static_cast<bool>(expr);
             }
 
-            if(table->lookup(identifier)->type != type)
+            if(*entry->type != *type)
             {
                 std::cout
                 << SemanticError("redefinition of variable with different type in global scope", line, column);
+                return false;
             }
         }
         else
@@ -184,37 +186,53 @@ bool FunctionDefinition::fill() const
 {
     auto res = Helper::fill_table_with_function(parameters, returnType, identifier, table,
                                                 body->table, line, column);
-    if(res) table->lookup(identifier)->isInitialized = true;
+    if(res)
+    {
+        const auto& entry = table->lookup(identifier);
+        if(entry->isInitialized)
+        {
+            std::cout << SemanticError("function already defined before", line, column);
+            return false;
+        }
+        entry->isInitialized = true;
+    }
     return res;
 }
 
 bool FunctionDefinition::check() const
 {
-    if(returnType->isVoidType()) return true;
-
-    bool                       found = false;
-    std::function<bool(Node*)> func  = [&](auto* root) {
+    bool                       found  = false;
+    bool                       worked = true;
+    std::function<void(Node*)> func   = [&](auto* root) {
+        if(auto* res = dynamic_cast<ReturnStatement*>(root))
+        {
+            found     = true;
+            auto type = (res->expr) ? res->expr->type() : new Type;
+            worked &= Type::convert(type, returnType, false, res->line, res->column, true);
+        }
         for(auto* child : root->children())
         {
-            if(auto* res = dynamic_cast<ReturnStatement*>(child))
-            {
-                found           = true;
-                auto       type = (res->expr) ? res->expr->type() : new Type;
-                const auto worked = Type::convert(type, returnType, false, res->line, res->column, true);
-                if(not worked) return false;
-            }
             func(child);
         }
-        return true;
     };
-    if(not func(body)) return false;
+    func(body);
+    if(not worked)
+    {
+        return false;
+    }
 
-    if(identifier != "main" and not found)
+    if(returnType->isVoidType() or identifier == "main")
+    {
+        return true;
+    }
+    else if(not found)
     {
         std::cout << SemanticError("no return statement in nonvoid function", line, column, true);
     }
-
-    return true;
+    else
+    {
+        return true;
+    }
 }
 
 void FunctionDefinition::visit(IRVisitor& visitor)

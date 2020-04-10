@@ -144,7 +144,7 @@ struct WrongArgumentCount : public SemanticError
 {
     explicit WrongArgumentCount(
     const std::string& name, size_t expected, size_t got, const unsigned int line, const unsigned int column)
-    : SemanticError("wrong function argument count for " + name + ", expected: " + std::to_string(expected) + " got " + std::to_string(got) + ".", line, column, true)
+    : SemanticError("wrong function argument count for " + name + ", expected: " + std::to_string(expected) + " got " + std::to_string(got) + ".", line, column, false)
     {
     }
 };

@@ -257,10 +257,18 @@ Node* PrefixExpr::fold()
 
 bool PrefixExpr::check() const
 {
-    if(operation.isIncrDecr() and operand->type()->isConst())
+    if(operation.isIncrDecr())
     {
-        std::cout << ConstError("prefix operator", operand->name(), line, column);
-        return false;
+        if(not Helper::is_lvalue(operand))
+        {
+            std::cout << RValueError("assigning to", line, column);
+            return false;
+        }
+        if(operand->type()->isConst())
+        {
+            std::cout << ConstError(operation.string(), operand->name(), line, column);
+            return false;
+        }
     }
 
     // check when a variable is dereferenced
@@ -277,6 +285,11 @@ bool PrefixExpr::check() const
         if(operation.isIncrDecr())
         {
             std::cout << RValueError("assigning to", line, column);
+            return false;
+        }
+        if(operation.type == PrefixOperation::Addr)
+        {
+            std::cout << SemanticError("lvalue required as unary & operand", line, column);
             return false;
         }
     }
@@ -439,7 +452,16 @@ bool Assignment::check() const
 
     if(auto* res = dynamic_cast<Variable*>(lhs))
     {
-        table->lookup(res->identifier)->isInitialized = true;
+        const auto& entry = table->lookup(res->identifier);
+        if(entry == nullptr)
+        {
+            std::cout << UndeclaredError(res->identifier, line, column);
+            return false;
+        }
+        else
+        {
+            entry->isInitialized = true;
+        }
     }
 
     if(lhs->type()->isConst())
