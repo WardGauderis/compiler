@@ -21,7 +21,7 @@ File structure:
  	 - benchmark - *provided tests*
  	 - project_<1-6> - *custom tests for each project*
  	    - files prefixed with 'opt' are for optional features
- 	    - files prefixed with 'extra' are for extra feature (neither required nor optional)
+ 	    - files prefixed with 'extra' are for extra features (neither required nor optional)
 
 #### Execution of tests:
  - ./test.sh
