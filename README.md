@@ -43,5 +43,6 @@ File structure:
  - Hexadecimal, octal, binary integer literals
  - CST visualisation
  - Float literals in scientific notation
+ - Do while loops
  - Dereference and address-of operators in combination with multi-dimensional arrays and pointers
  - Literal strings as global arrays, assignable to char pointers

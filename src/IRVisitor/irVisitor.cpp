@@ -74,7 +74,7 @@ void IRVisitor::visitComment(const Ast::Comment& comment)
 void IRVisitor::visitVariable(const Ast::Variable& variable)
 {
 	const auto tmp = variable.table->lookupAllocaInst(variable.name());
-	if(!tmp) throw InternalError("'" + variable.name() +"' undeclared in LLVM IR");
+	if (!tmp) throw InternalError("'"+variable.name()+"' undeclared in LLVM IR");
 	ret = *tmp;
 	isRvalue = false;
 }
@@ -368,17 +368,14 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 			context, "loop.body", builder.GetInsertBlock()->getParent());
 	const auto& loopEnd = BasicBlock::Create(
 			context, "loop.end", builder.GetInsertBlock()->getParent());
-	const auto& loopIter =
-			loopStatement.iteration
-			? BasicBlock::Create(context, "loop.iter",
-					builder.GetInsertBlock()->getParent())
-			: nullptr;
+	const auto& loopIter = loopStatement.iteration ? BasicBlock::Create(context, "loop.iter",
+			builder.GetInsertBlock()->getParent()) : nullptr;
 
 	for (const auto& init: loopStatement.init)
 	{
 		init->visit(*this);
 	}
-	builder.CreateBr(loopCond);
+	builder.CreateBr(loopStatement.doWhile ? loopBody : loopCond);
 
 	builder.SetInsertPoint(loopCond);
 	if (loopStatement.condition)
