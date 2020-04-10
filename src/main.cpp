@@ -96,7 +96,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 	}
 	catch (const std::exception& ex)
 	{
-		std::cout << ex.what() << std::endl;
+		std::cout << ex.what();
 	}
 
 }
