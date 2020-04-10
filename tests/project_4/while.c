@@ -9,6 +9,6 @@ int main(){
     int a = 5;
     do
     {
-        printf(++a);
+        printf("%i", ++a);
     } while(a < 7);
 }
