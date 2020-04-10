@@ -46,6 +46,8 @@ class SymbolTable
 
     llvm::Value** lookupAllocaInst(const std::string& id);
 
+    void setUsed(const std::string& id);
+
     bool insert(const std::string& id, Type* type, bool initialized);
 
     std::shared_ptr<SymbolTable>& getParent();

@@ -27,18 +27,18 @@ std::string Scope::color() const
 }
 Node* Scope::fold()
 {
-  // this removes the statements after a return fucntion
-  if(table->getType() == ScopeType::function)
-  {
-    for(size_t i = 0; i < statements.size(); i++)
+    // this removes the statements after a return fucntion
+    if(table->getType() == ScopeType::function)
     {
-      if(dynamic_cast<ReturnStatement*>(statements[i]))
-      {
-        statements.resize(i+1);
-        break;
-      }
+        for(size_t i = 0; i < statements.size(); i++)
+        {
+            if(dynamic_cast<ReturnStatement*>(statements[i]))
+            {
+                statements.resize(i + 1);
+                break;
+            }
+        }
     }
-  }
 
     Helper::fold_children(statements);
     return this;
@@ -163,7 +163,7 @@ std::string FunctionDefinition::name() const
 
 std::string FunctionDefinition::value() const
 {
-return table->lookup(identifier)->type->string();
+    return table->lookup(identifier)->type->string();
 }
 
 std::vector<Node*> FunctionDefinition::children() const
@@ -173,7 +173,7 @@ std::vector<Node*> FunctionDefinition::children() const
 
 Node* FunctionDefinition::fold()
 {
-    const auto pred = [](auto& elem){ return dynamic_cast<ReturnStatement*>(elem); };
+    const auto pred = [](auto& elem) { return dynamic_cast<ReturnStatement*>(elem); };
     Helper::remove_dead(body->statements, pred);
 
     Helper::folder(body);
@@ -182,7 +182,8 @@ Node* FunctionDefinition::fold()
 
 bool FunctionDefinition::fill() const
 {
-    auto res = Helper::fill_table_with_function(parameters, returnType, identifier, table, body->table, line, column);
+    auto res = Helper::fill_table_with_function(parameters, returnType, identifier, table,
+                                                body->table, line, column);
     if(res) table->lookup(identifier)->isInitialized = true;
     return res;
 }
@@ -197,8 +198,8 @@ bool FunctionDefinition::check() const
         {
             if(auto* res = dynamic_cast<ReturnStatement*>(child))
             {
-                found             = true;
-                auto       type   = (res->expr) ? res->expr->type() : new Type;
+                found           = true;
+                auto       type = (res->expr) ? res->expr->type() : new Type;
                 const auto worked = Type::convert(type, returnType, false, res->line, res->column, true);
                 if(not worked) return false;
             }
@@ -239,11 +240,13 @@ Node* FunctionDeclaration::fold()
 bool FunctionDeclaration::fill() const
 {
     return Helper::fill_table_with_function(parameters, returnType, identifier, table,
-                                     std::make_shared<SymbolTable>(ScopeType::plain, table), line, column);
+                                            std::make_shared<SymbolTable>(ScopeType::plain, table),
+                                            line, column);
 }
 
-void FunctionDeclaration::visit(IRVisitor& visitor) {
-	visitor.visitFunctionDeclaration(*this);
+void FunctionDeclaration::visit(IRVisitor& visitor)
+{
+    visitor.visitFunctionDeclaration(*this);
 }
 
 void VariableDeclaration::visit(IRVisitor& visitor)
@@ -272,7 +275,7 @@ Node* LoopStatement::fold()
     // removes the dead code after continue or breaks
     if(auto* res = dynamic_cast<Scope*>(body))
     {
-        const auto pred = [](auto& elem){ return dynamic_cast<ControlStatement*>(elem); };
+        const auto pred = [](auto& elem) { return dynamic_cast<ControlStatement*>(elem); };
         Helper::remove_dead(res->statements, pred);
     }
 
@@ -309,17 +312,17 @@ Node* IfStatement::fold()
     {
         if(Helper::evaluate(res))
         {
-          Helper::folder(ifBody);
-          return ifBody;
+            Helper::folder(ifBody);
+            return ifBody;
         }
         else if(elseBody)
         {
-          Helper::folder(elseBody);
-          return elseBody;
+            Helper::folder(elseBody);
+            return elseBody;
         }
         else
         {
-          return nullptr;
+            return nullptr;
         }
     }
 
@@ -411,7 +414,7 @@ std::vector<Node*> IncludeStdioStatement::children() const
 bool IncludeStdioStatement::check() const
 {
     table->lookup("printf")->isInitialized = true;
-    table->lookup("scanf")->isInitialized = true;
+    table->lookup("scanf")->isInitialized  = true;
 
     return true;
 }
@@ -419,18 +422,20 @@ bool IncludeStdioStatement::check() const
 bool IncludeStdioStatement::fill() const
 {
     auto returnType = new Type(false, BaseType::Int);
-    auto strType = new Type(true, new Type(false, BaseType::Char));
-    auto funcType = new Type(returnType, {strType}, true);
+    auto strType    = new Type(true, new Type(false, BaseType::Char));
+    auto funcType   = new Type(returnType, { strType }, true);
 
     if(not table->insert("printf", funcType, false))
     {
-      std::cout << SemanticError("cannot include stdio.h: printf already declared with a different signature", line, column);
-      return false;
+        std::cout << SemanticError(
+        "cannot include stdio.h: printf already declared with a different signature", line, column);
+        return false;
     }
     if(not table->insert("scanf", funcType, false))
     {
-      std::cout << SemanticError("cannot include stdio.h: scanf already declared with a different signature", line, column);
-      return false;
+        std::cout << SemanticError(
+        "cannot include stdio.h: scanf already declared with a different signature", line, column);
+        return false;
     }
 
     return true;
@@ -443,7 +448,7 @@ Node* IncludeStdioStatement::fold()
 
 void IncludeStdioStatement::visit(IRVisitor& visitor)
 {
-	visitor.visitIncludeStdioStatement(*this);
+    visitor.visitIncludeStdioStatement(*this);
 }
 
 } // namespace Ast

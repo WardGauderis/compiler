@@ -24,12 +24,12 @@ struct Helper
         }
         else
         {
-          return true;
+            return true;
         }
         return false;
     }
 
-    template<typename Type, typename Func>
+    template <typename Type, typename Func>
     static void remove_dead(std::vector<Type*>& children, Func&& pred)
     {
         for(size_t i = 0; i < children.size(); i++)
@@ -42,20 +42,20 @@ struct Helper
         }
     }
 
-    template<typename Type>
+    template <typename Type>
     static void fold_children(std::vector<Type*>& children)
     {
-      for(auto iter = children.begin(); iter != children.end();)
-      {
-        if(Helper::folder(*iter))
+        for(auto iter = children.begin(); iter != children.end();)
         {
-          iter = children.erase(iter);
+            if(Helper::folder(*iter))
+            {
+                iter = children.erase(iter);
+            }
+            else
+            {
+                iter++;
+            }
         }
-        else
-        {
-          iter++;
-        }
-      }
     }
 
     template <typename Type0, typename Type1>
@@ -186,48 +186,51 @@ struct Helper
                                          size_t                              column)
     {
 
-      // converting the parameter types
-      std::vector<Type*> types(parameters.size());
-      const auto         convert = [&](const auto& param) { return Type::decay(param.first); };
-      std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
+        bool result = true;
+        // converting the parameter types
+        std::vector<Type*> types(parameters.size());
+        const auto         convert = [&](const auto& param) { return Type::decay(param.first); };
+        std::transform(parameters.begin(), parameters.end(), types.begin(), convert);
 
-      // checking for alternate redefinitions
-      if(not table->insert(identifier, new Type(returnType, types), true))
-      {
-        auto* res = table->lookup(identifier);
-        if(not res->type->isFunctionType())
+        // checking for alternate redefinitions
+        if(not table->insert(identifier, new Type(returnType, types), true))
         {
-          std::cout << RedefinitionError(identifier, line, column);
-          return false;
-        }
-        else if((*res->type->getFunctionType().returnType) != (*returnType))
-        {
-          std::cout << SemanticError("redefining function with different return type is not allowed", line, column);
-          return false;
-        }
-        else if(res->type->getFunctionType().variadic)
-        {
-          std::cout << SemanticError("defining similar function without variadic elements is not allowed", line, column);
-          return false;
-        }
-        else
-        {
-          if(res->type->getFunctionType().parameters.size() != types.size())
-          {
-            std::cout << SemanticError("overloading functions is not supported", line, column);
-            return false;
-          }
-
-          for(size_t i = 0; i < types.size(); i++)
-          {
-            if((*res->type->getFunctionType().parameters[i]) != (*types[i]))
+            auto* res = table->lookup(identifier);
+            if(not res->type->isFunctionType())
             {
-              std::cout << SemanticError("overloading functions is not supported", line, column);
-              return false;
+                std::cout << RedefinitionError(identifier, line, column);
+                return false;
             }
-          }
+            else if((*res->type->getFunctionType().returnType) != (*returnType))
+            {
+                std::cout
+                << SemanticError("redefining function with different return type is not allowed", line, column);
+                result = false;
+            }
+            else if(res->type->getFunctionType().variadic)
+            {
+                std::cout << SemanticError(
+                "defining similar function without variadic elements is not allowed", line, column);
+                result = false;
+            }
+            else
+            {
+                if(res->type->getFunctionType().parameters.size() != types.size())
+                {
+                    std::cout << SemanticError("overloading functions is not supported", line, column);
+                    result = false;
+                }
+
+                for(size_t i = 0; i < types.size(); i++)
+                {
+                    if((*res->type->getFunctionType().parameters[i]) != (*types[i]))
+                    {
+                        std::cout << SemanticError("overloading functions is not supported", line, column);
+                        result = false;
+                    }
+                }
+            }
         }
-      }
 
         // checking for duplicate names by inserting into bogus scope
         for(const auto& [type, id] : parameters)
@@ -248,6 +251,6 @@ struct Helper
             }
         }
 
-        return true;
+        return result;
     }
 };

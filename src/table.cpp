@@ -32,6 +32,19 @@ llvm::Value** SymbolTable::lookupAllocaInst(const std::string& id)
         return &iter->second.allocaInst;
 }
 
+void SymbolTable::setUsed(const std::string& id)
+{
+    const auto& iter = table.find(id);
+    if(iter != table.end())
+    {
+        iter->second.isUsed = true;
+    }
+    if(parent)
+    {
+        parent->setUsed(id);
+    }
+}
+
 bool SymbolTable::insert(const std::string& id, Type* type, bool initialized)
 {
     return table.emplace(id, TableElement{ type, std::nullopt, initialized, false, false }).second;
