@@ -17,7 +17,7 @@
 
 #### Tests
 File structure:
- - test
+ - tests
  	 - benchmarkTests -	*provided tests*
  	 - customTests -	*tests written by ourselves about the required functionality*
  	 - optionalTests -	*tests about the opional functionality*
