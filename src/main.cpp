@@ -88,17 +88,15 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 	}
 	catch (const SyntaxError& ex)
 	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors")
-		          << std::endl;
+		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
 	catch (const InternalError& ex)
 	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors")
-		          << std::endl;
+		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
 	catch (const std::exception& ex)
 	{
-		std::cout << ex.what() << std::endl;
+		std::cout << ex.what();
 	}
 
 }
@@ -123,7 +121,7 @@ void runTests(const std::filesystem::path& path, bool cst, bool ast, bool optimi
 	{
 		if (!entry.is_regular_file()) continue;
 		std::filesystem::path newPath = changeTopFolder(entry.path(), "output");
-		std::cout << entry << '\n';
+//		std::cout << entry << '\n';
 		if (newPath.extension()!=".c") continue;
 		std::filesystem::create_directories(newPath.parent_path());
 		compileFile(entry.path(), newPath, cst, ast, optimised);
