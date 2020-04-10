@@ -88,11 +88,11 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 	}
 	catch (const SyntaxError& ex)
 	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors")
+		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
 	catch (const InternalError& ex)
 	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors")
+		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
 	catch (const std::exception& ex)
 	{
