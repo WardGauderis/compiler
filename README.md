@@ -17,11 +17,11 @@
 
 #### Tests:
 File structure:
- - tests
- 	 - benchmarkTests -	*provided tests*
- 	 - customTests -	*tests written by ourselves about the required functionality*
- 	 - optionalTests -	*tests about the opional functionality*
- 	 - extraTests -	*tests about extra functionality (that was neither required or optional)*
+ - tests'
+ 	 - benchmark - *provided tests*
+ 	 - project_<1-6> - *custom tests for each project*
+ 	    - files prefixed with 'opt' are for optional features
+ 	    - files prefixed with 'extra' are for extra feature (neither required nor optional)
 
 #### Execution of tests:
  - ./test.sh
