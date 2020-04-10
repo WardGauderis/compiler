@@ -17,14 +17,15 @@ template <class... Ts>
 overloaded(Ts...)->overloaded<Ts...>;
 } // namespace
 
-[[nodiscard]] std::string Type::string() const
+[[nodiscard]] std::string Type::string(const std::string& name) const
 {
     return std::visit(
     overloaded{ [&](std::monostate empty) { return std::string("void"); },
-                [&](const Type* ptr) { return ptr->string() + "*" + (isTypeConst ? " const" : ""); },
-                [&](BaseType base) { return (isTypeConst ? "const " : "") + toString(base); },
+                [&](const Type* ptr) { return ptr->string() + "*" + (isTypeConst ? " const" : "") + " " + name; },
+                [&](BaseType base) { return (isTypeConst ? "const " : "") + toString(base) + " " + name; },
                 [&](const FunctionType& func) {
-                    auto res = func.returnType->string() + '(';
+                    auto res = func.returnType->string();
+                    res += ' '+ name + '(';
                     for(const auto& elem : func.parameters) res += elem->string() + ',';
                     if(func.variadic) res += "...";
 
@@ -35,7 +36,7 @@ overloaded(Ts...)->overloaded<Ts...>;
                     return res;
                 },
                 [&](const ArrayType& arr) {
-                    return arr.second->string() + '[' + (arr.first ? std::to_string(arr.first) : "") + ']';
+                    return arr.second->string(name) + "[]";
                 } },
     type);
 }

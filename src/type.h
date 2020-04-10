@@ -82,7 +82,7 @@ class Type
 
     explicit Type(bool isConst, BaseType baseType) : isTypeConst(isConst), type(baseType) {}
 
-    [[nodiscard]] std::string string() const;
+    [[nodiscard]] std::string string(const std::string& name = "") const;
 
     [[nodiscard]] BaseType getBaseType() const;
 

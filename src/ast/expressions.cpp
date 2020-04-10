@@ -230,7 +230,7 @@ std::string PrefixExpr::name() const
 
 std::string PrefixExpr::value() const
 {
-    return operation.string() + operand->value();
+    return operation.string();
 }
 
 std::vector<Node*> PrefixExpr::children() const
@@ -326,7 +326,7 @@ std::string PostfixExpr::name() const
 
 std::string PostfixExpr::value() const
 {
-    return operation.string() + operand->value();
+    return operation.string();
 }
 
 std::vector<Node*> PostfixExpr::children() const
@@ -574,12 +574,11 @@ void FunctionCall::visit(IRVisitor& visitor)
 
 std::string SubscriptExpr::name() const
 {
-    return lhs->name() + "[]";
-}
-
-std::string SubscriptExpr::value() const
-{
-    return lhs->value() + '[' + rhs->value() + ']';
+  if(dynamic_cast<Variable*>(lhs))
+  {
+    return lhs->name() + '[' + rhs->value() + ']';
+  }
+    else return "...[" + rhs->value() + ']';
 }
 
 std::vector<Node*> SubscriptExpr::children() const

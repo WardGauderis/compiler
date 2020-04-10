@@ -61,7 +61,7 @@ std::string VariableDeclaration::name() const
 
 std::string VariableDeclaration::value() const
 {
-    return identifier;
+    return table->lookup(identifier)->type->string(identifier);
 }
 
 std::vector<Node*> VariableDeclaration::children() const
