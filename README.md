@@ -15,7 +15,7 @@
  - ./compiler \<files> 
  - ./compiler -h
 
-#### Tests
+#### Tests:
 File structure:
  - tests
  	 - benchmarkTests -	*provided tests*
