@@ -296,6 +296,18 @@ Node* LoopStatement::fold()
     Helper::fold_children(init);
     Helper::folder(condition);
     Helper::folder(iteration);
+
+    if(condition->constant())
+    {
+        if(auto* res = dynamic_cast<Ast::Literal*>(condition))
+        {
+            if(not Helper::evaluate(res))
+            {
+                return nullptr;
+            }
+        }
+    }
+
     return this;
 }
 
@@ -321,28 +333,27 @@ std::vector<Node*> IfStatement::children() const
 Node* IfStatement::fold()
 {
     Helper::folder(condition);
-
-    if(auto* res = dynamic_cast<Ast::Literal*>(condition))
-    {
-        if(Helper::evaluate(res))
-        {
-            Helper::folder(ifBody);
-            return ifBody;
-        }
-        else if(elseBody)
-        {
-            Helper::folder(elseBody);
-            return elseBody;
-        }
-        else
-        {
-            return nullptr;
-        }
-    }
-
     Helper::folder(ifBody);
     Helper::folder(elseBody);
 
+    if(condition->constant())
+    {
+        if(auto* res = dynamic_cast<Ast::Literal*>(condition))
+        {
+            if(Helper::evaluate(res))
+            {
+                return ifBody;
+            }
+            else if(elseBody)
+            {
+                return elseBody;
+            }
+            else
+            {
+                return nullptr;
+            }
+        }
+    }
     return this;
 }
 
