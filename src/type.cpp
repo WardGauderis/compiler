@@ -303,7 +303,7 @@ bool Type::convert(Type* from, Type* to, bool cast, size_t line, size_t column, 
     }
 
     // cannot convert from or to void
-    if(from->isVoidType() or to->isVoidType())
+    if((from->isVoidType() and not to->isVoidType()) or (not from->isVoidType() and to->isVoidType()))
     {
         if(print)
             std::cout << ConversionError(operation, from->string(), to->string(), line, column);
