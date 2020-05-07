@@ -23,14 +23,11 @@ public:
 
 	bool runOnFunction(llvm::Function& function) final
 	{
-		for (auto& block: function)
-		{
+		for (auto& block: function) {
 			bool done = false;
-			for (auto instruction = block.begin(); instruction!=block.end();)
-			{
+			for (auto instruction = block.begin(); instruction!=block.end();) {
 				if (done) instruction = instruction->eraseFromParent();
-				else
-				{
+				else {
 					done |= instruction->isTerminator();
 					++instruction;
 				}
@@ -92,7 +89,7 @@ public:
 
 	void visitFunctionDeclaration(const Ast::FunctionDeclaration& functionDeclaration);
 
-	const llvm::Module& getModule() const;
+	llvm::Module& getModule();
 
 private:
 	llvm::LLVMContext context;

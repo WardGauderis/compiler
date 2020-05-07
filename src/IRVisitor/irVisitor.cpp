@@ -82,8 +82,7 @@ void IRVisitor::visitVariable(const Ast::Variable& variable)
 
 void IRVisitor::visitScope(const Ast::Scope& scope)
 {
-	for (const auto& statement : scope.children())
-	{
+	for (const auto& statement : scope.children()) {
 		statement->visit(*this);
 	}
 }
@@ -99,8 +98,7 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 	bool pointerOperation = false;
 	const auto lhsType = lhs->getType();
 
-	if (binaryExpr.operation.isLogicalOperator())
-	{
+	if (binaryExpr.operation.isLogicalOperator()) {
 		bool lAnd = operationType==BinaryOperation::And;
 		auto lRhs = BasicBlock::Create(context, lAnd ? "land.true" : "lor.false",
 				builder.GetInsertBlock()->getParent());
@@ -130,26 +128,21 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 	auto rhs = LRValue(binaryExpr.rhs, true);
 	const auto rhsType = rhs->getType();
 
-	if (binaryExpr.operation.isComparisonOperator())
-	{
-		if (lhsType->isFloatTy() || rhsType->isFloatTy())
-		{
+	if (binaryExpr.operation.isComparisonOperator()) {
+		if (lhsType->isFloatTy() || rhsType->isFloatTy()) {
 			lhs = cast(lhs, builder.getFloatTy());
 			rhs = cast(rhs, builder.getFloatTy());
 			floatOperation = true;
 		}
-		else if (lhsType->isPointerTy())
-		{
+		else if (lhsType->isPointerTy()) {
 			rhs = cast(rhs, lhs->getType());
 			pointerOperation = true;
 		}
-		else if (rhsType->isPointerTy())
-		{
+		else if (rhsType->isPointerTy()) {
 			lhs = cast(lhs, rhs->getType());
 			pointerOperation = true;
 		}
-		else if (lhsType->isIntegerTy(32) || rhsType->isIntegerTy(32))
-		{
+		else if (lhsType->isIntegerTy(32) || rhsType->isIntegerTy(32)) {
 			lhs = cast(lhs, builder.getInt32Ty());
 			rhs = cast(rhs, builder.getInt32Ty());
 		}
@@ -194,13 +187,11 @@ void IRVisitor::visitBinaryExpr(const Ast::BinaryExpr& binaryExpr)
 			rhs->getType()->isPointerTy())
 		ret = builder.CreateInBoundsGEP(rhs, lhs);
 	else if (operationType==BinaryOperation::Sub &&
-			lhs->getType()->isPointerTy())
-	{
+			lhs->getType()->isPointerTy()) {
 		ret = builder.CreateSub(ConstantInt::get(rhs->getType(), 0), rhs);
 		ret = builder.CreateInBoundsGEP(lhs, ret);
 	}
-	else
-	{
+	else {
 		floatOperation = targetType->isFloatTy();
 		lhs = cast(lhs, targetType);
 		rhs = cast(rhs, targetType);
@@ -244,14 +235,12 @@ void IRVisitor::visitPostfixExpr(const Ast::PostfixExpr& postFixExpr)
 void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 {
 	const auto& opType = prefixExpr.operation.type;
-	if (opType==PrefixOperation::Addr)
-	{
+	if (opType==PrefixOperation::Addr) {
 		ret = LRValue(prefixExpr.operand, false);
 		return;
 	}
 	else if (opType==PrefixOperation::Incr ||
-			opType==PrefixOperation::Decr)
-	{
+			opType==PrefixOperation::Decr) {
 		const auto lvalue = LRValue(prefixExpr.operand, false);
 		const auto rvalue = builder.CreateLoad(lvalue);
 
@@ -265,20 +254,17 @@ void IRVisitor::visitPrefixExpr(const Ast::PrefixExpr& prefixExpr)
 
 	if (opType==PrefixOperation::Plus)
 		return;
-	else if (opType==PrefixOperation::Neg)
-	{
+	else if (opType==PrefixOperation::Neg) {
 		if (type->isFloatTy())
 			ret = builder.CreateFSub(ConstantFP::get(type, 0), ret, "neg");
 		else
 			ret = builder.CreateSub(ConstantInt::get(type, 0), ret, "neg");
 	}
-	else if (opType==PrefixOperation::Not)
-	{
+	else if (opType==PrefixOperation::Not) {
 		ret = cast(ret, builder.getInt1Ty());
 		ret = builder.CreateXor(ret, builder.getTrue(), "not");
 	}
-	else if (opType==PrefixOperation::Deref)
-	{
+	else if (opType==PrefixOperation::Deref) {
 		isRvalue = false;
 	}
 }
@@ -306,24 +292,20 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 	const auto& name = declaration.identifier;
 	auto& allocaInst = declaration.table->lookup(name)->allocaInst;
 	bool global = !declaration.table->getParent();
-	if (global)
-	{
+	if (global) {
 		const auto& var =
 				new GlobalVariable(module, type, ASTType->isConst(),
 						GlobalValue::LinkageTypes::ExternalLinkage,
 						Constant::getNullValue(type), name);
 		allocaInst = var;
-		if (declaration.expr)
-		{
+		if (declaration.expr) {
 			ret = LRValue(declaration.expr, true);
 			var->setInitializer(llvm::cast<Constant>(ret));
 		}
 	}
-	else
-	{
+	else {
 		allocaInst = createAlloca(type, name);
-		if (declaration.expr)
-		{
+		if (declaration.expr) {
 			ret = LRValue(declaration.expr, true);
 			ret = cast(ret, type);
 			builder.CreateStore(ret, allocaInst);
@@ -351,8 +333,7 @@ void IRVisitor::visitIfStatement(const Ast::IfStatement& ifStatement)
 	ifStatement.ifBody->visit(*this);
 	builder.CreateBr(ifEnd);
 
-	if (ifFalse)
-	{
+	if (ifFalse) {
 		builder.SetInsertPoint(ifFalse);
 		ifStatement.elseBody->visit(*this);
 		builder.CreateBr(ifEnd);
@@ -372,15 +353,13 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	const auto& loopIter = loopStatement.iteration ? BasicBlock::Create(context, "loop.iter",
 			builder.GetInsertBlock()->getParent()) : nullptr;
 
-	for (const auto& init: loopStatement.init)
-	{
+	for (const auto& init: loopStatement.init) {
 		init->visit(*this);
 	}
 	builder.CreateBr(loopStatement.doWhile ? loopBody : loopCond);
 
 	builder.SetInsertPoint(loopCond);
-	if (loopStatement.condition)
-	{
+	if (loopStatement.condition) {
 		ret = LRValue(loopStatement.condition, true);
 		ret = cast(ret, builder.getInt1Ty());
 		builder.CreateCondBr(ret, loopBody, loopEnd);
@@ -398,8 +377,7 @@ void IRVisitor::visitLoopStatement(const Ast::LoopStatement& loopStatement)
 	continueBlock = continueBackup;
 	builder.CreateBr(loopIter ? loopIter : loopCond);
 
-	if (loopIter)
-	{
+	if (loopIter) {
 		builder.SetInsertPoint(loopIter);
 		loopStatement.iteration->visit(*this);
 		builder.CreateBr(loopCond);
@@ -420,8 +398,7 @@ void IRVisitor::visitControlStatement(
 void IRVisitor::visitReturnStatement(
 		const Ast::ReturnStatement& returnStatement)
 {
-	if (returnStatement.expr)
-	{
+	if (returnStatement.expr) {
 		ret = LRValue(returnStatement.expr, true);
 		ret = cast(ret, builder.getCurrentFunctionReturnType());
 		builder.CreateRet(ret);
@@ -438,8 +415,7 @@ void IRVisitor::visitFunctionDefinition(
 	const auto& block = BasicBlock::Create(context, "entry", function);
 	builder.SetInsertPoint(block);
 	size_t i = 0;
-	for (auto& parameter : function->args())
-	{
+	for (auto& parameter : function->args()) {
 		const auto& name = functionDefinition.parameters[i++].second;
 		ret = createAlloca(parameter.getType(), name);
 		functionDefinition.body->table->lookup(name)->allocaInst = ret;
@@ -460,8 +436,7 @@ void IRVisitor::visitFunctionCall(const Ast::FunctionCall& functionCall)
 	const auto& function = llvm::cast<Function>(
 			*functionCall.table->lookupAllocaInst(functionCall.value()));
 	std::vector<Value*> arguments;
-	for (int i = 0; i<functionCall.arguments.size(); ++i)
-	{
+	for (int i = 0; i<functionCall.arguments.size(); ++i) {
 		const auto& argument = functionCall.arguments[i];
 		ret = LRValue(argument, true);
 		if (!function->isVarArg() || i<function->arg_size()) ret = cast(ret, function->args().begin()[i].getType());
@@ -482,8 +457,7 @@ void IRVisitor::visitIncludeStdioStatement(
 		const Ast::IncludeStdioStatement& includeStdioStatement)
 {
 	auto names = {"printf", "scanf"};
-	for (const auto& name : names)
-	{
+	for (const auto& name : names) {
 		const auto& printf = module.getOrInsertFunction(name,
 				llvm::FunctionType::get(llvm::Type::getInt32PtrTy(context), builder.getInt8PtrTy(), true)).getCallee();
 		includeStdioStatement.table->lookup(name)->allocaInst = printf;
@@ -502,8 +476,7 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 	if (from==to)
 		return value;
 
-	if (from==builder.getInt1Ty())
-	{
+	if (from==builder.getInt1Ty()) {
 		if (to->isIntegerTy())
 			return builder.CreateZExt(value, to);
 		else if (to->isFloatTy())
@@ -511,8 +484,7 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 		else if (to->isPointerTy())
 			return builder.CreateIntToPtr(value, to);
 	}
-	else if (from->isIntegerTy())
-	{
+	else if (from->isIntegerTy()) {
 		if (to==builder.getInt1Ty())
 			return builder.CreateICmpNE(value, Constant::getNullValue(from));
 		else if (to->isIntegerTy())
@@ -522,8 +494,7 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 		else if (to->isPointerTy())
 			return builder.CreateIntToPtr(value, to);
 	}
-	else if (from->isFloatTy())
-	{
+	else if (from->isFloatTy()) {
 		if (to==builder.getInt1Ty())
 			return builder.CreateFCmpUNE(value, Constant::getNullValue(from));
 		else if (to->isIntegerTy())
@@ -531,8 +502,7 @@ llvm::Value* IRVisitor::cast(llvm::Value* value, llvm::Type* to)
 		else if (to->isDoubleTy())
 			return builder.CreateFPExt(value, to);
 	}
-	else if (from->isPointerTy())
-	{
+	else if (from->isPointerTy()) {
 		if (to==builder.getInt1Ty())
 			return builder.CreateICmpNE(value, Constant::getNullValue(from));
 		else if (to->isIntegerTy())
@@ -564,10 +534,8 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function,
 {
 	if (first)
 		type = ::Type::invert(type);
-	if (type->isBaseType())
-	{
-		switch (type->getBaseType())
-		{
+	if (type->isBaseType()) {
+		switch (type->getBaseType()) {
 		case BaseType::Char:
 			return llvm::Type::getInt8Ty(context);
 		case BaseType::Int:
@@ -578,19 +546,16 @@ llvm::Type* IRVisitor::convertToIR(::Type* type, const bool function,
 			throw InternalError("type is not supported in IR");
 		}
 	}
-	else if (type->isPointerType())
-	{
+	else if (type->isPointerType()) {
 		return PointerType::getUnqual(
 				convertToIR(type->getDerefType(), false, false));
 	}
-	else if (type->isVoidType())
-	{
+	else if (type->isVoidType()) {
 		if (function)
 			return builder.getVoidTy();
 		return builder.getInt8Ty();
 	}
-	else if (type->isArrayType())
-	{
+	else if (type->isArrayType()) {
 		return llvm::ArrayType::get(convertToIR(type->getDerefType(), false, false),
 				type->getArrayType().first);
 	}
@@ -614,23 +579,19 @@ Value* IRVisitor::LRValue(Ast::Node* ASTValue, const bool requiresRvalue,
 	//	errs() << "in: " << *type << "\t";
 	//	errs().flush();
 
-	if (requiresRvalue && !isRvalue)
-	{
+	if (requiresRvalue && !isRvalue) {
 		const auto& containedType = type->getContainedType(0);
-		if (containedType->isArrayTy())
-		{
+		if (containedType->isArrayTy()) {
 			value = builder.CreateInBoundsGEP(
 					value, {builder.getInt64(0), inc ? inc : builder.getInt64(0)});
 		}
-		else
-		{
+		else {
 			value = builder.CreateLoad(value);
 			if (inc)
 				value = builder.CreateInBoundsGEP(value, inc);
 		}
 	}
-	else if (inc)
-	{
+	else if (inc) {
 		value = builder.CreateInBoundsGEP(value, inc);
 	}
 
@@ -649,8 +610,7 @@ llvm::Function* IRVisitor::getOrCreateFunction(const std::string& identifier, co
 
 	std::vector<llvm::Type*> llvmParameters;
 	const auto& type = ASTFunction->type->getFunctionType();
-	for (const auto& parameter : type.parameters)
-	{
+	for (const auto& parameter : type.parameters) {
 		llvmParameters.emplace_back(convertToIR(parameter));
 	}
 	const auto& llvmReturnType = convertToIR(type.returnType, true);
@@ -662,7 +622,7 @@ llvm::Function* IRVisitor::getOrCreateFunction(const std::string& identifier, co
 	return function;
 }
 
-const llvm::Module& IRVisitor::getModule() const
+llvm::Module& IRVisitor::getModule()
 {
 	return module;
 }

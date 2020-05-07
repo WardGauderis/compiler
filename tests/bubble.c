@@ -41,9 +41,9 @@
 //}
 //
 
-#include <stdio.h>
-
-int x = 6;
 int main(){
-	printf("hallo %i", x);
+}
+
+int f(int x){
+	return x;
 }
