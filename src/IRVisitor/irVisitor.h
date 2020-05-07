@@ -9,6 +9,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <filesystem>
 #include <ast/statements.h>
+#include <llvm/Pass.h>
 
 #include "ast/expressions.h"
 #include "ast/node.h"
@@ -90,6 +91,8 @@ public:
 	void visitIncludeStdioStatement(const Ast::IncludeStdioStatement& includeStdioStatement);
 
 	void visitFunctionDeclaration(const Ast::FunctionDeclaration& functionDeclaration);
+
+	const llvm::Module& getModule() const;
 
 private:
 	llvm::LLVMContext context;

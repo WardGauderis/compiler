@@ -9,6 +9,7 @@
 #include <llvm/IR/Verifier.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/IPO.h>
+#include "MIPSVisitor/mipsVisitor.h"
 
 using namespace llvm;
 
@@ -29,10 +30,10 @@ void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 void IRVisitor::LLVMOptimize()
 {
 	PassBuilder passBuilder;
-	LoopAnalysisManager loopAnalysisManager(true);
-	FunctionAnalysisManager functionAnalysisManager(true);
-	CGSCCAnalysisManager cGSCCAnalysisManager(true);
-	ModuleAnalysisManager moduleAnalysisManager(true);
+	LoopAnalysisManager loopAnalysisManager(false);
+	FunctionAnalysisManager functionAnalysisManager(false);
+	CGSCCAnalysisManager cGSCCAnalysisManager(false);
+	ModuleAnalysisManager moduleAnalysisManager(false);
 	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
 	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
 	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
@@ -659,4 +660,9 @@ llvm::Function* IRVisitor::getOrCreateFunction(const std::string& identifier, co
 			module.getOrInsertFunction(identifier, functionType).getCallee());
 	table->lookup(identifier)->allocaInst = function;
 	return function;
+}
+
+const llvm::Module& IRVisitor::getModule() const
+{
+	return module;
 }

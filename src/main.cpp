@@ -7,7 +7,8 @@
 #include "cst.h"
 #include "visitor.h"
 #include <boost/program_options.hpp>
-#include <IRVisitor/irVisitor.h>
+#include "IRVisitor/irVisitor.h"
+#include "MIPSVisitor/mipsVisitor.h"
 
 std::string CompilationError::file;
 
@@ -35,6 +36,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 	try
 	{
 		const auto llPath = output.replace_extension("ll");
+		const auto asmPath = output.replace_extension("asm");
 		const auto cstPath = output.replace_extension("cst.png");
 		output.replace_extension("");
 		const auto astPath = output.replace_extension("ast.png");
@@ -84,6 +86,11 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 		if (optimised) visitor.LLVMOptimize();
 
 		visitor.print(llPath);
+
+		MIPSVisitor mVisitor;
+		mVisitor.convertIR(visitor.getModule());
+		mVisitor.print(asmPath);
+
 		std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 	}
 	catch (const SyntaxError& ex)
