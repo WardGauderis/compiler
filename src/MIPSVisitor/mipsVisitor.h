@@ -23,11 +23,49 @@ public:
 
 	[[maybe_unused]] void visitBasicBlock(llvm::BasicBlock& BB);
 
-	[[maybe_unused]] void visitReturnInst(llvm::ReturnInst& I);
+	[[maybe_unused]] void visitICmpInst(llvm::ICmpInst& I);
+
+	[[maybe_unused]] void visitFCmpInst(llvm::FCmpInst& I);
+
+	[[maybe_unused]] void visitLoadInst(llvm::LoadInst& I);
 
 	[[maybe_unused]] void visitAllocaInst(llvm::AllocaInst& I);
 
 	[[maybe_unused]] void visitStoreInst(llvm::StoreInst& I);
+
+	[[maybe_unused]] void visitGetElementPtrInst(llvm::GetElementPtrInst& I);
+
+	[[maybe_unused]] void visitPHINode(llvm::PHINode& I);
+
+	[[maybe_unused]] void visitTruncInst(llvm::TruncInst& I);
+
+	[[maybe_unused]] void visitZExtInst(llvm::ZExtInst& I);
+
+	[[maybe_unused]] void visitSExtInst(llvm::SExtInst& I);
+
+	[[maybe_unused]] void visitFPToUIInst(llvm::FPToUIInst& I);
+
+	[[maybe_unused]] void visitFPToSIInst(llvm::FPToSIInst& I);
+
+	[[maybe_unused]] void visitUIToFPInst(llvm::UIToFPInst& I);
+
+	[[maybe_unused]] void visitSIToFPInst(llvm::SIToFPInst& I);
+
+	[[maybe_unused]] void visitPtrToIntInst(llvm::PtrToIntInst& I);
+
+	[[maybe_unused]] void visitIntToPtrInst(llvm::IntToPtrInst& I);
+
+	[[maybe_unused]] void visitBitCastInst(llvm::BitCastInst& I);
+
+	[[maybe_unused]] void visitCallInst(llvm::CallInst& I);
+
+	[[maybe_unused]] void visitReturnInst(llvm::ReturnInst& I);
+
+	[[maybe_unused]] void visitBranchInst(llvm::BranchInst& I);
+
+	[[maybe_unused]] void visitBinaryOperator(llvm::BinaryOperator& I);
+
+	[[maybe_unused]] void visitInstruction(llvm::Instruction& I);
 
 private:
 	mips::Module module;

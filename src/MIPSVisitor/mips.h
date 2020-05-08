@@ -34,12 +34,32 @@ namespace mips {
 		}
 	};
 
-	class sw : public Instruction {
+	class l : public Instruction {
 	public:
+		l(bool isCharacter)
+				:isCharacter(isCharacter) { }
+
 		void print(std::ostream& os) const final
 		{
-			os << "sw" << std::endl;
+			os << 'l' << (isCharacter ? 'b' : 'w') << std::endl;
 		}
+
+	private:
+		bool isCharacter;
+	};
+
+	class s : public Instruction {
+	public:
+		s(bool isCharacter)
+				:isCharacter(isCharacter) { }
+
+		void print(std::ostream& os) const final
+		{
+			os << 's' << (isCharacter ? 'b' : 'w') << std::endl;
+		}
+
+	private:
+		bool isCharacter;
 	};
 
 	class Block {
@@ -70,7 +90,6 @@ namespace mips {
 
 		void addToStack(const unsigned int size)
 		{
-			std::cerr << size << std::endl;
 			stackSize += size;
 		}
 

@@ -42,9 +42,9 @@
 //
 
 int main(){
-	int x = 5;
+	char x = 5;
 	int y = 7;
-	int z = x+y;
+	int z = 3+y;
 	return z;
 }
 
