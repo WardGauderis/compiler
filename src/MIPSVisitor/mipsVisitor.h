@@ -11,6 +11,8 @@
 
 class MIPSVisitor : public llvm::InstVisitor<MIPSVisitor> {
 public:
+	MIPSVisitor(const llvm::Module& module);
+
 	void convertIR(llvm::Module& module);
 
 	void print(const std::filesystem::path& output);
@@ -23,10 +25,16 @@ public:
 
 	[[maybe_unused]] void visitReturnInst(llvm::ReturnInst& I);
 
+	[[maybe_unused]] void visitAllocaInst(llvm::AllocaInst& I);
+
+	[[maybe_unused]] void visitStoreInst(llvm::StoreInst& I);
+
 private:
 	mips::Module module;
 	mips::Function* currentFunction;
 	mips::Block* currentBlock;
+
+	const llvm::DataLayout layout;
 };
 
 #endif //COMPILER_MIPSVISITOR_H

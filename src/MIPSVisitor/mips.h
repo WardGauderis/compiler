@@ -8,20 +8,50 @@
 #endif //COMPILER_MIPS_H
 
 #include <vector>
+#include <iostream>
 
 namespace mips {
 	class Instruction {
+	public:
+		virtual void print(std::ostream& os) const = 0;
+
+		virtual ~Instruction() { }
 	};
 
 	class li : public Instruction {
+	public:
+		void print(std::ostream& os) const final
+		{
+			os << "li" << std::endl;
+		}
 	};
 
 	class move : public Instruction {
+	public:
+		void print(std::ostream& os) const final
+		{
+			os << "move" << std::endl;
+		}
+	};
+
+	class sw : public Instruction {
+	public:
+		void print(std::ostream& os) const final
+		{
+			os << "sw" << std::endl;
+		}
 	};
 
 	class Block {
 	public:
 		void append(Instruction* instruction) { instructions.emplace_back(instruction); }
+
+		void print(std::ostream& os) const
+		{
+			for (const auto& instruction : instructions) {
+				instruction->print(os);
+			}
+		}
 
 		virtual ~Block()
 		{
@@ -38,6 +68,20 @@ namespace mips {
 	public:
 		void append(Block* block) { blocks.emplace_back(block); }
 
+		void addToStack(const unsigned int size)
+		{
+			std::cerr << size << std::endl;
+			stackSize += size;
+		}
+
+		void print(std::ostream& os) const
+		{
+			os << stackSize << std::endl;
+			for (const auto& block : blocks) {
+				block->print(os);
+			}
+		}
+
 		virtual ~Function()
 		{
 			for (const auto& block : blocks) {
@@ -47,13 +91,19 @@ namespace mips {
 
 	private:
 		std::vector<Block*> blocks;
+		unsigned int stackSize = 0;
 	};
 
 	class Module {
 	public:
 		void append(Function* function) { functions.emplace_back(function); }
 
-		void print(const std::filesystem::path& output) { }
+		void print(std::ostream& os) const
+		{
+			for (const auto& function : functions) {
+				function->print(os);
+			}
+		}
 
 		virtual ~Module()
 		{

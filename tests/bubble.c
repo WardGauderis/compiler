@@ -42,8 +42,12 @@
 //
 
 int main(){
+	int x = 5;
+	int y = 7;
+	int z = x+y;
+	return z;
 }
 
-int f(int x){
-	return x;
-}
+//int f(int x){
+//	return x;
+//}
