@@ -156,8 +156,10 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 
 void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 {
+	bool immediate = isa<Constant>(I.getOperand(0)) || isa<Constant>(I.getOperand(1));
 	switch (I.getOpcode()) {
 	case llvm::Instruction::Add:
+		currentBlock->append(new bin(immediate, "add"));
 		break;
 	default:
 		InstVisitor::visitBinaryOperator(I);

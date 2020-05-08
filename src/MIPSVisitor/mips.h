@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <iostream>
+#include <string>
 
 namespace mips {
 	class Instruction {
@@ -46,6 +47,21 @@ namespace mips {
 
 	private:
 		bool isCharacter;
+	};
+
+	class bin : public Instruction {
+	public:
+		bin(bool immediate, std::string type)
+				:immediate(immediate), type(type) { };
+
+		void print(std::ostream& os) const final
+		{
+			os << type << (immediate ? "i" : "") << 'u' << std::endl;
+		}
+
+	private:
+		bool immediate;
+		std::string type;
 	};
 
 	class s : public Instruction {

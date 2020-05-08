@@ -44,7 +44,7 @@
 int main(){
 	char x = 5;
 	int y = 7;
-	int z = 3+y;
+	int z = x+y;
 	return z;
 }
 
