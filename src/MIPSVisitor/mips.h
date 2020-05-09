@@ -14,6 +14,66 @@
 
 namespace mips
 {
+std::string reg(uint num)
+{
+    return "$" + std::to_string(num);
+}
+
+bool isFloat(llvm::Value* value)
+{
+    const auto type = value->getType();
+
+    if(type->isFloatTy())
+    {
+        return true;
+    }
+    else if(type->isIntegerTy())
+    {
+        return false;
+    }
+    else if(type->isPointerTy())
+    {
+        return false;
+    }
+    else
+    {
+        throw std::logic_error("unsupported type");
+    }
+}
+
+
+void assertSame(llvm::Value* val1, llvm::Value* val2)
+{
+    if(isFloat(val1) != isFloat(val2))
+    {
+        throw std::logic_error("types do not have same type class");
+    }
+}
+
+void assertSame(llvm::Value* val1, llvm::Value* val2, llvm::Value* t3)
+{
+    if(isFloat(val1) != isFloat(val2) or isFloat(val1) != isFloat(t3))
+    {
+        throw std::logic_error("types do not have same type class");
+    }
+}
+
+void assertInt(llvm::Value* value)
+{
+    if(isFloat(value))
+    {
+        throw std::logic_error("type must be integer");
+    }
+}
+
+void assertFloat(llvm::Value* value)
+{
+    if(not isFloat(value))
+    {
+        throw std::logic_error("type must be float");
+    }
+}
+
 class RegisterMapper
 {
     public:
@@ -22,164 +82,275 @@ class RegisterMapper
         emptyRegisters[0].resize(26);
         std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 2);
 
-        emptyRegisters[1].resize(26);
-        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 2);
+        emptyRegisters[1].resize(32);
+        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 0);
     }
 
     // gets the register for the value, if it is not yet in a register put it in one.
-    uint getInternal(llvm::Value* value)
+    uint getRegister(std::ostream& os, llvm::Value* id)
     {
-        const bool isFloat = value->getType()->isFloatTy();
-        const auto iter = registerDescriptors[isFloat].find(value);
+        const auto index = isFloat(id);
+        const auto regIter = registerDescriptors[index].find(id);
 
-        if(iter == registerDescriptors[isFloat].end())
+        if(regIter == registerDescriptors[index].end())
         {
-            if(emptyRegisters[isFloat].empty())
+            const auto addrIter = addressDescriptors[index].find(id);
+
+            // if no register is available: spill something else into memory
+            if(emptyRegisters[index].empty())
             {
-                // aiaiai
+                // od the spillies ye
                 return -1;
             }
             else
             {
-                const auto res = emptyRegisters[isFloat].back();
-                emptyRegisters[isFloat].pop_back();
+                const auto res = emptyRegisters[index].back();
+                emptyRegisters[index].pop_back();
+
+                // if address is found: load word from the memory and remove the address entry
+                if(addrIter != addressDescriptors[index].end())
+                {
+                    os << "lw " << reg(res) << addrIter->second << '\n';
+                    addressDescriptors[index].erase(addrIter);
+                }
+
                 return res;
             }
         }
         else
         {
-            return iter->second;
+            return regIter->second;
         }
     }
 
-    void popInternal(llvm::Value* value)
+    void popValue(llvm::Value* id)
     {
-        const bool isFloat = value->getType()->isFloatTy();
-        const auto iter = registerDescriptors[isFloat].find(value);
+        const auto index = isFloat(id);
+        const auto iter = registerDescriptors[index].find(id);
 
-        if(iter != registerDescriptors[isFloat].end())
+        if(iter != registerDescriptors[index].end())
         {
-            emptyRegisters[isFloat].push_back(iter->second);
-            registerDescriptors[isFloat].erase(iter);
+            emptyRegisters[index].push_back(iter->second);
+            registerDescriptors[index].erase(iter);
         }
-        addressDescriptors[isFloat].erase(value);
+        addressDescriptors[index].erase(id);
     }
 
     private:
     std::array<std::vector<uint>, 2> emptyRegisters;
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
+    uint stackSize;
 };
 
 class Instruction
 {
     public:
+    Instruction() : mapper(nullptr)
+    {
+    }
+
     virtual void print(std::ostream& os) const = 0;
 
-    virtual ~Instruction() = default;
-};
-
-class Li : public Instruction
-{
-    public:
-    void print(std::ostream& os) const final
-    {
-        os << "li" << std::endl;
-        os << "ori" << '\n';
-    }
+    protected:
+    std::shared_ptr<RegisterMapper> mapper;
 };
 
 class Move : public Instruction
 {
     public:
+    Move(llvm::Value* t1, llvm::Value* t2) : t1(t1), t2(t2)
+    {
+        assertSame(t1, t2);
+    }
+
     void print(std::ostream& os) const final
     {
-        os << "move" << std::endl;
+        const auto index1 = mapper->getRegister(os, t1);
+        const auto index2 = mapper->getRegister(os, t2);
+
+        os << (isFloat(t1) ? "mov.s " : "move ");
+        os << reg(index1) << ',' << reg(index2) << '\n';
     }
+
+    private:
+    llvm::Value* t1;
+    llvm::Value* t2;
 };
 
 class Load : public Instruction
 {
     public:
-    explicit Load(bool isCharacter) : isCharacter(isCharacter)
+    Load(llvm::Value* t1, llvm::Value* t2, int offset)
+    : t1(t1), t2(t2), ivalue(offset), fvalue(0), label(), immediate(false)
+    {
+    }
+
+    Load(llvm::Value* t1, int value)
+    : t1(t1), t2(nullptr), ivalue(value), fvalue(0), label(), immediate(true)
+    {
+    }
+
+    Load(llvm::Value* t1, float value)
+    : t1(t1), t2(nullptr), ivalue(0), fvalue(value), label(), immediate(true)
+    {
+    }
+
+    Load(llvm::Value* t1, std::string label)
+    : t1(t1), t2(nullptr), ivalue(0), fvalue(0), label(std::move(label)), immediate(false)
     {
     }
 
     void print(std::ostream& os) const final
     {
-        os << 'l' << (isCharacter ? 'b' : 'w') << std::endl;
+        const auto index1 = mapper->getRegister(os, t1);
+        if(immediate)
+        {
+            if(isFloat(t1))
+            {
+                // TODO: load float
+            }
+            else
+            {
+                os << "lui " << reg(index1) << (ivalue & 0xffff0000u) << '\n'; // fuck the warnings even more
+                os << "ori " << reg(index1) << (ivalue & 0x0000ffffu) << '\n';
+            }
+        }
+        else
+        {
+            std::string temp;
+            if(not label.empty())
+            {
+                temp += (label + '+');
+            }
+            if(ivalue != 0)
+            {
+                temp += std::to_string(ivalue);
+            }
+            if(t2 != nullptr)
+            {
+                const auto index2 = mapper->getRegister(os, t2);
+                temp += ('(' + reg(index2) + ')');
+            }
+
+            if(isFloat(t1))
+            {
+                // TODO: more load floats
+            }
+            else
+            {
+                os << (t1->getType()->getIntegerBitWidth() == 32 ? "lw " : "lb ");
+                os << temp << '\n';
+            }
+        }
     }
 
     private:
-    bool isCharacter;
+    llvm::Value* t1;
+    llvm::Value* t2;
+
+    int ivalue;
+    float fvalue;
+
+    std::string label;
+    bool immediate;
 };
 
 class Arithmetic : public Instruction
 {
     public:
-    Arithmetic(bool immediate, std::string operation)
-    : immediate(immediate), operation(std::move(operation))
+    Arithmetic(std::string operation, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+    : operation(std::move(operation)), t1(t1), t2(t2), t3(t3)
     {
+        assertSame(t1, t2, t3);
+    }
+
+    Arithmetic(std::string operation, llvm::Value* t1, llvm::Value* t2, int immediate)
+    : operation(std::move(operation)), t1(t1), t2(t2), t3(nullptr), immediate(immediate)
+    {
+        assertInt(t1);
+        assertInt(t2);
     }
 
     void print(std::ostream& os) const final
     {
-        os << operation << (immediate ? "i" : "") << 'u' << std::endl;
+        const auto index1 = mapper->getRegister(os, t1);
+        const auto index2 = mapper->getRegister(os, t2);
+
+        if(isFloat(t1))
+        {
+            const auto index3 = mapper->getRegister(os, t3);
+            os << operation << ".s " << reg(index1) << ',' + reg(index2) + ',' << reg(index3) << '\n';
+        }
+        else if(t3 == nullptr)
+        {
+            // TODO: brol als immediate boven 2^16 is
+            os << operation << "iu " << reg(index1) + ',' + reg(index2) + ',' << std::to_string(immediate) << '\n';
+        }
+        else
+        {
+            const auto index3 = mapper->getRegister(os, t3);
+            os << operation << "u " << reg(index1) + ',' + reg(index2) + ',' << reg(index3) << '\n';
+        }
     }
 
     private:
-    bool immediate;
     std::string operation;
+    llvm::Value* t1;
+    llvm::Value* t2;
+    llvm::Value* t3;
+
+    int immediate;
 };
 
-class Multiplication : public Instruction
+class Modulo : public Instruction
 {
     public:
-    explicit Multiplication() = default;
-
-    void print(std::ostream& os) const final
+    Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3 = nullptr) : t1(t1), t2(t2), t3(t3)
     {
-        os << "mulu" << std::endl;
-        os << "mflo" << std::endl;
-    }
-};
-
-class Division : public Instruction
-{
-    public:
-    explicit Division(bool modulo) : modulo(modulo)
-    {
+        assertSame(t1, t2, t3);
     }
 
     void print(std::ostream& os) const final
     {
-        os << "divu" << std::endl;
-        if(modulo) os << "mflo";
-        else os << "mfhi";
+        const auto index1 = mapper->getRegister(os, t1);
+        const auto index2 = mapper->getRegister(os, t2);
+        const auto index3 = mapper->getRegister(os, t3);
+
+        if(isFloat(t1))
+        {
+            os << "div.s" << reg(index1) << ',' << reg(index2) << ',' << reg(index3) << '\n';
+        }
+        else
+        {
+            os << "divu " << reg(index2) << ',' << reg(index3) << '\n';
+            os << "mfhi " << reg(index1) << '\n';
+        }
     }
 
     private:
-    bool modulo;
+    llvm::Value* t1;
+    llvm::Value* t2;
+    llvm::Value* t3;
 };
 
 class Comparison : public Instruction
 {
     public:
-    explicit Comparison(std::string operation, llvm::Value* ) : operation(std::move(operation))
+    explicit Comparison(std::string operation, llvm::Value* lhs, llvm::Value* rhs)
     {
-    }
-
-    explicit Comparison(std::string operation, ) : operation(std::move(operation))
-    {
+        lhs->getType()
     }
 
     void print(std::ostream& os) const final
     {
-        os << operation << 'u' << std::endl;
+        os << output;
     }
 
     private:
-    std::string operation;
+    std::string output;
+    llvm::Value* lhs;
+    llvm::Value* rhs;
 };
 
 class Branch : public Instruction
@@ -200,10 +371,10 @@ class Branch : public Instruction
     std::string label;
 };
 
-class Jump : public Instruction
+class Jal : public Instruction
 {
     public:
-    explicit Jump(std::string label, bool link) : label(std::move(label)), link(link)
+    explicit Jal(std::string label) : label(std::move(label)), link(link)
     {
     }
 
@@ -235,80 +406,65 @@ class Store : public Instruction
 
 class Block
 {
+    friend class Function;
+
     public:
     Block() : mapper(nullptr)
     {
     }
 
-    void append(Instruction* instruction)
+    void append(std::unique_ptr<Instruction>&& instruction)
     {
-        instructions.emplace_back(instruction);
+        instructions.emplace_back(std::move(instruction));
     }
 
     void print(std::ostream& os) const
     {
+        os << label << ":\n";
         for(const auto& instruction : instructions)
         {
             instruction->print(os);
         }
     }
 
-    virtual ~Block()
-    {
-        for(const auto& instruction : instructions)
-        {
-            delete instruction;
-        }
-    }
-
     private:
-    std::vector<Instruction*> instructions;
+    std::string label;
+    std::vector<std::unique_ptr<Instruction>> instructions;
     std::shared_ptr<RegisterMapper> mapper;
 };
 
 class Function
 {
     public:
-    void append(Block* block)
+    Function() : mapper(new RegisterMapper)
     {
-        blocks.emplace_back(block);
     }
 
-    void addToStack(const unsigned int size)
+    void append(std::unique_ptr<Block>&& block)
     {
-        stackSize += size;
+        block->mapper = mapper;
+        blocks.emplace_back(std::move(block));
     }
 
     void print(std::ostream& os) const
     {
-        os << stackSize << std::endl;
         for(const auto& block : blocks)
         {
             block->print(os);
         }
     }
 
-    virtual ~Function()
-    {
-        for(const auto& block : blocks)
-        {
-            delete block;
-        }
-    }
-
     private:
-    std::vector<Block*> blocks;
-    uint stackSize = 0;
-
+    std::vector<std::unique_ptr<Block>> blocks;
     std::shared_ptr<RegisterMapper> mapper;
 };
 
 class Module
 {
     public:
-    void append(Function* function)
+    void append(std::unique_ptr<Function>&& function)
     {
-        functions.emplace_back(function);
+        functions.emplace_back(std::move(function));
     }
 
     void print(std::ostream& os) const
@@ -319,16 +475,8 @@ class Module
         }
     }
 
-    virtual ~Module()
-    {
-        for(const auto& function : functions)
-        {
-            delete function;
-        }
-    }
-
     private:
-    std::vector<Function*> functions;
+    std::vector<std::unique_ptr<Function>> functions;
 };
 
 
