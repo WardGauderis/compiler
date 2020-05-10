@@ -11,7 +11,7 @@
 
 class MIPSVisitor : public llvm::InstVisitor<MIPSVisitor> {
 public:
-	MIPSVisitor(const llvm::Module& module);
+	MIPSVisitor();
 
 	void convertIR(llvm::Module& module);
 
@@ -71,8 +71,6 @@ private:
 	mips::Module module;
 	mips::Function* currentFunction;
 	mips::Block* currentBlock;
-
-	const llvm::DataLayout layout;
 };
 
 #endif //COMPILER_MIPSVISITOR_H

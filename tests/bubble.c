@@ -41,6 +41,8 @@
 //}
 //
 
-void f(int a) {
-
+int f(int a, int b)
+{
+	int c = a && b;
+	return a+c;
 }
