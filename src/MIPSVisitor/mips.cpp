@@ -5,8 +5,8 @@
 //============================================================================
 
 #include "mips.h"
-#include <llvm/IR/Type.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Type.h>
 
 namespace
 {
@@ -190,7 +190,7 @@ Load::Load(llvm::Value* t1, llvm::Value* t2, int offset)
     if(isFloat(t1))
     {
         const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
-        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) +')');
+        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) + ')');
     }
     else
     {
@@ -248,7 +248,7 @@ Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, int i
     output += operation(type + "iu", reg(index1), reg(index2), std::to_string(immediate));
 }
 
-Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3 )
+Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
 {
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
@@ -274,7 +274,7 @@ Comparison::Comparison(const std::string& type, llvm::Value* t1, llvm::Value* t2
     output += operation(type, reg(index1), reg(index2), reg(index3));
 }
 
-Branch::Branch(std::string type, llvm::Value *t1, llvm::Value *t2, std::string label)
+Branch::Branch(std::string type, llvm::Value* t1, llvm::Value* t2, std::string label)
 {
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
@@ -321,6 +321,11 @@ void Block::print(std::ostream& os) const
     }
 }
 
+llvm::BasicBlock* Block::getBlock()
+{
+    return label;
+}
+
 
 void Function::append(Block* block)
 {
@@ -334,6 +339,16 @@ void Function::print(std::ostream& os) const
     {
         block->print(os);
     }
+}
+
+Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
+{
+    const auto pred = [&](const auto& ptr)
+    {
+        return ptr->getBlock() == block;
+    };
+    const auto iter = std::find_if(blocks.begin(), blocks.end(), pred);
+    return (iter == blocks.end()) ? nullptr : iter->get();
 }
 
 

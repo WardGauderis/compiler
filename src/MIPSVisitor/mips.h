@@ -144,8 +144,10 @@ class Block
 
     void print(std::ostream& os) const;
 
+    llvm::BasicBlock* getBlock();
+
     private:
-    std::string label;
+    llvm::BasicBlock* label;
     std::vector<std::unique_ptr<Instruction>> instructions;
     std::shared_ptr<RegisterMapper> mapper;
 };
@@ -160,6 +162,8 @@ class Function
     void append(Block* block);
 
     void print(std::ostream& os) const;
+
+    Block* getBlockByBasicBlock(llvm::BasicBlock* block);
 
     private:
     std::vector<std::unique_ptr<Block>> blocks;
