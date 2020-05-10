@@ -19,6 +19,20 @@ std::string reg(uint num)
     return "$" + std::to_string(num);
 }
 
+void operation_impl(std::ostream& os)
+{
+
+}
+
+template<typename... Args>
+std::string operation(std::ostream& os, const std::string& operation, const Args&... args)
+{
+    os << operation << ' ';
+
+    std::make_index_sequence<sizeof...(Args) - 1>{};
+
+}
+
 bool isFloat(llvm::Value* value)
 {
     const auto type = value->getType();
@@ -77,7 +91,7 @@ void assertFloat(llvm::Value* value)
 class RegisterMapper
 {
     public:
-    RegisterMapper() : emptyRegisters{}
+    RegisterMapper() : emptyRegisters(), stackSize(0)
     {
         emptyRegisters[0].resize(26);
         std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 2);
@@ -89,6 +103,11 @@ class RegisterMapper
     // gets the register for the value, if it is not yet in a register put it in one.
     uint getRegister(std::ostream& os, llvm::Value* id)
     {
+        if(id == nullptr)
+        {
+            throw std::logic_error("register value id cannot be nullptr");
+        }
+
         const auto index = isFloat(id);
         const auto regIter = registerDescriptors[index].find(id);
 
@@ -221,11 +240,11 @@ class Load : public Instruction
             std::string temp;
             if(not label.empty())
             {
-                temp += (label + '+');
+                temp += label;
             }
             if(ivalue != 0)
             {
-                temp += std::to_string(ivalue);
+                temp += ("+" + std::to_string(ivalue));
             }
             if(t2 != nullptr)
             {
@@ -285,7 +304,8 @@ class Arithmetic : public Instruction
         else if(t3 == nullptr)
         {
             // TODO: brol als immediate boven 2^16 is
-            os << operation << "iu " << reg(index1) + ',' + reg(index2) + ',' << std::to_string(immediate) << '\n';
+            os << operation << "iu " << reg(index1) + ',' + reg(index2) + ','
+               << std::to_string(immediate) << '\n';
         }
         else
         {
@@ -334,40 +354,51 @@ class Modulo : public Instruction
     llvm::Value* t3;
 };
 
+// beq, bgtz, blez, bne, ...
 class Comparison : public Instruction
 {
     public:
-    explicit Comparison(std::string operation, llvm::Value* lhs, llvm::Value* rhs)
+    explicit Comparison(std::string operation, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+    : operation(std::move(operation)), t1(t1), t2(t2), t3(t3)
     {
-        lhs->getType()
     }
 
     void print(std::ostream& os) const final
     {
-        os << output;
+        const auto index1 = mapper->getRegister(os, t1);
+        const auto index2 = mapper->getRegister(os, t2);
+        const auto index3 = mapper->getRegister(os, t3);
+
+        os << operation << ' ' << reg(index1) << ',' << reg(index2) << ',' << reg(index3) << '\n';
     }
 
     private:
-    std::string output;
-    llvm::Value* lhs;
-    llvm::Value* rhs;
+    std::string operation;
+    llvm::Value* t1;
+    llvm::Value* t2;
+    llvm::Value* t3;
 };
 
 class Branch : public Instruction
 {
     public:
-    explicit Branch(std::string operation, std::string label)
-    : operation(std::move(operation)), label(std::move(label))
+    explicit Branch(std::string operation, llvm::Value* t1, llvm::Value* t2, std::string label)
+    : operation(std::move(operation)), t1(t1), t2(t2), label(std::move(label))
     {
     }
 
-    void print(std::ostream& os)
+    void print(std::ostream& os) const final
     {
-        os << /* registers */ label << '\n';
+        const auto index1 = mapper->getRegister(os, t1);
+        const auto index2 = mapper->getRegister(os, t2);
+
+        os << operation << ' ' << reg(index1) << ',' << reg(index2) << ',' << label << '\n';
     }
 
     private:
     std::string operation;
+    llvm::Value* t1;
+    llvm::Value* t2;
     std::string label;
 };
 
@@ -413,9 +444,9 @@ class Block
     {
     }
 
-    void append(std::unique_ptr<Instruction>&& instruction)
+    void append(Instruction* instruction)
     {
-        instructions.emplace_back(std::move(instruction));
+        instructions.emplace_back(instruction);
     }
 
     void print(std::ostream& os) const
@@ -440,10 +471,10 @@ class Function
     {
     }
 
-    void append(std::unique_ptr<Block>&& block)
+    void append(Block* block)
     {
         block->mapper = mapper;
-        blocks.emplace_back(std::move(block));
+        blocks.emplace_back(block);
     }
 
     void print(std::ostream& os) const
@@ -462,9 +493,9 @@ class Function
 class Module
 {
     public:
-    void append(std::unique_ptr<Function>&& function)
+    void append(Function* function)
     {
-        functions.emplace_back(std::move(function));
+        functions.emplace_back(function);
     }
 
     void print(std::ostream& os) const
