@@ -6,6 +6,7 @@
 
 #include "mips.h"
 #include <llvm/IR/Type.h>
+#include <llvm/IR/DerivedTypes.h>
 
 namespace
 {

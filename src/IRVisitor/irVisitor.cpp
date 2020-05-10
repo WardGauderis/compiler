@@ -64,7 +64,13 @@ void IRVisitor::visitLiteral(const Ast::Literal& literal)
 
 void IRVisitor::visitStringLiteral(const Ast::StringLiteral& stringLiteral)
 {
-	ret = builder.CreateGlobalString(stringLiteral.value());
+	Constant* StrConstant = ConstantDataArray::getString(context, stringLiteral.value());
+	auto* GV = new GlobalVariable(module, StrConstant->getType(), true,
+			GlobalValue::PrivateLinkage, StrConstant, "",
+			nullptr, GlobalVariable::NotThreadLocal, 0);
+	GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+	GV->setAlignment(Align(1));
+	ret = GV;
 }
 
 void IRVisitor::visitComment(const Ast::Comment& comment)
@@ -300,6 +306,7 @@ void IRVisitor::visitDeclaration(const Ast::VariableDeclaration& declaration)
 		allocaInst = var;
 		if (declaration.expr) {
 			ret = LRValue(declaration.expr, true);
+			ret = cast(ret, type);
 			var->setInitializer(llvm::cast<Constant>(ret));
 		}
 	}

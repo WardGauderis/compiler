@@ -28,7 +28,7 @@ void MIPSVisitor::print(const std::filesystem::path& output)
 
 void MIPSVisitor::visitModule(llvm::Module& M)
 {
-
+	//TODO globals
 }
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
@@ -55,21 +55,17 @@ void MIPSVisitor::visitFCmpInst(FCmpInst& I)
 
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
-	//TODO sign extend?
-	currentBlock->append(new l(layout.getTypeAllocSize(I.getType())==1));
+	std::cout << I.getValueID() << std::endl;
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 {
-	currentFunction->addToStack(layout.getTypeAllocSize(I.getAllocatedType()));
+	InstVisitor::visitAllocaInst(I);
 }
 
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
-	if (auto i = dyn_cast<Constant>(I.getValueOperand())) {
-		currentBlock->append(new li());
-	}
-	currentBlock->append(new s(layout.getTypeAllocSize(I.getValueOperand()->getType())==1));
+	InstVisitor::visitStoreInst(I);
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
@@ -139,14 +135,7 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	//TODO void
-	//TODO ret/syscall
-	if (auto i = dyn_cast<Constant>(I.getReturnValue())) {
-		currentBlock->append(new li());
-	}
-	else {
-		currentBlock->append(new move());
-	}
+
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
@@ -156,14 +145,7 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 
 void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 {
-	bool immediate = isa<Constant>(I.getOperand(0)) || isa<Constant>(I.getOperand(1));
-	switch (I.getOpcode()) {
-	case llvm::Instruction::Add:
-		currentBlock->append(new bin(immediate, "add"));
-		break;
-	default:
-		InstVisitor::visitBinaryOperator(I);
-	}
+
 }
 
 void MIPSVisitor::visitInstruction(llvm::Instruction& I)

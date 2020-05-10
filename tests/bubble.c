@@ -41,13 +41,6 @@
 //}
 //
 
-int main(){
-	char x = 5;
-	int y = 7;
-	int z = x+y;
-	return z;
-}
+void f(int a) {
 
-//int f(int x){
-//	return x;
-//}
+}
