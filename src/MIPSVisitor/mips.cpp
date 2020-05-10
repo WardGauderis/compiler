@@ -39,7 +39,7 @@ std::string reg(uint num)
 template <typename... Args>
 std::string operation(const std::string& operation, const Args&... args)
 {
-    if constexpr(not std::is_same_v<Args..., std::string>)
+    if constexpr(not std::conjunction_v<std::is_same<Args, std::string>...>)
     {
         throw std::logic_error("types must all be string");
     }
@@ -105,9 +105,7 @@ void assertFloat(llvm::Value* value)
     }
 }
 
-
-// gets the register for the value, if it is not yet in a register put it in one.
-uint RegisterMapper::getRegister(std::ostream& os, llvm::Value* id)
+uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
     if(id == nullptr)
     {
@@ -124,8 +122,11 @@ uint RegisterMapper::getRegister(std::ostream& os, llvm::Value* id)
         // if no register is available: spill something else into memory
         if(emptyRegisters[index].empty())
         {
-            // od the spillies ye
-            return -1;
+            storeValue(output, id);
+
+            const auto res = nextSpill[index];
+            nextSpill[index] = (nextSpill[index] + 1) % registerSize[index];
+            return res;
         }
         else
         {
@@ -135,8 +136,9 @@ uint RegisterMapper::getRegister(std::ostream& os, llvm::Value* id)
             // if address is found: load word from the memory and remove the address entry
             if(addrIter != addressDescriptors[index].end())
             {
-                os << "lw " << reg(res) << addrIter->second << '\n';
+                output += operation("lw", reg(res), std::to_string(addrIter->second) + "($sp)");
                 addressDescriptors[index].erase(addrIter);
+                registerDescriptors[index].emplace(id, res);
             }
 
             return res;
@@ -148,141 +150,160 @@ uint RegisterMapper::getRegister(std::ostream& os, llvm::Value* id)
     }
 }
 
-void RegisterMapper::popValue(llvm::Value* id)
+void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 {
+    if(id == nullptr)
+    {
+        throw std::logic_error("register value id cannot be nullptr");
+    }
+
     const auto index = isFloat(id);
     const auto iter = registerDescriptors[index].find(id);
 
     if(iter != registerDescriptors[index].end())
     {
+        output += operation("sw", reg(iter->second), std::to_string(stackSize) + "($sp)");
+        stackSize += 4;
+
         emptyRegisters[index].push_back(iter->second);
-        registerDescriptors[index].erase(iter);
-    }
-    addressDescriptors[index].erase(id);
-}
-
-
-void Move::print(std::ostream& os) const
-{
-    const auto index1 = mapper->getRegister(os, t1);
-    const auto index2 = mapper->getRegister(os, t2);
-
-    os << (isFloat(t1) ? "mov.s " : "move ");
-    os << reg(index1) << ',' << reg(index2) << '\n';
-}
-
-
-void Load::print(std::ostream& os) const 
-{
-    const auto index1 = mapper->getRegister(os, t1);
-    if(immediate)
-    {
-        if(isFloat(t1))
-        {
-            // TODO: load float
-        }
-        else
-        {
-            os << "lui " << reg(index1) << (ivalue & 0xffff0000u) << '\n'; // fuck the warnings even more
-            os << "ori " << reg(index1) << (ivalue & 0x0000ffffu) << '\n';
-        }
+        registerDescriptors[index].emplace(id, iter->second);
     }
     else
     {
-        std::string temp;
-        if(not label.empty())
-        {
-            temp += label;
-        }
-        if(ivalue != 0)
-        {
-            temp += ("+" + std::to_string(ivalue));
-        }
-        if(t2 != nullptr)
-        {
-            const auto index2 = mapper->getRegister(os, t2);
-            temp += ('(' + reg(index2) + ')');
-        }
-
-        if(isFloat(t1))
-        {
-            // TODO: more load floats
-        }
-        else
-        {
-            os << (t1->getType()->getIntegerBitWidth() == 32 ? "lw " : "lb ");
-            os << temp << '\n';
-        }
+        throw std::logic_error("cannot store unused register");
     }
 }
 
-
-void Arithmetic::print(std::ostream& os) const 
+Move::Move(llvm::Value* t1, llvm::Value* t2)
 {
-    const auto index1 = mapper->getRegister(os, t1);
-    const auto index2 = mapper->getRegister(os, t2);
+    assertSame(t1, t2);
+
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    output += operation(isFloat(t1) ? "mov.s" : "move", reg(index1), reg(index2));
+}
+
+Load::Load(llvm::Value* t1, llvm::Value* t2, int offset)
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    if(isFloat(t1))
+    {
+        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
+        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) +')');
+    }
+    else
+    {
+        // TODO
+    }
+}
+
+Load::Load(llvm::Value* t1, int value)
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    output += operation("lui", reg(index1), std::to_string(value & 0xffff0000u));
+    output += operation("ori", reg(index1), std::to_string(value & 0x0000ffffu));
+}
+
+Load::Load(llvm::Value* t1, float value)
+{
+    // TODO
+}
+
+Load::Load(llvm::Value* t1, std::string label)
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    if(isFloat(t1))
+    {
+        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
+        output += operation(isWord ? "lw" : "lb", reg(index1), label);
+    }
+    else
+    {
+        // TODO
+    }
+}
+
+Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    const auto index3 = mapper->loadValue(output, t3);
 
     if(isFloat(t1))
     {
-        const auto index3 = mapper->getRegister(os, t3);
-        os << operation << ".s " << reg(index1) << ',' + reg(index2) + ',' << reg(index3) << '\n';
-    }
-    else if(t3 == nullptr)
-    {
-        // TODO: brol als immediate boven 2^16 is
-        os << operation << "iu " << reg(index1) + ',' + reg(index2) + ',' << std::to_string(immediate) << '\n';
+        output += operation(type + ".s", reg(index1), reg(index2), reg(index3));
     }
     else
     {
-        const auto index3 = mapper->getRegister(os, t3);
-        os << operation << "u " << reg(index1) + ',' + reg(index2) + ',' << reg(index3) << '\n';
+        output += operation(type + "u", reg(index1), reg(index2), reg(index3));
     }
 }
 
-void Modulo::print(std::ostream& os) const 
+Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, int immediate)
 {
-    const auto index1 = mapper->getRegister(os, t1);
-    const auto index2 = mapper->getRegister(os, t2);
-    const auto index3 = mapper->getRegister(os, t3);
+    // TODO: brol als immediate boven 2^16 is
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    output += operation(type + "iu", reg(index1), reg(index2), std::to_string(immediate));
+}
+
+Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3 )
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    const auto index3 = mapper->loadValue(output, t3);
 
     if(isFloat(t1))
     {
-        os << "div.s" << reg(index1) << ',' << reg(index2) << ',' << reg(index3) << '\n';
+        output += operation("div.s", reg(index1), reg(index2), reg(index3));
     }
     else
     {
-        os << "divu " << reg(index2) << ',' << reg(index3) << '\n';
-        os << "mfhi " << reg(index1) << '\n';
+        output += operation("divu", reg(index2), reg(index3));
+        output += operation("mfhi", reg(index1));
     }
 }
 
-
-void Comparison::print(std::ostream& os) const 
+Comparison::Comparison(const std::string& type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
 {
-    const auto index1 = mapper->getRegister(os, t1);
-    const auto index2 = mapper->getRegister(os, t2);
-    const auto index3 = mapper->getRegister(os, t3);
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    const auto index3 = mapper->loadValue(output, t3);
 
-    os << operation << ' ' << reg(index1) << ',' << reg(index2) << ',' << reg(index3) << '\n';
+    output += operation(type, reg(index1), reg(index2), reg(index3));
 }
 
-void Branch::print(std::ostream& os) const 
+Branch::Branch(std::string type, llvm::Value *t1, llvm::Value *t2, std::string label)
 {
-    const auto index1 = mapper->getRegister(os, t1);
-    const auto index2 = mapper->getRegister(os, t2);
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
 
-    os << operation << ' ' << reg(index1) << ',' << reg(index2) << ',' << label << '\n';
+    output += operation(type, reg(index1), reg(index2), label);
 }
 
-
-void Jal::print(std::ostream& os)
+Call::Call(std::string label)
 {
-    os << (link ? "jal" : "j") << /* registers */ label << '\n';
+    output += operation("jal", label);
 }
 
-void Store::print(std::ostream& os) const 
+Jump::Jump(std::string label)
 {
-    os << 's' << (isCharacter ? 'b' : 'w') << std::endl;
+    output += operation("j", label);
+}
+
+Store::Store(llvm::Value* t1, llvm::Value* t2, uint offset)
+{
+    const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    output += operation(isWord ? "sw" : "sb", reg(index1), std::to_string(offset) + '(' + reg(index2) + ')');
+}
+
+Store::Store(llvm::Value* t1, std::string label, uint offset)
+{
+    const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
+    const auto index1 = mapper->loadValue(output, t1);
+    output += operation(isWord ? "sw" : "sb", reg(index1), label + '+' + std::to_string(offset));
 }
 
 void Block::append(Instruction* instruction)
