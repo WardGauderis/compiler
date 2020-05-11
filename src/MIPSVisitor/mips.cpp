@@ -5,6 +5,7 @@
 //============================================================================
 
 #include "mips.h"
+#include "../errors.h"
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
 
@@ -15,40 +16,26 @@ std::string reg(uint num)
     return "$" + std::to_string(num);
 }
 
-template <typename... Args>
-std::string operation(const std::string& operation, const Args&... args)
+template <typename Ptr>
+std::string label(Ptr* ptr)
 {
-    if constexpr(not std::is_same_v<Args..., std::string>)
-    {
-        throw std::logic_error("types must all be string");
-    }
-
-    std::string res = (operation + ' ');
-    res += ((args + ','), ...);
-    res.back() = '\n';
-    return res;
-}
-} // namespace
-
-namespace mips
-{
-std::string reg(uint num)
-{
-    return "$" + std::to_string(num);
+    return std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
 }
 
 template <typename... Args>
-std::string operation(const std::string& operation, const Args&... args)
+std::string operation(std::string&& operation, Args&&... args)
 {
     if constexpr(not std::conjunction_v<std::is_same<Args, std::string>...>)
     {
-        throw std::logic_error("types must all be string");
+        throw InternalError("types must all be string");
     }
-
-    std::string res = (operation + ' ');
-    res += ((args + ','), ...);
-    res.back() = '\n';
-    return res;
+    else
+    {
+        std::string res = (operation + ' ');
+        res += ((args + ','), ...);
+        res.back() = '\n';
+        return res;
+    }
 }
 
 bool isFloat(llvm::Value* value)
@@ -69,7 +56,7 @@ bool isFloat(llvm::Value* value)
     }
     else
     {
-        throw std::logic_error("unsupported type");
+        throw InternalError("unsupported type for mips");
     }
 }
 
@@ -78,7 +65,7 @@ void assertSame(llvm::Value* val1, llvm::Value* val2)
 {
     if(isFloat(val1) != isFloat(val2))
     {
-        throw std::logic_error("types do not have same type class");
+        throw InternalError("types do not have same type class");
     }
 }
 
@@ -86,7 +73,7 @@ void assertSame(llvm::Value* val1, llvm::Value* val2, llvm::Value* t3)
 {
     if(isFloat(val1) != isFloat(val2) or isFloat(val1) != isFloat(t3))
     {
-        throw std::logic_error("types do not have same type class");
+        throw InternalError("types do not have same type class");
     }
 }
 
@@ -94,7 +81,7 @@ void assertInt(llvm::Value* value)
 {
     if(isFloat(value))
     {
-        throw std::logic_error("type must be integer");
+        throw InternalError("type must be integer");
     }
 }
 
@@ -102,17 +89,17 @@ void assertFloat(llvm::Value* value)
 {
     if(not isFloat(value))
     {
-        throw std::logic_error("type must be float");
+        throw InternalError("type must be float");
     }
 }
+} // namespace
+
+namespace mips
+{
+
 
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
-    if(id == nullptr)
-    {
-        throw std::logic_error("register value id cannot be nullptr");
-    }
-
     const auto index = isFloat(id);
     const auto regIter = registerDescriptors[index].find(id);
 
@@ -141,7 +128,6 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
                 addressDescriptors[index].erase(addrIter);
                 registerDescriptors[index].emplace(id, res);
             }
-
             return res;
         }
     }
@@ -153,11 +139,6 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 {
-    if(id == nullptr)
-    {
-        throw std::logic_error("register value id cannot be nullptr");
-    }
-
     const auto index = isFloat(id);
     const auto iter = registerDescriptors[index].find(id);
 
@@ -171,8 +152,23 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
     }
     else
     {
-        throw std::logic_error("cannot store unused register");
+        throw InternalError("cannot store unused register");
     }
+}
+
+uint RegisterMapper::getSize() const noexcept
+{
+    return stackSize;
+}
+
+void Instruction::print(std::ostream& os)
+{
+    os << output;
+}
+
+void Instruction::setMapper(std::shared_ptr<RegisterMapper> imapper)
+{
+    mapper = std::move(imapper);
 }
 
 Move::Move(llvm::Value* t1, llvm::Value* t2)
@@ -208,19 +204,20 @@ Load::Load(llvm::Value* t1, int value)
 Load::Load(llvm::Value* t1, float value)
 {
     // TODO
+    // mtc1
 }
 
-Load::Load(llvm::Value* t1, std::string label)
+Load::Load(llvm::Value* t1, llvm::GlobalVariable* variable)
 {
     const auto index1 = mapper->loadValue(output, t1);
     if(isFloat(t1))
     {
-        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
-        output += operation(isWord ? "lw" : "lb", reg(index1), label);
+        output += operation("l.s", reg(index1), label(variable));
     }
     else
     {
-        // TODO
+        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
+        output += operation(isWord ? "lw" : "lb", reg(index1), label(variable));
     }
 }
 
@@ -232,11 +229,11 @@ Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm:
 
     if(isFloat(t1))
     {
-        output += operation(type + ".s", reg(index1), reg(index2), reg(index3));
+        output += operation(std::move(type) + ".s", reg(index1), reg(index2), reg(index3));
     }
     else
     {
-        output += operation(type + "u", reg(index1), reg(index2), reg(index3));
+        output += operation(std::move(type) + "u", reg(index1), reg(index2), reg(index3));
     }
 }
 
@@ -265,31 +262,41 @@ Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
     }
 }
 
-Comparison::Comparison(const std::string& type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+Comparison::Comparison(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
 {
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
     const auto index3 = mapper->loadValue(output, t3);
 
-    output += operation(type, reg(index1), reg(index2), reg(index3));
+    output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
 }
 
-Branch::Branch(std::string type, llvm::Value* t1, llvm::Value* t2, std::string label)
+NotEquals::NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+{
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
+    const auto index3 = mapper->loadValue(output, t3);
+
+    output += operation("c.eq.s", reg(index1), reg(index2), reg(index3));
+    output += operation("cmp", reg(index1), reg(index1), reg(0));
+}
+
+Branch::Branch(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::BasicBlock* block)
 {
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
 
-    output += operation(type, reg(index1), reg(index2), label);
+    output += operation(std::move(type), reg(index1), reg(index2), label(block));
 }
 
-Call::Call(std::string label)
+Call::Call(llvm::Function* function)
 {
-    output += operation("jal", label);
+    output += operation("jal", label(function));
 }
 
-Jump::Jump(std::string label)
+Jump::Jump(llvm::BasicBlock* block)
 {
-    output += operation("j", label);
+    output += operation("j", label(block));
 }
 
 Store::Store(llvm::Value* t1, llvm::Value* t2, uint offset)
@@ -304,17 +311,24 @@ Store::Store(llvm::Value* t1, std::string label, uint offset)
 {
     const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
     const auto index1 = mapper->loadValue(output, t1);
-    output += operation(isWord ? "sw" : "sb", reg(index1), label + '+' + std::to_string(offset));
+    output += operation(isWord ? "sw" : "sb", reg(index1), std::move(label) + '+' + std::to_string(offset));
 }
 
 void Block::append(Instruction* instruction)
 {
+    instruction->setMapper(mapper);
     instructions.emplace_back(instruction);
+}
+
+void Block::appendBeforeLast(Instruction* instruction)
+{
+    instruction->setMapper(mapper);
+    instructions.emplace(instructions.end() - 2, instruction);
 }
 
 void Block::print(std::ostream& os) const
 {
-    os << label << ":\n";
+    os << label(block) << ":\n";
     for(const auto& instruction : instructions)
     {
         instruction->print(os);
@@ -323,30 +337,39 @@ void Block::print(std::ostream& os) const
 
 llvm::BasicBlock* Block::getBlock()
 {
-    return label;
+    return block;
+}
+
+void Block::setMapper(std::shared_ptr<RegisterMapper> imapper)
+{
+    for(auto& instruction : instructions)
+    {
+        instruction->setMapper(imapper);
+    }
+    mapper = std::move(imapper);
 }
 
 
 void Function::append(Block* block)
 {
-    block->mapper = mapper;
+    block->setMapper(mapper);
     blocks.emplace_back(block);
 }
 
 void Function::print(std::ostream& os) const
 {
+    os << label(function) << ":\n";
+    os << operation("addi", "$sp", "$sp", std::to_string(-mapper->getSize()));
     for(const auto& block : blocks)
     {
         block->print(os);
     }
+    os << operation("addi", "$sp", "$sp", std::to_string(mapper->getSize()));
 }
 
 Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
 {
-    const auto pred = [&](const auto& ptr)
-    {
-        return ptr->getBlock() == block;
-    };
+    const auto pred = [&](const auto& ptr) { return ptr->getBlock() == block; };
     const auto iter = std::find_if(blocks.begin(), blocks.end(), pred);
     return (iter == blocks.end()) ? nullptr : iter->get();
 }
