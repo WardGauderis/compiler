@@ -7,7 +7,6 @@
 #include "mips.h"
 #include "../errors.h"
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
 
 namespace
@@ -101,13 +100,19 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
     {
         const auto immediate = int(constant->getSExtValue());
-        output += operation("lui", reg(tempReg), std::to_string(immediate & 0xffff0000u));
-        output += operation("ori", reg(tempReg), std::to_string(immediate & 0x0000ffffu));
-        return (tempReg) ? tempReg-- : tempReg++;
+        const auto res = getTemp();
+
+        output += operation("lui", reg(res), std::to_string(immediate & 0xffff0000u));
+        output += operation("ori", reg(res), std::to_string(immediate & 0x0000ffffu));
+        return res;
     }
     else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
     {
-        // TODO
+        module->addFloat(constant);
+        const auto res = getTemp();
+
+        output += operation("l.s", reg(res), label(id));
+        return res;
     }
 
     const auto regIter = registerDescriptors[index].find(id);
@@ -142,8 +147,13 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     }
     else
     {
-       return regIter->second + 32 * index;
+        return regIter->second + 32 * index;
     }
+}
+
+uint RegisterMapper::getTemp()
+{
+    return (tempReg) ? tempReg-- : tempReg++;
 }
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
@@ -187,25 +197,36 @@ void Instruction::print(std::ostream& os)
     os << output;
 }
 
-void Instruction::setMapper(std::shared_ptr<RegisterMapper> imapper)
+void Instruction::setBlock(Block* b)
 {
-    mapper = std::move(imapper);
+    block = b;
 }
 
-Move::Move(llvm::Value* t1, llvm::Value* t2)
+RegisterMapper* Instruction::mapper()
+{
+    return block->function->getMapper();
+}
+
+Module* Instruction::module()
+{
+    return block->function->getModule();
+}
+
+Move::Move(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     assertSame(t1, t2);
 
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
+
     output += operation(isFloat(t1) ? "mov.s" : "move", reg(index1), reg(index2));
 }
 
-Convert::Convert(llvm::Value* t1, llvm::Value* t2)
+Convert::Convert(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     // converts t2 into t1
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
 
     if(isFloat(t2))
     {
@@ -225,28 +246,32 @@ Convert::Convert(llvm::Value* t1, llvm::Value* t2)
     }
 }
 
-Load::Load(llvm::Value* t1, llvm::Value* t2)
+Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
+    const auto index1 = mapper()->loadValue(output, t1);
 
     if(llvm::isa<llvm::Constant>(t2))
     {
     }
     else if(isFloat(t1))
     {
-        // TODO
+        const auto index2 = mapper()->loadValue(output, t2);
+
+        output += operation("lw", reg(mapper()->getTemp()), reg(index2));
+        output += operation("mtc1", reg(mapper()->getTemp()), reg(index1));
     }
     else
     {
-        const auto index2 = mapper->loadValue(output, t2);
+        const auto index2 = mapper()->loadValue(output, t2);
         const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
+
         output += operation(isWord ? "lw" : "lb", reg(index1), reg(index2));
     }
 }
 
-Load::Load(llvm::Value* t1, llvm::GlobalVariable* variable)
+Load::Load(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
+    const auto index1 = mapper()->loadValue(output, t1);
     if(isFloat(t1))
     {
         output += operation("l.s", reg(index1), label(variable));
@@ -258,77 +283,79 @@ Load::Load(llvm::Value* t1, llvm::GlobalVariable* variable)
     }
 }
 
-Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+Arithmetic::Arithmetic(Block* block, std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
-    const auto index3 = mapper->loadValue(output, t3);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
+    const auto index3 = mapper()->loadValue(output, t3);
 
     output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
 }
 
-Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+Modulo::Modulo(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
-    const auto index3 = mapper->loadValue(output, t3);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
+    const auto index3 = mapper()->loadValue(output, t3);
 
     output += operation("divu", reg(index2), reg(index3));
     output += operation("mfhi", reg(index1));
 }
 
-NotEquals::NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+NotEquals::NotEquals(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
-    const auto index3 = mapper->loadValue(output, t3);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
+    const auto index3 = mapper()->loadValue(output, t3);
 
     output += operation("c.eq.s", reg(index1), reg(index2), reg(index3));
     output += operation("cmp", reg(index1), reg(index1), reg(0));
 }
 
-Branch::Branch(llvm::Value* t1, llvm::BasicBlock* block)
+Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZero) : Instruction(block)
 {
-    const auto index1 = mapper->loadValue(output, t1);
+    const auto index1 = mapper()->loadValue(output, t1);
 
-    output += operation("bnez", reg(index1), label(block));
+    output += operation(eqZero ? "beqz" : "bnez", reg(index1), label(target));
 }
 
-Call::Call(llvm::Function* function)
+Call::Call(Block* block, llvm::Function* function) : Instruction(block)
 {
-    mapper->storeRegisters(output);
+    mapper()->storeRegisters(output);
     output += operation("jal", label(function));
 }
 
-Jump::Jump(llvm::BasicBlock* block)
+Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
 {
-    output += operation("j", label(block));
+    output += operation("j", label(target));
 }
 
-Store::Store(llvm::Value* t1, llvm::Value* t2)
+Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
+    const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
+
     output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
 }
 
-Store::Store(llvm::Value* t1, llvm::GlobalVariable* variable)
+Store::Store(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : Instruction(block)
 {
     const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
-    const auto index1 = mapper->loadValue(output, t1);
+    const auto index1 = mapper()->loadValue(output, t1);
+
     output += operation(isWord ? "sw" : "sb", reg(index1), label(variable));
 }
 
 void Block::append(Instruction* instruction)
 {
-    instruction->setMapper(mapper);
+    instruction->setBlock(this);
     instructions.emplace_back(instruction);
 }
 
 void Block::appendBeforeLast(Instruction* instruction)
 {
-    instruction->setMapper(mapper);
+    instruction->setBlock(this);
     instructions.emplace(instructions.end() - 2, instruction);
 }
 
@@ -346,31 +373,42 @@ llvm::BasicBlock* Block::getBlock()
     return block;
 }
 
-void Block::setMapper(std::shared_ptr<RegisterMapper> imapper)
+void Block::setFunction(Function* func)
 {
-    for(auto& instruction : instructions)
-    {
-        instruction->setMapper(imapper);
-    }
-    mapper = std::move(imapper);
+    function = func;
 }
 
 
 void Function::append(Block* block)
 {
-    block->setMapper(mapper);
+    block->setFunction(this);
     blocks.emplace_back(block);
 }
 
 void Function::print(std::ostream& os) const
 {
     os << label(function) << ":\n";
-    os << operation("addi", "$sp", "$sp", std::to_string(-mapper->getSize()));
+    os << operation("addi", "$sp", "$sp", std::to_string(-mapper.getSize()));
     for(const auto& block : blocks)
     {
         block->print(os);
     }
-    os << operation("addi", "$sp", "$sp", std::to_string(mapper->getSize()));
+    os << operation("addi", "$sp", "$sp", std::to_string(mapper.getSize()));
+}
+
+void Function::setModule(Module* mod)
+{
+    module = mod;
+}
+
+RegisterMapper* Function::getMapper()
+{
+    return &mapper;
+}
+
+Module* Function::getModule()
+{
+    return module;
 }
 
 Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
@@ -380,7 +418,6 @@ Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
     return (iter == blocks.end()) ? nullptr : iter->get();
 }
 
-
 void Module::append(Function* function)
 {
     functions.emplace_back(function);
@@ -389,6 +426,14 @@ void Module::append(Function* function)
 void Module::print(std::ostream& os) const
 {
     os << ".data\n";
+    for(auto variable : floats)
+    {
+        os << label(variable) << ": .float " << variable->getValueAPF().convertToFloat() << '\n';
+    }
+    for(auto variable : globals)
+    {
+        // TODO:
+    }
 
     os << ".text\n";
     for(const auto& function : functions)
@@ -399,6 +444,12 @@ void Module::print(std::ostream& os) const
 
 void Module::addGlobal(llvm::GlobalVariable* variable)
 {
+    globals.emplace(variable);
+}
+
+void Module::addFloat(llvm::ConstantFP* variable)
+{
+    floats.emplace(variable);
 }
 
 

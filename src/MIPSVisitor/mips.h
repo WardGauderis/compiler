@@ -7,20 +7,27 @@
 #pragma once
 
 #include <iostream>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/Value.h>
+#include <map>
 #include <numeric>
+#include <queue>
+#include <set>
 #include <string>
 #include <vector>
-#include <map>
-#include <queue>
 
 namespace mips
 {
 
+class Block;
+class Function;
+class Module;
+
 class RegisterMapper
 {
     public:
-    RegisterMapper() : emptyRegisters(), registerSize{25, 31}, nextSpill{0,0}
+    explicit RegisterMapper(Module* module)
+    : emptyRegisters(), module(module), registerSize{ 25, 31 }, nextSpill{ 0, 0 }
     {
         emptyRegisters[0].resize(26);
         std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 4);
@@ -31,6 +38,8 @@ class RegisterMapper
 
     uint loadValue(std::string& output, llvm::Value* id);
 
+    uint getTemp();
+
     void storeValue(std::string& output, llvm::Value* id);
 
     void storeRegisters(std::string& output);
@@ -39,6 +48,7 @@ class RegisterMapper
 
     private:
     std::array<std::vector<uint>, 2> emptyRegisters;
+    Module* module;
 
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
@@ -53,80 +63,87 @@ class RegisterMapper
 class Instruction
 {
     public:
-    Instruction() = default;
+    explicit Instruction(Block* block) : block(block)
+    {
+    }
 
     void print(std::ostream& os);
 
-    void setMapper(std::shared_ptr<RegisterMapper> imapper);
+    void setBlock(Block* b);
+
+    RegisterMapper* mapper();
+    Module* module();
 
     protected:
-    std::shared_ptr<RegisterMapper> mapper = nullptr;
+    Block* block;
     std::string output;
 };
 
 // move
 struct Move : public Instruction
 {
-    Move(llvm::Value* t1, llvm::Value* t2);
+    Move(Block* block, llvm::Value* t1, llvm::Value* t2);
 };
 
 struct Convert : public Instruction
 {
-    Convert(llvm::Value* t1, llvm::Value* t2);
+    Convert(Block* block, llvm::Value* t1, llvm::Value* t2);
 };
 
 // lw, li, lb, l.s
 struct Load : public Instruction
 {
-    Load(llvm::Value* t1, llvm::Value* t2);
-    Load(llvm::Value* t1, llvm::GlobalVariable* variable);
+    Load(Block* block, llvm::Value* t1, llvm::Value* t2);
+    Load(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
 // add, sub, mul
 struct Arithmetic : public Instruction
 {
-    Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
+    Arithmetic(Block* block, std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
 };
 
 // modulo
 struct Modulo : public Instruction
 {
-    Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
+    Modulo(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
 };
 
 struct NotEquals : public Instruction
 {
-    NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
+    NotEquals(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
 };
 
 struct Branch : public Instruction
 {
-    explicit Branch(llvm::Value* t1, llvm::BasicBlock* block);
+    explicit Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZero);
 };
 
 // jal
 struct Call : public Instruction
 {
-    explicit Call(llvm::Function* function);
+    explicit Call(Block* block, llvm::Function* function);
 };
 
 // j
 struct Jump : public Instruction
 {
-    explicit Jump(llvm::BasicBlock* block);
+    explicit Jump(Block* block, llvm::BasicBlock* target);
 };
 
 // sw, sb
 struct Store : public Instruction
 {
-    explicit Store(llvm::Value* t1, llvm::Value* t2);
-    explicit Store(llvm::Value* t1, llvm::GlobalVariable* variable);
+    explicit Store(Block* block, llvm::Value* t1, llvm::Value* t2);
+    explicit Store(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
 class Block
 {
+    friend class Instruction;
+
     public:
-    explicit Block(llvm::BasicBlock* block) : block(block), mapper(nullptr)
+    explicit Block(Function* function, llvm::BasicBlock* block) : block(block), function(function)
     {
     }
 
@@ -138,18 +155,20 @@ class Block
 
     llvm::BasicBlock* getBlock();
 
-    void setMapper(std::shared_ptr<RegisterMapper> imapper);
+    void setFunction(Function* func);
 
     private:
     llvm::BasicBlock* block;
     std::vector<std::unique_ptr<Instruction>> instructions;
-    std::shared_ptr<RegisterMapper> mapper;
+    Function* function;
 };
 
 class Function
 {
+    friend class Block;
+
     public:
-    explicit Function(llvm::Function* function) : function(function), mapper(new RegisterMapper)
+    explicit Function(Module* module, llvm::Function* function) : function(function), mapper(module), module(module)
     {
     }
 
@@ -157,12 +176,20 @@ class Function
 
     void print(std::ostream& os) const;
 
+    void setModule(Module* mod);
+
+    RegisterMapper* getMapper();
+
+    Module* getModule();
+
     Block* getBlockByBasicBlock(llvm::BasicBlock* block);
 
     private:
     llvm::Function* function;
     std::vector<std::unique_ptr<Block>> blocks;
-    std::shared_ptr<RegisterMapper> mapper;
+
+    RegisterMapper mapper;
+    Module* module;
 };
 
 class Module
@@ -174,9 +201,12 @@ class Module
 
     void addGlobal(llvm::GlobalVariable* variable);
 
+    void addFloat(llvm::ConstantFP* variable);
+
     private:
     std::vector<std::unique_ptr<Function>> functions;
-    std::vector<llvm::GlobalVariable*> variables;
+    std::set<llvm::GlobalVariable*> globals;
+    std::set<llvm::ConstantFP*> floats;
 };
 
 
