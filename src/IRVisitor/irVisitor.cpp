@@ -10,6 +10,9 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/IPO.h>
 #include "MIPSVisitor/mipsVisitor.h"
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Utils.h>
 
 using namespace llvm;
 
@@ -29,19 +32,25 @@ void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 
 void IRVisitor::LLVMOptimize()
 {
-	PassBuilder passBuilder;
-	LoopAnalysisManager loopAnalysisManager(false);
-	FunctionAnalysisManager functionAnalysisManager(false);
-	CGSCCAnalysisManager cGSCCAnalysisManager(false);
-	ModuleAnalysisManager moduleAnalysisManager(false);
-	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
-	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
-	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
-	passBuilder.registerLoopAnalyses(loopAnalysisManager);
-	passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
-			moduleAnalysisManager);
-	ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(PassBuilder::OptimizationLevel::O3);
-	modulePassManager.run(module, moduleAnalysisManager);
+//	PassBuilder passBuilder;
+	legacy::FunctionPassManager m(&module);
+	m.add(createPromoteMemoryToRegisterPass());
+	m.add(createSROAPass());
+	for (auto& function: module.functions()) {
+		m.run(function);
+	}
+//	LoopAnalysisManager loopAnalysisManager(false);
+//	FunctionAnalysisManager functionAnalysisManager(false);
+//	CGSCCAnalysisManager cGSCCAnalysisManager(false);
+//	ModuleAnalysisManager moduleAnalysisManager(false);
+//	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+//	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+//	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+//	passBuilder.registerLoopAnalyses(loopAnalysisManager);
+//	passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
+//			moduleAnalysisManager);
+//	ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(PassBuilder::OptimizationLevel::O3);
+//	modulePassManager.run(module, moduleAnalysisManager);
 }
 
 void IRVisitor::print(const std::filesystem::path& output)

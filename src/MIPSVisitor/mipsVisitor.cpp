@@ -151,6 +151,7 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 		const auto& value = I.getIncomingValueForBlock(block);
 		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
 		mips::Instruction* instruction;
+		const auto& constant = dyn_cast<ConstantFP>(value);
 		if (const auto& constant = dyn_cast<ConstantInt>(value)) {
 			instruction = new mips::Load(&I, int(constant->getZExtValue()));
 		}
