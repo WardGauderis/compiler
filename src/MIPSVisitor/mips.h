@@ -20,10 +20,10 @@ namespace mips
 class RegisterMapper
 {
     public:
-    RegisterMapper() : emptyRegisters(), registerSize{25, 31}, nextSpill{0,0}, stackSize(0)
+    RegisterMapper() : emptyRegisters(), registerSize{25, 31}, nextSpill{0,0}
     {
         emptyRegisters[0].resize(26);
-        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 3);
+        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 4);
 
         emptyRegisters[1].resize(32);
         std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 1);
@@ -33,35 +33,27 @@ class RegisterMapper
 
     void storeValue(std::string& output, llvm::Value* id);
 
-    void cleanupRegisters(std::string& output);
-
     void storeRegisters(std::string& output);
-
-    void loadRegisters(std::string& output);
 
     [[nodiscard]] uint getSize() const noexcept;
 
     private:
     std::array<std::vector<uint>, 2> emptyRegisters;
-    std::array<std::vector<uint>, 2> usedRegisters;
-    std::array<std::vector<uint>, 2> tempRegisters;
 
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
 
     std::array<uint, 2> registerSize;
     std::array<uint, 2> nextSpill;
-    uint stackSize;
+
+    int tempReg = 0;
+    uint stackSize = 0;
 };
 
 class Instruction
 {
     public:
     Instruction() = default;
-
-    Instruction(const std::string& type, llvm::Value* t1, llvm::Value* t2, bool isFloat);
-
-    Instruction(const std::string& type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3, bool isFloat);
 
     void print(std::ostream& os);
 
@@ -107,10 +99,9 @@ struct NotEquals : public Instruction
     NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
 };
 
-// beq, bgtz, blez, bne, ...
 struct Branch : public Instruction
 {
-    explicit Branch(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::BasicBlock* block);
+    explicit Branch(llvm::Value* t1, llvm::BasicBlock* block);
 };
 
 // jal

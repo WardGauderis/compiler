@@ -98,8 +98,19 @@ namespace mips
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
     const auto index = isFloat(id);
+    if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
+    {
+        const auto immediate = int(constant->getSExtValue());
+        output += operation("lui", reg(tempReg), std::to_string(immediate & 0xffff0000u));
+        output += operation("ori", reg(tempReg), std::to_string(immediate & 0x0000ffffu));
+        return (tempReg) ? tempReg-- : tempReg++;
+    }
+    else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
+    {
+        // TODO
+    }
+
     const auto regIter = registerDescriptors[index].find(id);
-    auto res = -1;
 
     if(regIter == registerDescriptors[index].end())
     {
@@ -110,12 +121,13 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             storeValue(output, id);
 
-            res = nextSpill[index] + 32 * index;
+            const auto temp = nextSpill[index] + 32 * index;
             nextSpill[index] = (nextSpill[index] + 1) % registerSize[index];
+            return temp;
         }
         else
         {
-            res = emptyRegisters[index].back() + 32 * index;
+            const auto res = emptyRegisters[index].back() + 32 * index;
             emptyRegisters[index].pop_back();
 
             // if address is found: load word from the memory and remove the address entry
@@ -125,27 +137,13 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
                 addressDescriptors[index].erase(addrIter);
                 registerDescriptors[index].emplace(id, res);
             }
+            return res;
         }
     }
     else
     {
-        res = regIter->second + 32 * index;
+       return regIter->second + 32 * index;
     }
-
-    // directly initialize the register with a constant value
-    if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
-    {
-        const auto immediate = int(constant->getSExtValue());
-        output += operation("lui", reg(res), std::to_string(immediate & 0xffff0000u));
-        output += operation("ori", reg(res), std::to_string(immediate & 0x0000ffffu));
-        tempRegisters[index].emplace_back(res);
-    }
-    else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
-    {
-        // TODO
-    }
-    usedRegisters[index].emplace_back(res);
-    return res;
 }
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
@@ -167,16 +165,16 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
     }
 }
 
-void RegisterMapper::cleanupRegisters(std::string& output)
-{
-}
-
 void RegisterMapper::storeRegisters(std::string& output)
 {
-}
-
-void RegisterMapper::loadRegisters(std::string& output)
-{
+    for(const auto [id, reg] : registerDescriptors[0])
+    {
+        storeValue(output, id);
+    }
+    for(const auto [id, reg] : registerDescriptors[1])
+    {
+        storeValue(output, id);
+    }
 }
 
 uint RegisterMapper::getSize() const noexcept
@@ -289,16 +287,16 @@ NotEquals::NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
     output += operation("cmp", reg(index1), reg(index1), reg(0));
 }
 
-Branch::Branch(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::BasicBlock* block)
+Branch::Branch(llvm::Value* t1, llvm::BasicBlock* block)
 {
     const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
 
-    output += operation(std::move(type), reg(index1), reg(index2), label(block));
+    output += operation("bnez", reg(index1), label(block));
 }
 
 Call::Call(llvm::Function* function)
 {
+    mapper->storeRegisters(output);
     output += operation("jal", label(function));
 }
 
