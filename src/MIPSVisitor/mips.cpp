@@ -167,6 +167,18 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
     }
 }
 
+void RegisterMapper::cleanupRegisters(std::string& output)
+{
+}
+
+void RegisterMapper::storeRegisters(std::string& output)
+{
+}
+
+void RegisterMapper::loadRegisters(std::string& output)
+{
+}
+
 uint RegisterMapper::getSize() const noexcept
 {
     return stackSize;
