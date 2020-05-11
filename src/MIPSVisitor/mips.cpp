@@ -14,7 +14,7 @@ namespace
 {
 std::string reg(uint num)
 {
-    return (num >= 32 ? "$f": "$") + std::to_string(num);
+    return (num >= 32 ? "$f" : "$") + std::to_string(num);
 }
 
 template <typename Ptr>
@@ -39,11 +39,6 @@ std::string operation(std::string&& operation, Args&&... args)
     }
 }
 
-bool fits16(int x)
-{
-    return ((x & 0xffff8000) + 0x8000) & 0xffff7fff;
-}
-
 bool isFloat(llvm::Value* value)
 {
     const auto type = value->getType();
@@ -52,11 +47,7 @@ bool isFloat(llvm::Value* value)
     {
         return true;
     }
-    else if(type->isIntegerTy())
-    {
-        return false;
-    }
-    else if(type->isPointerTy())
+    else if(type->isIntegerTy() or type->isPointerTy())
     {
         return false;
     }
@@ -99,22 +90,16 @@ void assertFloat(llvm::Value* value)
     }
 }
 
-void loadImmediate(std::string& output, int immediate, uint index)
-{
-    output += operation("lui", reg(index), std::to_string(immediate & 0xffff0000u));
-    output += operation("ori", reg(index), std::to_string(immediate & 0x0000ffffu));
-}
-
 } // namespace
 
 namespace mips
 {
 
-
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
     const auto index = isFloat(id);
     const auto regIter = registerDescriptors[index].find(id);
+    auto res = -1;
 
     if(regIter == registerDescriptors[index].end())
     {
@@ -125,13 +110,12 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             storeValue(output, id);
 
-            const auto res = nextSpill[index];
+            res = nextSpill[index] + 32 * index;
             nextSpill[index] = (nextSpill[index] + 1) % registerSize[index];
-            return res + 32*index;
         }
         else
         {
-            const auto res = emptyRegisters[index].back();
+            res = emptyRegisters[index].back() + 32 * index;
             emptyRegisters[index].pop_back();
 
             // if address is found: load word from the memory and remove the address entry
@@ -141,13 +125,27 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
                 addressDescriptors[index].erase(addrIter);
                 registerDescriptors[index].emplace(id, res);
             }
-            return res + 32*index;
         }
     }
     else
     {
-        return regIter->second + 32*index;
+        res = regIter->second + 32 * index;
     }
+
+    // directly initialize the register with a constant value
+    if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
+    {
+        const auto immediate = int(constant->getSExtValue());
+        output += operation("lui", reg(res), std::to_string(immediate & 0xffff0000u));
+        output += operation("ori", reg(res), std::to_string(immediate & 0x0000ffffu));
+        tempRegisters[index].emplace_back(res);
+    }
+    else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
+    {
+        // TODO
+    }
+    usedRegisters[index].emplace_back(res);
+    return res;
 }
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
@@ -221,14 +219,8 @@ Load::Load(llvm::Value* t1, llvm::Value* t2)
 {
     const auto index1 = mapper->loadValue(output, t1);
 
-    if (const auto& constant = dyn_cast<llvm::ConstantInt>(t2))
+    if(llvm::isa<llvm::Constant>(t2))
     {
-        const auto immediate = int(constant->getSExtValue());
-        loadImmediate(output, immediate, index1);
-    }
-    else if(const auto& constant = dyn_cast<llvm::ConstantFP>(t2))
-    {
-        // TODO
     }
     else if(isFloat(t1))
     {
@@ -262,25 +254,7 @@ Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm:
     const auto index2 = mapper->loadValue(output, t2);
     const auto index3 = mapper->loadValue(output, t3);
 
-    if (const auto& constant = dyn_cast<llvm::ConstantInt>(t3))
-    {
-        const auto immediate = int(constant->getSExtValue());
-        loadImmediate(output, immediate, 2);
-        output += operation(std::move(type), reg(index1), reg(index2), reg(2));
-    }
-    else if(const auto& constant = dyn_cast<llvm::ConstantFP>(t3))
-    {
-        output += operation("l.s", reg(2), label(t3));
-        output += operation(std::move(type), reg(index1), reg(index2), reg(2));
-    }
-    else if(isFloat(t1))
-    {
-        output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
-    }
-    else
-    {
-        output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
-    }
+    output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
 }
 
 Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)

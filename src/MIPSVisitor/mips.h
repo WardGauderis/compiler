@@ -33,10 +33,19 @@ class RegisterMapper
 
     void storeValue(std::string& output, llvm::Value* id);
 
+    void cleanupRegisters(std::string& output);
+
+    void storeRegisters(std::string& output);
+
+    void loadRegisters(std::string& output);
+
     [[nodiscard]] uint getSize() const noexcept;
 
     private:
     std::array<std::vector<uint>, 2> emptyRegisters;
+    std::array<std::vector<uint>, 2> usedRegisters;
+    std::array<std::vector<uint>, 2> tempRegisters;
+
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
 
@@ -85,7 +94,6 @@ struct Load : public Instruction
 struct Arithmetic : public Instruction
 {
     Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
-    Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, int immediate);
 };
 
 // modulo
