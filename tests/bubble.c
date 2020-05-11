@@ -41,8 +41,7 @@
 //}
 //
 
-int f(int a, int b)
-{
-	int c = a && b;
-	return a+c;
+int f(int a){
+	int b = 7;
+	return a && b;
 }
