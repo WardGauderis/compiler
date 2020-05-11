@@ -59,58 +59,58 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 	switch (I.getPredicate()) {
 	case CmpInst::FCMP_OEQ:
 	case CmpInst::FCMP_UEQ:
-		instruction = new mips::Comparison("c.eq.s", a, b, c);
+		instruction = new mips::Arithmetic("c.eq.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OGT:
 	case CmpInst::FCMP_UGT:
-		instruction = new mips::Comparison("c.lt.s", a, c, b);
+		instruction = new mips::Arithmetic("c.lt.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OGE:
 	case CmpInst::FCMP_UGE:
-		instruction = new mips::Comparison("c.le.s", a, c, b);
+		instruction = new mips::Arithmetic("c.le.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OLT:
 	case CmpInst::FCMP_ULT:
-		instruction = new mips::Comparison("c.lt.s", a, b, c);
+		instruction = new mips::Arithmetic("c.lt.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OLE:
 	case CmpInst::FCMP_ULE:
-		instruction = new mips::Comparison("c.le.s", a, b, c);
+		instruction = new mips::Arithmetic("c.le.s", a, b, c);
 		break;
 	case CmpInst::FCMP_ONE:
 	case CmpInst::FCMP_UNE:
 //		instruction = new mips::Not(); //TODO not
-		instruction = new mips::Comparison("c.eq.s", a, b, c);
+		instruction = new mips::Arithmetic("c.eq.s", a, b, c);
 		break;
 	case CmpInst::ICMP_EQ:
-		instruction = new mips::Comparison("seq", a, b, c);
+		instruction = new mips::Arithmetic("seq", a, b, c);
 		break;
 	case CmpInst::ICMP_NE:
-		instruction = new mips::Comparison("sne", a, b, c);
+		instruction = new mips::Arithmetic("sne", a, b, c);
 		break;
 	case CmpInst::ICMP_UGT:
-		instruction = new mips::Comparison("sgtu", a, b, c);
+		instruction = new mips::Arithmetic("sgtu", a, b, c);
 		break;
 	case CmpInst::ICMP_UGE:
-		instruction = new mips::Comparison("sgeu", a, b, c);
+		instruction = new mips::Arithmetic("sgeu", a, b, c);
 		break;
 	case CmpInst::ICMP_ULT:
-		instruction = new mips::Comparison("slte", a, b, c);
+		instruction = new mips::Arithmetic("slte", a, b, c);
 		break;
 	case CmpInst::ICMP_ULE:
-		instruction = new mips::Comparison("slue", a, b, c);
+		instruction = new mips::Arithmetic("slue", a, b, c);
 		break;
 	case CmpInst::ICMP_SGT:
-		instruction = new mips::Comparison("sgt", a, b, c);
+		instruction = new mips::Arithmetic("sgt", a, b, c);
 		break;
 	case CmpInst::ICMP_SGE:
-		instruction = new mips::Comparison("sge", a, b, c);
+		instruction = new mips::Arithmetic("sge", a, b, c);
 		break;
 	case CmpInst::ICMP_SLT:
-		instruction = new mips::Comparison("slt", a, b, c);
+		instruction = new mips::Arithmetic("slt", a, b, c);
 		break;
 	case CmpInst::ICMP_SLE:
-		instruction = new mips::Comparison("sle", a, b, c);
+		instruction = new mips::Arithmetic("sle", a, b, c);
 		break;
 	default:
 		instruction = nullptr;
@@ -153,7 +153,7 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 		mips::Instruction* instruction;
 		const auto& constant = dyn_cast<ConstantFP>(value);
 		if (const auto& constant = dyn_cast<ConstantInt>(value)) {
-			instruction = new mips::Load(&I, int(constant->getZExtValue()));
+			instruction = new mips::Load(&I, constant);
 		}
 		else {
 			instruction = new mips::Move(&I, value);
