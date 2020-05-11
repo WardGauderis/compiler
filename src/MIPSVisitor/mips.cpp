@@ -185,12 +185,13 @@ Load::Load(llvm::Value* t1, llvm::Value* t2, int offset)
     const auto index1 = mapper->loadValue(output, t1);
     if(isFloat(t1))
     {
-        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
-        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) + ')');
+        throw InternalError("TODO loat fload");
+        // TODO
     }
     else
     {
-        // TODO
+        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
+        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) + ')');
     }
 }
 
@@ -203,6 +204,7 @@ Load::Load(llvm::Value* t1, int value)
 
 Load::Load(llvm::Value* t1, float value)
 {
+    throw InternalError("TODO floadt immediate");
     // TODO
     // mtc1
 }
@@ -382,10 +384,18 @@ void Module::append(Function* function)
 
 void Module::print(std::ostream& os) const
 {
+    os << ".data\n";
+
+    os << ".text\n";
     for(const auto& function : functions)
     {
         function->print(os);
     }
+}
+
+void Module::addGlobal(llvm::GlobalVariable* variable)
+{
+
 }
 
 

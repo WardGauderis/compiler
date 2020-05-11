@@ -17,16 +17,6 @@
 namespace mips
 {
 
-bool isFloat(llvm::Value* value);
-
-void assertSame(llvm::Value* val1, llvm::Value* val2);
-
-void assertSame(llvm::Value* val1, llvm::Value* val2, llvm::Value* t3);
-
-void assertInt(llvm::Value* value);
-
-void assertFloat(llvm::Value* value);
-
 class RegisterMapper
 {
     public:
@@ -184,8 +174,11 @@ class Module
 
     void print(std::ostream& os) const;
 
+    void addGlobal(llvm::GlobalVariable* variable);
+
     private:
     std::vector<std::unique_ptr<Function>> functions;
+    std::vector<llvm::GlobalVariable*> variables;
 };
 
 
