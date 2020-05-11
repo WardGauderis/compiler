@@ -6,6 +6,7 @@
 
 #include "mips.h"
 #include "../errors.h"
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Type.h>
 
@@ -97,6 +98,13 @@ void assertFloat(llvm::Value* value)
         throw InternalError("type must be float");
     }
 }
+
+void loadImmediate(std::string& output, int immediate, uint index)
+{
+    output += operation("lui", reg(index), std::to_string(immediate & 0xffff0000u));
+    output += operation("ori", reg(index), std::to_string(immediate & 0x0000ffffu));
+}
+
 } // namespace
 
 namespace mips
@@ -185,49 +193,53 @@ Move::Move(llvm::Value* t1, llvm::Value* t2)
     output += operation(isFloat(t1) ? "mov.s" : "move", reg(index1), reg(index2));
 }
 
-Convert::Convert(llvm::Value* t1, llvm::Value* t2, bool firstIsFloat)
+Convert::Convert(llvm::Value* t1, llvm::Value* t2)
 {
-    if(isFloat(t1))
-    {
-        assertInt(t2);
-        const auto index1 = mapper->loadValue(output, t1);
-        const auto index2 = mapper->loadValue(output, t2);
+    // converts t2 into t1
+    const auto index1 = mapper->loadValue(output, t1);
+    const auto index2 = mapper->loadValue(output, t2);
 
-        output += operation("mtc1", reg("f0"));
+    if(isFloat(t2))
+    {
+        // float to int
+        assertInt(t1);
+
+        output += operation("cvt.s.w", reg(index2), reg(index2));
+        output += operation("mfc1", reg(index1), reg(index2));
     }
     else
     {
-        assertFloat(t2);
+        // int to float
+        assertFloat(t1);
+
+        output += operation("mtc1", reg(index2), reg(index1));
+        output += operation("cvt.w.s", reg(index1), reg(index1));
     }
 }
 
-Load::Load(llvm::Value* t1, llvm::Value* t2, int offset)
+Load::Load(llvm::Value* t1, llvm::Value* t2)
 {
     const auto index1 = mapper->loadValue(output, t1);
-    if(isFloat(t1))
+
+    if (const auto& constant = dyn_cast<llvm::ConstantInt>(t2))
     {
-        throw InternalError("TODO loat fload");
+        const auto immediate = int(constant->getSExtValue());
+        loadImmediate(output, immediate, index1);
+    }
+    else if(const auto& constant = dyn_cast<llvm::ConstantFP>(t2))
+    {
+        // TODO
+    }
+    else if(isFloat(t1))
+    {
         // TODO
     }
     else
     {
+        const auto index2 = mapper->loadValue(output, t2);
         const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
-        output += operation(isWord ? "lw" : "lb", std::to_string(offset) + '(' + reg(index1) + ')');
+        output += operation(isWord ? "lw" : "lb", reg(index1), reg(index2));
     }
-}
-
-Load::Load(llvm::Value* t1, int value)
-{
-    const auto index1 = mapper->loadValue(output, t1);
-    output += operation("lui", reg(index1), std::to_string(value & 0xffff0000u));
-    output += operation("ori", reg(index1), std::to_string(value & 0x0000ffffu));
-}
-
-Load::Load(llvm::Value* t1, float value)
-{
-    throw InternalError("TODO floadt immediate");
-    // TODO
-    // mtc1
 }
 
 Load::Load(llvm::Value* t1, llvm::GlobalVariable* variable)
@@ -250,28 +262,25 @@ Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm:
     const auto index2 = mapper->loadValue(output, t2);
     const auto index3 = mapper->loadValue(output, t3);
 
-    if(isFloat(t1))
+    if (const auto& constant = dyn_cast<llvm::ConstantInt>(t3))
     {
-        output += operation(std::move(type) + ".s", reg(index1), reg(index2), reg(index3));
+        const auto immediate = int(constant->getSExtValue());
+        loadImmediate(output, immediate, 2);
+        output += operation(std::move(type), reg(index1), reg(index2), reg(2));
+    }
+    else if(const auto& constant = dyn_cast<llvm::ConstantFP>(t3))
+    {
+        output += operation("l.s", reg(2), label(t3));
+        output += operation(std::move(type), reg(index1), reg(index2), reg(2));
+    }
+    else if(isFloat(t1))
+    {
+        output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
     }
     else
     {
-        output += operation(std::move(type) + "u", reg(index1), reg(index2), reg(index3));
+        output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
     }
-}
-
-Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, int immediate)
-{
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
-    if(fits16(immediate))
-    {
-        output += operation(type + "iu", reg(index1), reg(index2), std::to_string(immediate));
-    }
-    else
-    {
-    }
-    // TODO: brol als immediate boven 2^16 is
 }
 
 Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
@@ -280,24 +289,8 @@ Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
     const auto index2 = mapper->loadValue(output, t2);
     const auto index3 = mapper->loadValue(output, t3);
 
-    if(isFloat(t1))
-    {
-        output += operation("div.s", reg(index1), reg(index2), reg(index3));
-    }
-    else
-    {
-        output += operation("divu", reg(index2), reg(index3));
-        output += operation("mfhi", reg(index1));
-    }
-}
-
-Comparison::Comparison(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
-{
-    const auto index1 = mapper->loadValue(output, t1);
-    const auto index2 = mapper->loadValue(output, t2);
-    const auto index3 = mapper->loadValue(output, t3);
-
-    output += operation(std::move(type), reg(index1), reg(index2), reg(index3));
+    output += operation("divu", reg(index2), reg(index3));
+    output += operation("mfhi", reg(index1));
 }
 
 NotEquals::NotEquals(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
@@ -328,19 +321,19 @@ Jump::Jump(llvm::BasicBlock* block)
     output += operation("j", label(block));
 }
 
-Store::Store(llvm::Value* t1, llvm::Value* t2, uint offset)
+Store::Store(llvm::Value* t1, llvm::Value* t2)
 {
     const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
-    output += operation(isWord ? "sw" : "sb", reg(index1), std::to_string(offset) + '(' + reg(index2) + ')');
+    output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
 }
 
-Store::Store(llvm::Value* t1, std::string label, uint offset)
+Store::Store(llvm::Value* t1, llvm::GlobalVariable* variable)
 {
     const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
     const auto index1 = mapper->loadValue(output, t1);
-    output += operation(isWord ? "sw" : "sb", reg(index1), std::move(label) + '+' + std::to_string(offset));
+    output += operation(isWord ? "sw" : "sb", reg(index1), label(variable));
 }
 
 void Block::append(Instruction* instruction)

@@ -20,10 +20,10 @@ namespace mips
 class RegisterMapper
 {
     public:
-    RegisterMapper() : emptyRegisters(), registerSize{26, 31}, nextSpill{0,0}, stackSize(0)
+    RegisterMapper() : emptyRegisters(), registerSize{25, 31}, nextSpill{0,0}, stackSize(0)
     {
         emptyRegisters[0].resize(26);
-        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 2);
+        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 3);
 
         emptyRegisters[1].resize(32);
         std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 1);
@@ -48,16 +48,18 @@ class RegisterMapper
 class Instruction
 {
     public:
-    Instruction() : mapper(nullptr)
-    {
-    }
+    Instruction() = default;
+
+    Instruction(const std::string& type, llvm::Value* t1, llvm::Value* t2, bool isFloat);
+
+    Instruction(const std::string& type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3, bool isFloat);
 
     void print(std::ostream& os);
 
     void setMapper(std::shared_ptr<RegisterMapper> imapper);
 
     protected:
-    std::shared_ptr<RegisterMapper> mapper;
+    std::shared_ptr<RegisterMapper> mapper = nullptr;
     std::string output;
 };
 
@@ -69,15 +71,13 @@ struct Move : public Instruction
 
 struct Convert : public Instruction
 {
-    Convert(llvm::Value* t1, llvm::Value* t2, bool firstIsFloat);
+    Convert(llvm::Value* t1, llvm::Value* t2);
 };
 
-// lw, li
+// lw, li, lb, l.s
 struct Load : public Instruction
 {
-    Load(llvm::Value* t1, llvm::Value* t2, int offset = 0);
-    Load(llvm::Value* t1, int value);
-    Load(llvm::Value* t1, float value);
+    Load(llvm::Value* t1, llvm::Value* t2);
     Load(llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
@@ -92,12 +92,6 @@ struct Arithmetic : public Instruction
 struct Modulo : public Instruction
 {
     Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
-};
-
-// slt, sgt, slte
-struct Comparison : public Instruction
-{
-    Comparison(std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3);
 };
 
 struct NotEquals : public Instruction
@@ -126,8 +120,8 @@ struct Jump : public Instruction
 // sw, sb
 struct Store : public Instruction
 {
-    explicit Store(llvm::Value* t1, llvm::Value* t2, uint offset = 0);
-    explicit Store(llvm::Value* t1, std::string label, uint offset = 0);
+    explicit Store(llvm::Value* t1, llvm::Value* t2);
+    explicit Store(llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
 class Block
