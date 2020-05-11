@@ -87,7 +87,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 
 		visitor.print(llPath);
 
-		MIPSVisitor mVisitor(visitor.getModule());
+		MIPSVisitor mVisitor;
 		mVisitor.convertIR(visitor.getModule());
 		mVisitor.print(asmPath);
 
