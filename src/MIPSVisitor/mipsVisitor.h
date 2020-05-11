@@ -23,9 +23,7 @@ public:
 
 	[[maybe_unused]] void visitBasicBlock(llvm::BasicBlock& BB);
 
-	[[maybe_unused]] void visitICmpInst(llvm::ICmpInst& I);
-
-	[[maybe_unused]] void visitFCmpInst(llvm::FCmpInst& I);
+	[[maybe_unused]] void visitCmpInst(llvm::CmpInst& I);
 
 	[[maybe_unused]] void visitLoadInst(llvm::LoadInst& I);
 

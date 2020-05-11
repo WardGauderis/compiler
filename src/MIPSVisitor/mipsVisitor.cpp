@@ -39,149 +39,91 @@ void MIPSVisitor::visitModule(llvm::Module& M)
 void MIPSVisitor::visitFunction(llvm::Function& F)
 {
 	//TODO signature
-	currentFunction = new mips::Function();
+	currentFunction = new mips::Function(&F);
 	module.append(currentFunction);
 }
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 {
 	//TODO label
-	currentBlock = new mips::Block();
+	currentBlock = new mips::Block(&BB);
 	currentFunction->append(currentBlock);
 }
 
-void MIPSVisitor::visitICmpInst(ICmpInst& I)
+void MIPSVisitor::visitCmpInst(CmpInst& I)
 {
-	//TODO types
-	InstVisitor::visitICmpInst(I);
+	const auto& a = &I;
+	const auto& b = I.getOperand(0);
+	const auto& c = I.getOperand(1);
+	mips::Instruction* instruction;
 	switch (I.getPredicate()) {
-	case CmpInst::FCMP_FALSE:
-		break;
 	case CmpInst::FCMP_OEQ:
+	case CmpInst::FCMP_UEQ:
+		instruction = new mips::Comparison("c.eq.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OGT:
+	case CmpInst::FCMP_UGT:
+		instruction = new mips::Comparison("c.lt.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OGE:
+	case CmpInst::FCMP_UGE:
+		instruction = new mips::Comparison("c.le.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OLT:
+	case CmpInst::FCMP_ULT:
+		instruction = new mips::Comparison("c.lt.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OLE:
+	case CmpInst::FCMP_ULE:
+		instruction = new mips::Comparison("c.le.s", a, b, c);
 		break;
 	case CmpInst::FCMP_ONE:
-		break;
-	case CmpInst::FCMP_ORD:
-		break;
-	case CmpInst::FCMP_UNO:
-		break;
-	case CmpInst::FCMP_UEQ:
-		break;
-	case CmpInst::FCMP_UGT:
-		break;
-	case CmpInst::FCMP_UGE:
-		break;
-	case CmpInst::FCMP_ULT:
-		break;
-	case CmpInst::FCMP_ULE:
-		break;
 	case CmpInst::FCMP_UNE:
-		break;
-	case CmpInst::FCMP_TRUE:
-		break;
-	case CmpInst::BAD_FCMP_PREDICATE:
+//		instruction = new mips::Not(); //TODO not
+		instruction = new mips::Comparison("c.eq.s", a, b, c);
 		break;
 	case CmpInst::ICMP_EQ:
+		instruction = new mips::Comparison("seq", a, b, c);
 		break;
 	case CmpInst::ICMP_NE:
+		instruction = new mips::Comparison("sne", a, b, c);
 		break;
 	case CmpInst::ICMP_UGT:
+		instruction = new mips::Comparison("sgtu", a, b, c);
 		break;
 	case CmpInst::ICMP_UGE:
+		instruction = new mips::Comparison("sgeu", a, b, c);
 		break;
 	case CmpInst::ICMP_ULT:
+		instruction = new mips::Comparison("slte", a, b, c);
 		break;
 	case CmpInst::ICMP_ULE:
+		instruction = new mips::Comparison("slue", a, b, c);
 		break;
 	case CmpInst::ICMP_SGT:
+		instruction = new mips::Comparison("sgt", a, b, c);
 		break;
 	case CmpInst::ICMP_SGE:
+		instruction = new mips::Comparison("sge", a, b, c);
 		break;
 	case CmpInst::ICMP_SLT:
+		instruction = new mips::Comparison("slt", a, b, c);
 		break;
 	case CmpInst::ICMP_SLE:
+		instruction = new mips::Comparison("sle", a, b, c);
 		break;
-	case CmpInst::BAD_ICMP_PREDICATE:
-		break;
-	}
-}
-
-void MIPSVisitor::visitFCmpInst(FCmpInst& I)
-{
-	//TODO types
-	InstVisitor::visitFCmpInst(I);
-	switch (I.getPredicate()) {
-	case CmpInst::FCMP_FALSE:
-		break;
-	case CmpInst::FCMP_OEQ:
-		break;
-	case CmpInst::FCMP_OGT:
-		break;
-	case CmpInst::FCMP_OGE:
-		break;
-	case CmpInst::FCMP_OLT:
-		break;
-	case CmpInst::FCMP_OLE:
-		break;
-	case CmpInst::FCMP_ONE:
-		break;
-	case CmpInst::FCMP_ORD:
-		break;
-	case CmpInst::FCMP_UNO:
-		break;
-	case CmpInst::FCMP_UEQ:
-		break;
-	case CmpInst::FCMP_UGT:
-		break;
-	case CmpInst::FCMP_UGE:
-		break;
-	case CmpInst::FCMP_ULT:
-		break;
-	case CmpInst::FCMP_ULE:
-		break;
-	case CmpInst::FCMP_UNE:
-		break;
-	case CmpInst::FCMP_TRUE:
-		break;
-	case CmpInst::BAD_FCMP_PREDICATE:
-		break;
-	case CmpInst::ICMP_EQ:
-		break;
-	case CmpInst::ICMP_NE:
-		break;
-	case CmpInst::ICMP_UGT:
-		break;
-	case CmpInst::ICMP_UGE:
-		break;
-	case CmpInst::ICMP_ULT:
-		break;
-	case CmpInst::ICMP_ULE:
-		break;
-	case CmpInst::ICMP_SGT:
-		break;
-	case CmpInst::ICMP_SGE:
-		break;
-	case CmpInst::ICMP_SLT:
-		break;
-	case CmpInst::ICMP_SLE:
-		break;
-	case CmpInst::BAD_ICMP_PREDICATE:
+	default:
+		instruction = nullptr;
+		InstVisitor::visitCmpInst(I);
 		break;
 	}
+	currentBlock->append(instruction);
 }
 
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
 	//TODO label, register, stack
-	InstVisitor::visitLoadInst(I);
+	currentBlock->append(new mips::Load(&I, I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
@@ -193,6 +135,7 @@ void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
 	//TODO label, regitster, stack
+	currentBlock->append(new mips::Store(&I, I.getPointerOperand()));
 	InstVisitor::visitStoreInst(I);
 }
 
@@ -204,8 +147,18 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 
 void MIPSVisitor::visitPHINode(PHINode& I)
 {
-	//TODO to if statement
-	InstVisitor::visitPHINode(I);
+	for (const auto& block: I.blocks()) {
+		const auto& value = I.getIncomingValueForBlock(block);
+		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
+		mips::Instruction* instruction;
+		if (const auto& constant = dyn_cast<ConstantInt>(value)) {
+			instruction = new mips::Load(&I, int(constant->getZExtValue()));
+		}
+		else {
+			instruction = new mips::Move(&I, value);
+		}
+		mipsBlock->appendBeforeLast(instruction);
+	}
 }
 
 void MIPSVisitor::visitTruncInst(TruncInst& I)
@@ -226,7 +179,7 @@ void MIPSVisitor::visitSExtInst(SExtInst& I)
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
 {
 	//TODO cvt.w.s
-	InstVisitor::visitFPToUIInst(I);
+//	currentBlock->append(new mips::)
 }
 
 void MIPSVisitor::visitFPToSIInst(FPToSIInst& I)
@@ -282,12 +235,17 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 
 void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 {
-	//TODO enum
-	InstVisitor::visitBinaryOperator(I);
+	const auto& a = &I;
+	const auto& b = I.getOperand(0);
+	const auto& c = I.getOperand(1);
+	mips::Instruction* instruction;
+
 	switch (I.getOpcode()) {
 	case llvm::Instruction::FAdd:
+		instruction = new mips::Arithmetic("add", a, b, c);
 		break;
 	case llvm::Instruction::Sub:
+		instruction = new mips::Arithmetic("add", a, b, c);
 		break;
 	case llvm::Instruction::FSub:
 		break;
@@ -322,6 +280,8 @@ void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 	default:
 		InstVisitor::visitBinaryOperator(I);
 	}
+
+	currentBlock->append(instruction);
 }
 
 void MIPSVisitor::visitInstruction(llvm::Instruction& I)
