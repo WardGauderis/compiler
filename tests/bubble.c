@@ -41,7 +41,13 @@
 //}
 //
 
-int f(int a){
-	int b = 7;
-	return a && b;
+int x(int a)
+{
+	while (a){
+		if (a){
+
+		} else {
+
+		}
+	}
 }

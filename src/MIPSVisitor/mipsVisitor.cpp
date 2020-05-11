@@ -38,14 +38,12 @@ void MIPSVisitor::visitModule(llvm::Module& M)
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
 {
-	//TODO signature
 	currentFunction = new mips::Function(&F);
 	module.append(currentFunction);
 }
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 {
-	//TODO label
 	currentBlock = new mips::Block(&BB);
 	currentFunction->append(currentBlock);
 }
@@ -79,8 +77,7 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 		break;
 	case CmpInst::FCMP_ONE:
 	case CmpInst::FCMP_UNE:
-//		instruction = new mips::Not(); //TODO not
-		instruction = new mips::Arithmetic("c.eq.s", a, b, c);
+		instruction = new mips::NotEquals(a, b, c);
 		break;
 	case CmpInst::ICMP_EQ:
 		instruction = new mips::Arithmetic("seq", a, b, c);
@@ -179,26 +176,26 @@ void MIPSVisitor::visitSExtInst(SExtInst& I)
 
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
 {
-	//TODO cvt.w.s
-//	currentBlock->append(new mips::)
+	//cvt.w.s
+	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPToSIInst(FPToSIInst& I)
 {
-	//TODO cvt.w.s
-	InstVisitor::visitFPToSIInst(I);
+	//cvt.w.s
+	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitUIToFPInst(UIToFPInst& I)
 {
-	//TODO cvt.s.w
-	InstVisitor::visitUIToFPInst(I);
+	//cvt.s.w
+	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 {
-	//TODO cvt.w.s
-	InstVisitor::visitSIToFPInst(I);
+	//cvt.w.s
+	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
@@ -230,8 +227,20 @@ void MIPSVisitor::visitReturnInst(ReturnInst& I)
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
 {
-	//TODO branch
-	InstVisitor::visitBranchInst(I);
+	if (I.isConditional()) {
+		bool first = currentBlock->getBlock()->getNextNode()==I.getOperand(0);
+		bool second = currentBlock->getBlock()->getNextNode()==I.getOperand(1);
+		if (first && !second) currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(0)));  //TODO bneqz
+		else if (!first && second) currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(1)));
+			//TODO beqz
+		else if (!first && !second) {
+			currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(0)));    //TODO bneqz
+			currentBlock->append(new mips::Jump(I.getSuccessor(1)));
+		}
+	}
+	else {
+		currentBlock->append(new mips::Jump(I.getSuccessor(0)));
+	}
 }
 
 void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
@@ -243,40 +252,43 @@ void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 
 	switch (I.getOpcode()) {
 	case llvm::Instruction::FAdd:
-		instruction = new mips::Arithmetic("add", a, b, c);
+		instruction = new mips::Arithmetic("add.s", a, b, c);
 		break;
 	case llvm::Instruction::Sub:
-		instruction = new mips::Arithmetic("add", a, b, c);
+		instruction = new mips::Arithmetic("sub", a, b, c);
 		break;
 	case llvm::Instruction::FSub:
+		instruction = new mips::Arithmetic("sub.s", a, b, c);
 		break;
 	case llvm::Instruction::Mul:
+		instruction = new mips::Arithmetic("mul", a, b, c);
 		break;
 	case llvm::Instruction::FMul:
+		instruction = new mips::Arithmetic("mul.s", a, b, c);
 		break;
 	case llvm::Instruction::UDiv:
+		instruction = new mips::Arithmetic("divu", a, b, c);
 		break;
 	case llvm::Instruction::SDiv:
+		instruction = new mips::Arithmetic("div", a, b, c);
 		break;
 	case llvm::Instruction::FDiv:
+		instruction = new mips::Arithmetic("div.s", a, b, c);
 		break;
 	case llvm::Instruction::URem:
+		instruction = new Modulo(a, b, c);
 		break;
 	case llvm::Instruction::SRem:
-		break;
-	case llvm::Instruction::FRem:
-		break;
-	case llvm::Instruction::Shl:
-		break;
-	case llvm::Instruction::LShr:
-		break;
-	case llvm::Instruction::AShr:
+		instruction = new Modulo(a, b, c);
 		break;
 	case llvm::Instruction::And:
+		instruction = new mips::Arithmetic("and", a, b, c);
 		break;
 	case llvm::Instruction::Or:
+		instruction = new mips::Arithmetic("or", a, b, c);
 		break;
 	case llvm::Instruction::Xor:
+		instruction = new mips::Arithmetic("xor", a, b, c);
 		break;
 	default:
 		InstVisitor::visitBinaryOperator(I);
