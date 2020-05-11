@@ -20,20 +20,20 @@ namespace mips
 class RegisterMapper
 {
     public:
-    RegisterMapper() : emptyRegisters(), registerSize{26, 32}, nextSpill{0,0}, stackSize(0)
+    RegisterMapper() : emptyRegisters(), registerSize{26, 31}, nextSpill{0,0}, stackSize(0)
     {
         emptyRegisters[0].resize(26);
         std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 2);
 
         emptyRegisters[1].resize(32);
-        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 0);
+        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 1);
     }
 
     uint loadValue(std::string& output, llvm::Value* id);
 
     void storeValue(std::string& output, llvm::Value* id);
 
-    uint getSize() const noexcept;
+    [[nodiscard]] uint getSize() const noexcept;
 
     private:
     std::array<std::vector<uint>, 2> emptyRegisters;
@@ -65,6 +65,11 @@ class Instruction
 struct Move : public Instruction
 {
     Move(llvm::Value* t1, llvm::Value* t2);
+};
+
+struct Convert : public Instruction
+{
+    Convert(llvm::Value* t1, llvm::Value* t2, bool firstIsFloat);
 };
 
 // lw, li

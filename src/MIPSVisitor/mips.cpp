@@ -13,7 +13,7 @@ namespace
 {
 std::string reg(uint num)
 {
-    return "$" + std::to_string(num);
+    return (num >= 32 ? "$f": "$") + std::to_string(num);
 }
 
 template <typename Ptr>
@@ -36,6 +36,11 @@ std::string operation(std::string&& operation, Args&&... args)
         res.back() = '\n';
         return res;
     }
+}
+
+bool fits16(int x)
+{
+    return ((x & 0xffff8000) + 0x8000) & 0xffff7fff;
 }
 
 bool isFloat(llvm::Value* value)
@@ -114,7 +119,7 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 
             const auto res = nextSpill[index];
             nextSpill[index] = (nextSpill[index] + 1) % registerSize[index];
-            return res;
+            return res + 32*index;
         }
         else
         {
@@ -128,12 +133,12 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
                 addressDescriptors[index].erase(addrIter);
                 registerDescriptors[index].emplace(id, res);
             }
-            return res;
+            return res + 32*index;
         }
     }
     else
     {
-        return regIter->second;
+        return regIter->second + 32*index;
     }
 }
 
@@ -178,6 +183,22 @@ Move::Move(llvm::Value* t1, llvm::Value* t2)
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
     output += operation(isFloat(t1) ? "mov.s" : "move", reg(index1), reg(index2));
+}
+
+Convert::Convert(llvm::Value* t1, llvm::Value* t2, bool firstIsFloat)
+{
+    if(isFloat(t1))
+    {
+        assertInt(t2);
+        const auto index1 = mapper->loadValue(output, t1);
+        const auto index2 = mapper->loadValue(output, t2);
+
+        output += operation("mtc1", reg("f0"));
+    }
+    else
+    {
+        assertFloat(t2);
+    }
 }
 
 Load::Load(llvm::Value* t1, llvm::Value* t2, int offset)
@@ -241,10 +262,16 @@ Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, llvm:
 
 Arithmetic::Arithmetic(std::string type, llvm::Value* t1, llvm::Value* t2, int immediate)
 {
-    // TODO: brol als immediate boven 2^16 is
     const auto index1 = mapper->loadValue(output, t1);
     const auto index2 = mapper->loadValue(output, t2);
-    output += operation(type + "iu", reg(index1), reg(index2), std::to_string(immediate));
+    if(fits16(immediate))
+    {
+        output += operation(type + "iu", reg(index1), reg(index2), std::to_string(immediate));
+    }
+    else
+    {
+    }
+    // TODO: brol als immediate boven 2^16 is
 }
 
 Modulo::Modulo(llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
@@ -395,7 +422,6 @@ void Module::print(std::ostream& os) const
 
 void Module::addGlobal(llvm::GlobalVariable* variable)
 {
-
 }
 
 
