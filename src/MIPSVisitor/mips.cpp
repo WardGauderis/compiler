@@ -112,6 +112,16 @@ RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
 
     savedRegisters[0] = std::vector<uint>(32, std::numeric_limits<uint>::max());
     savedRegisters[1] = std::vector<uint>(32, std::numeric_limits<uint>::max());
+
+    registerValues[0] = std::vector<llvm::Value*>(32, nullptr);
+    registerValues[1] = std::vector<llvm::Value*>(32, nullptr);
+
+    for(auto& arg : function->args())
+    {
+        const auto fl = isFloat(&arg);
+        addressDescriptors[fl].emplace(&arg, stackSize);
+        stackSize += 4;
+    }
 }
 
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
@@ -120,16 +130,13 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     const auto result = [&](auto r) { return r + 32 * fl; };
 
     // try to place constant value into temp register and be done with it
-    const auto res = getTempRegister(fl);
-    if(placeConstant(output, res, id))
+    if(const auto res = getTempRegister(fl); placeConstant(output, res, id))
     {
         return res;
     }
 
     // we try to find if it is stored in a register already
-    const auto regIter = registerDescriptors[fl].find(id);
-
-    if(regIter == registerDescriptors[fl].end())
+    if(const auto iter = registerDescriptors[fl].find(id); iter == registerDescriptors[fl].end())
     {
         // we find a suitable register, either by finding an empty one or spilling another one
         auto index = -1;
@@ -141,22 +148,46 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             index = emptyRegisters[fl].back();
             emptyRegisters[fl].pop_back();
-            savedRegisters[fl][index] = stackSize;
-            stackSize += 4;
 
+            savedRegisters[fl][index] = stackSize;
+            output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(stackSize) + "($sp)");
+
+            stackSize += 4;
         }
 
         // spill if nescessary
         storeRegister(output, index, fl);
 
         // place it in the desired register
-        placeValue(output, index, id);
+        const auto found = placeValue(output, index, id);
+
+        // look in the alloca table
+        if(not fl and not found)
+        {
+            const auto address = pointerDescriptors[fl].find(id);
+            output += operation("la", reg(index), std::to_string(address->second) + "($sp)");
+        }
 
         return result(index);
     }
     else
     {
-        return result(regIter->second);
+        return result(iter->second);
+    }
+}
+
+void RegisterMapper::loadSaved(std::string& output)
+{
+    for(size_t i = 0; i < savedRegisters[0].size(); i++)
+    {
+        if(savedRegisters[0][i] == std::numeric_limits<uint>::max()) continue;
+        output += operation("lw", reg(i), std::to_string(savedRegisters[0][i]) + "($sp)");
+    }
+
+    for(size_t i = 0; i < savedRegisters[1].size(); i++)
+    {
+        if(savedRegisters[1][i] == std::numeric_limits<uint>::max()) continue;
+        output += operation("lwc1", reg(i + 32), std::to_string(savedRegisters[1][i]) + "($sp)");
     }
 }
 
@@ -217,12 +248,12 @@ uint RegisterMapper::getTempRegister(bool fl)
 
 uint RegisterMapper::getNextSpill(bool fl)
 {
-    nextSpill[fl]++;
-    if(nextSpill[fl] > end[fl])
+    spill[fl]++;
+    if(spill[fl] > end[fl])
     {
-        nextSpill[fl] = start[fl];
+        spill[fl] = start[fl];
     }
-    return nextSpill[fl];
+    return spill[fl];
 }
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
@@ -249,29 +280,22 @@ void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
 //    }
 }
 
-void RegisterMapper::storeRegisters(std::string& output)
+void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm::Value*>& ids)
 {
-    for(const auto [id, reg] : registerDescriptors[0])
+    auto offset = 0;
+    for(auto id : ids)
     {
-        storeValue(output, id);
+        const auto index = loadValue(output, id);
+        output += operation("sw", reg(index), std::to_string(stackSize + offset) + "($sp)");
+        offset += 4;
     }
-    for(const auto [id, reg] : registerDescriptors[1])
-    {
-        storeValue(output, id);
-    }
-}
-
-void RegisterMapper::storeParameter(std::string& output, llvm::Value* id)
-{
-    loadValue(output, id);
-//    output += operation("");
 }
 
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
 {
     const auto fl = isFloat(id);
     pointerDescriptors[fl].emplace(id, stackSize);
-    //    stackSize += type.size
+    stackSize += module->layout.getTypeAllocSize(type);
 }
 
 uint RegisterMapper::getSize() const noexcept
@@ -287,11 +311,6 @@ void Instruction::print(std::ostream& os)
 RegisterMapper* Instruction::mapper()
 {
     return block->function->getMapper();
-}
-
-Module* Instruction::module()
-{
-    return block->function->getModule();
 }
 
 Move::Move(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
@@ -404,17 +423,24 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
     output += operation(eqZero ? "beqz" : "bnez", reg(index1), label(target));
 }
 
-Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments) : Instruction(block)
+Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments)
+: Instruction(block)
 {
-    mapper()->storeRegisters(output);
-    for(auto value : arguments)
-    {
-        mapper()->storeParameter(output, value);
-    }
+    mapper()->storeParameters(output, arguments);
+    output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
     output += operation("jal", label(function));
+    output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
 }
 
-Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
+Return::Return(Block* block)
+: Instruction(block)
+  {
+      mapper()->loadSaved(output);
+      output += operation("jr", "$ra");
+  }
+
+  Jump::Jump(Block * block, llvm::BasicBlock * target)
+: Instruction(block)
 {
     output += operation("j", label(target));
 }

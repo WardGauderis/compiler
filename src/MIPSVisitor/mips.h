@@ -31,6 +31,7 @@ class RegisterMapper
     explicit RegisterMapper(Module* module, llvm::Function* function);
 
     uint loadValue(std::string& output, llvm::Value* id);
+    void loadSaved(std::string& output);
 
     bool placeConstant(std::string& output, uint index, llvm::Value* id);
     bool placeValue(std::string& output, uint index, llvm::Value* id);
@@ -40,8 +41,7 @@ class RegisterMapper
 
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
-    void storeRegisters(std::string& output);
-    void storeParameter(std::string& output,llvm::Value* id);
+    void storeParameters(std::string& output, const std::vector<llvm::Value*>& ids);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 
@@ -53,6 +53,7 @@ class RegisterMapper
 
     std::array<std::vector<uint>, 2> emptyRegisters;
     std::array<std::vector<uint>, 2> savedRegisters;
+    std::array<std::vector<llvm::Value*>, 2> registerValues;
 
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
@@ -60,7 +61,7 @@ class RegisterMapper
 
     std::array<uint, 2> start = {4, 2};
     std::array<uint, 2> end = {26, 32};
-    std::array<uint, 2> nextSpill = {start[0], start[1]};
+    std::array<uint, 2> spill = {start[0], start[1]};
     std::array<uint, 2> temp = {0, 0};
 
     uint stackSize = 0;
@@ -76,7 +77,6 @@ class Instruction
     void print(std::ostream& os);
 
     RegisterMapper* mapper();
-    Module* module();
 
     protected:
     Block* block;
@@ -127,6 +127,11 @@ struct Branch : public Instruction
 struct Call : public Instruction
 {
     explicit Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments);
+};
+
+struct Return : public Instruction
+{
+    explicit Return(Block* block);
 };
 
 // j
