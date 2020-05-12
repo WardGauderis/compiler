@@ -42,6 +42,7 @@ class RegisterMapper
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
     void storeParameters(std::string& output, const std::vector<llvm::Value*>& ids);
+    uint storeReturnValue(std::string& output, llvm::Value* value);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 
@@ -126,12 +127,12 @@ struct Branch : public Instruction
 // jal
 struct Call : public Instruction
 {
-    explicit Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments);
+    explicit Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments, llvm::Value* ret);
 };
 
 struct Return : public Instruction
 {
-    explicit Return(Block* block);
+    explicit Return(Block* block, llvm::Value* value);
 };
 
 // j

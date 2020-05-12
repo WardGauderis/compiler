@@ -291,6 +291,13 @@ void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm
     }
 }
 
+uint RegisterMapper::storeReturnValue(std::string& output, llvm::Value* value)
+{
+    const auto fl = isFloat(value);
+    const auto index1 = loadValue(output, value);
+    output += operation(fl ? "mov.s" : "move", reg(fl ? 32 : 2), reg(index1));
+}
+
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
 {
     const auto fl = isFloat(id);
@@ -423,24 +430,25 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
     output += operation(eqZero ? "beqz" : "bnez", reg(index1), label(target));
 }
 
-Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments)
+Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments, llvm::Value* ret)
 : Instruction(block)
 {
     mapper()->storeParameters(output, arguments);
     output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
     output += operation("jal", label(function));
     output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
+
+    mapper()->storeReturnValue(output, ret);
 }
 
-Return::Return(Block* block)
-: Instruction(block)
-  {
-      mapper()->loadSaved(output);
-      output += operation("jr", "$ra");
-  }
+Return::Return(Block* block, llvm::Value* value) : Instruction(block)
+{
+    mapper()->storeReturnValue(output, value);
+    mapper()->loadSaved(output);
+    output += operation("jr", "$ra");
+}
 
-  Jump::Jump(Block * block, llvm::BasicBlock * target)
-: Instruction(block)
+Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
 {
     output += operation("j", label(target));
 }
@@ -539,8 +547,7 @@ void Module::print(std::ostream& os) const
     }
     for(auto variable : globals)
     {
-        os << label(variable) << ": ";
-        os << ".space ";
+        os << label(variable) << ": .space ";
         os << layout.getTypeAllocSize(variable->getValueType());
         os << "\n";
     }
