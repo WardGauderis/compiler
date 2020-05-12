@@ -22,7 +22,10 @@ char RemoveUnusedCodeInBlockPass::ID = 0;
 // code");
 
 IRVisitor::IRVisitor(const std::filesystem::path& input)
-		:module(input.string(), context), builder(context) { }
+		:module(input.string(), context), builder(context)
+{
+	module.setDataLayout("p:32:32");
+}
 
 void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 {

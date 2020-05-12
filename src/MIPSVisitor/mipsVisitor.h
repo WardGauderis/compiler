@@ -11,7 +11,7 @@
 
 class MIPSVisitor : public llvm::InstVisitor<MIPSVisitor> {
 public:
-	MIPSVisitor();
+	explicit MIPSVisitor(const llvm::Module& module);
 
 	void convertIR(llvm::Module& module);
 

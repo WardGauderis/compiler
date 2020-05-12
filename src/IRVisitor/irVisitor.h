@@ -9,6 +9,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <filesystem>
 #include <ast/statements.h>
+#include <llvm/IR/NoFolder.h>
 #include <llvm/Pass.h>
 
 #include "ast/expressions.h"
@@ -94,7 +95,7 @@ public:
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;
-	llvm::IRBuilder<> builder;
+	llvm::IRBuilder<llvm::NoFolder> builder;
 	RemoveUnusedCodeInBlockPass removeUnusedCode;
 
 	llvm::Value* ret{};

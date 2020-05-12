@@ -274,10 +274,10 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 
 void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
 {
-    if(registerValues[fl][index] != nullptr)
-    {
-        storeValue(output, registerValues[fl][index]);
-    }
+//    if(registerValues[fl][index] != nullptr)
+//    {
+//        storeValue(output, registerValues[fl][index]);
+//    }
 }
 
 void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm::Value*>& ids)

@@ -12,7 +12,8 @@
 using namespace llvm;
 using namespace mips;
 
-MIPSVisitor::MIPSVisitor() { }
+MIPSVisitor::MIPSVisitor(const llvm::Module& module)
+		:module(module.getDataLayout()) { }
 
 void MIPSVisitor::convertIR(llvm::Module& module)
 {
@@ -33,7 +34,9 @@ void MIPSVisitor::print(const std::filesystem::path& output)
 
 void MIPSVisitor::visitModule(llvm::Module& M)
 {
-	//TODO globals
+	for (auto& global: M.globals()) {
+		module.addGlobal(&global);
+	}
 }
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
@@ -119,27 +122,22 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
-	//TODO label, register, stack
 	currentBlock->append(new mips::Load(currentBlock, &I, I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 {
-	//TODO stack function
-	InstVisitor::visitAllocaInst(I);
+	currentBlock->append(new mips::Allocate(currentBlock, &I, I.getAllocatedType()));
 }
 
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
-	//TODO label, regitster, stack
 	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
-	InstVisitor::visitStoreInst(I);
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-	//TODO immediate, addu
-	InstVisitor::visitGetElementPtrInst(I);
+	InstVisitor::visitGetElementPtrInst(I); //TODO
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
@@ -200,12 +198,12 @@ void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
 {
-
+	std::cout << "PtrToInt" << std::endl;
 }
 
 void MIPSVisitor::visitIntToPtrInst(IntToPtrInst& I)
 {
-
+	std::cout << "IntToPtr" << std::endl;
 }
 
 void MIPSVisitor::visitBitCastInst(BitCastInst& I)
@@ -215,14 +213,17 @@ void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 
 void MIPSVisitor::visitCallInst(CallInst& I)
 {
-	//TODO arg
 	InstVisitor::visitCallInst(I);
+	std::vector<Value*> args;
+	for (const auto& arg: I.args()) {
+		args.emplace_back(arg);
+	}
+	currentBlock->append(new mips::Call(currentBlock, I.getFunction(), args));
 }
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	//TODO move
-	InstVisitor::visitReturnInst(I);
+	currentBlock->append(new mips::Return(currentBlock));
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
@@ -252,6 +253,9 @@ void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 	mips::Instruction* instruction;
 
 	switch (I.getOpcode()) {
+	case llvm::Instruction::Add:
+		instruction = new mips::Arithmetic(currentBlock, "add", a, b, c);
+		break;
 	case llvm::Instruction::FAdd:
 		instruction = new mips::Arithmetic(currentBlock, "add.s", a, b, c);
 		break;
