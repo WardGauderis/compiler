@@ -243,10 +243,10 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 
 void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
 {
-    if(registerValues[fl][index] != nullptr)
-    {
-        storeValue(output, registerValues[fl][index]);
-    }
+//    if(registerValues[fl][index] != nullptr)
+//    {
+//        storeValue(output, registerValues[fl][index]);
+//    }
 }
 
 void RegisterMapper::storeRegisters(std::string& output)
@@ -515,7 +515,7 @@ void Module::print(std::ostream& os) const
     {
         os << label(variable) << ": ";
         os << ".space ";
-        os << layout->getTypeAllocSize(variable->getValueType());
+        os << layout.getTypeAllocSize(variable->getValueType());
         os << "\n";
     }
 

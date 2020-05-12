@@ -12,7 +12,8 @@
 using namespace llvm;
 using namespace mips;
 
-MIPSVisitor::MIPSVisitor() { }
+MIPSVisitor::MIPSVisitor(const llvm::Module& module)
+		:module(module.getDataLayout()) { }
 
 void MIPSVisitor::convertIR(llvm::Module& module)
 {
@@ -33,7 +34,7 @@ void MIPSVisitor::print(const std::filesystem::path& output)
 
 void MIPSVisitor::visitModule(llvm::Module& M)
 {
-	//TODO globals
+
 }
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
@@ -44,6 +45,9 @@ void MIPSVisitor::visitFunction(llvm::Function& F)
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 {
+	for (auto& I: BB) {
+		outs() << I << '\n';
+	}
 	currentBlock = new mips::Block(currentFunction, &BB);
 	currentFunction->append(currentBlock);
 }
@@ -132,14 +136,14 @@ void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
 	//TODO label, regitster, stack
-	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
-	InstVisitor::visitStoreInst(I);
+//	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
+//	InstVisitor::visitStoreInst(I);
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-	//TODO immediate, addu
-	InstVisitor::visitGetElementPtrInst(I);
+	std::cout << "GetElementPtrInst" << std::endl;
+	unsigned int size = module.layout.getTypeAllocSize(I.getSourceElementType());
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
@@ -200,12 +204,12 @@ void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
 {
-
+	std::cout << "PtrToInt" << std::endl;
 }
 
 void MIPSVisitor::visitIntToPtrInst(IntToPtrInst& I)
 {
-
+	std::cout << "IntToPtr" << std::endl;
 }
 
 void MIPSVisitor::visitBitCastInst(BitCastInst& I)
@@ -252,6 +256,9 @@ void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 	mips::Instruction* instruction;
 
 	switch (I.getOpcode()) {
+	case llvm::Instruction::Add:
+		instruction = new mips::Arithmetic(currentBlock, "add", a, b, c);
+		break;
 	case llvm::Instruction::FAdd:
 		instruction = new mips::Arithmetic(currentBlock, "add.s", a, b, c);
 		break;

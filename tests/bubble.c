@@ -41,13 +41,11 @@
 //}
 //
 
-int x(int a)
+int a[5];
+
+int main()
 {
-	while (a){
-		if (a){
-
-		} else {
-
-		}
-	}
+	int b = a+5;
+	b = a+b;
+	return b;
 }
