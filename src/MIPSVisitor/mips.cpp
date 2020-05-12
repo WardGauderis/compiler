@@ -295,7 +295,7 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
 {
     const auto fl = isFloat(id);
     pointerDescriptors[fl].emplace(id, stackSize);
-    //    stackSize += type.size
+    stackSize += module->layout.getTypeAllocSize(type);
 }
 
 uint RegisterMapper::getSize() const noexcept
