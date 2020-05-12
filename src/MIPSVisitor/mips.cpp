@@ -7,6 +7,8 @@
 #include "mips.h"
 #include "../errors.h"
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Type.h>
 
 namespace
@@ -20,6 +22,11 @@ template <typename Ptr>
 std::string label(Ptr* ptr)
 {
     return std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
+}
+
+std::string label(llvm::Function* ptr)
+{
+    return ptr->getName();
 }
 
 template <typename... Args>
@@ -96,82 +103,148 @@ namespace mips
 
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
-    const auto index = isFloat(id);
+    const auto fl = isFloat(id);
+    const auto result = [&](auto r) { return r + 32 * fl; };
+
+    // try to place constant value into temp register and be done with it
+    const auto res = getTempRegister(fl);
+    if(placeConstant(output, res, id))
+    {
+        return res;
+    }
+
+    // we try to find if it is stored in a register already
+    const auto regIter = registerDescriptors[fl].find(id);
+
+    if(regIter == registerDescriptors[fl].end())
+    {
+        // we find a suitable register, either by finding an empty one or spilling another one
+        auto index = -1;
+        if(emptyRegisters[fl].empty())
+        {
+            index = getNextSpill(fl);
+        }
+        else
+        {
+            index = emptyRegisters[fl].back();
+            emptyRegisters[fl].pop_back();
+        }
+
+        // spill if nescessary
+        storeRegister(output, index, fl);
+
+        // place it in the desired register
+        placeValue(output, index, id);
+
+        return result(index);
+    }
+    else
+    {
+        return result(regIter->second);
+    }
+}
+
+void RegisterMapper::loadRegister(std::string& output, uint index, llvm::Value* id)
+{
+    const auto fl = isFloat(id);
+    storeRegister(output, index, fl);
+
+    auto result = true;
+    result &= placeConstant(output, index, id);
+    result &= placeValue(output, index, id);
+
+    if(not result)
+    {
+        throw InternalError("could not find the nescessary value for loading the register");
+    }
+}
+
+bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value* id)
+{
     if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
     {
         const auto immediate = int(constant->getSExtValue());
-        const auto res = getTemp();
 
-        output += operation("lui", reg(res), std::to_string(immediate & 0xffff0000u));
-        output += operation("ori", reg(res), std::to_string(immediate & 0x0000ffffu));
-        return res;
+        output += operation("lui", reg(index), std::to_string(immediate & 0xffff0000u));
+        output += operation("ori", reg(index), std::to_string(immediate & 0x0000ffffu));
+        return true;
     }
     else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
     {
         module->addFloat(constant);
-        const auto res = getTemp();
 
-        output += operation("l.s", reg(res), label(id));
-        return res;
+        output += operation("l.s", reg(index + 32), label(id));
+        return true;
     }
+    return false;
+}
 
-    const auto regIter = registerDescriptors[index].find(id);
+bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id)
+{
+    const auto fl = isFloat(id);
+    const auto addrIter = addressDescriptors[fl].find(id);
 
-    if(regIter == registerDescriptors[index].end())
+    // if it is already stored on the stack, we put that value in the register
+    if(addrIter != addressDescriptors[fl].end())
     {
-        const auto addrIter = addressDescriptors[index].find(id);
-
-        // if no register is available: spill something else into memory
-        if(emptyRegisters[index].empty())
+        if(fl)
         {
-            storeValue(output, id);
-
-            const auto temp = nextSpill[index] + 32 * index;
-            nextSpill[index] = (nextSpill[index] + 1) % registerSize[index];
-            return temp;
+            const auto tempReg = getTempRegister(false);
+            output += operation("lw", tempReg, std::to_string(addrIter->second) + "($sp)");
+            output += operation("mtc1", tempReg, reg(index + 32));
         }
         else
         {
-            const auto res = emptyRegisters[index].back() + 32 * index;
-            emptyRegisters[index].pop_back();
-
-            // if address is found: load word from the memory and remove the address entry
-            if(addrIter != addressDescriptors[index].end())
-            {
-                output += operation("lw", reg(res), std::to_string(addrIter->second) + "($sp)");
-                addressDescriptors[index].erase(addrIter);
-                registerDescriptors[index].emplace(id, res);
-            }
-            return res;
+            output += operation("lw", reg(index), std::to_string(addrIter->second) + "($sp)");
         }
+
+        addressDescriptors[fl].erase(addrIter);
+        registerDescriptors[fl].emplace(id, index);
+        return true;
     }
-    else
-    {
-        return regIter->second + 32 * index;
-    }
+    return false;
 }
 
-uint RegisterMapper::getTemp()
+uint RegisterMapper::getTempRegister(bool fl)
 {
-    return (tempReg) ? tempReg-- : tempReg++;
+    if(not(temp[fl] == 0 or temp[fl] == 1))
+    {
+        throw InternalError("integer temp register has wrong value for some reason");
+    }
+    return (!fl * 2) + (temp[fl]) ? temp[fl]-- : temp[fl]++;
+}
+
+uint RegisterMapper::getNextSpill(bool fl)
+{
+    nextSpill[fl]++;
+    if(nextSpill[fl] > end[fl])
+    {
+        nextSpill[fl] = start[fl];
+    }
+    return nextSpill[fl];
 }
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 {
-    const auto index = isFloat(id);
-    const auto iter = registerDescriptors[index].find(id);
+    const auto fl = isFloat(id);
+    const auto iter = registerDescriptors[fl].find(id);
 
-    if(iter != registerDescriptors[index].end())
+    if(iter != registerDescriptors[fl].end())
     {
+        registerDescriptors[fl].erase(iter);
         output += operation("sw", reg(iter->second), std::to_string(stackSize) + "($sp)");
         stackSize += 4;
 
-        emptyRegisters[index].push_back(iter->second);
-        registerDescriptors[index].emplace(id, iter->second);
+        emptyRegisters[fl].push_back(iter->second);
+        registerDescriptors[fl].emplace(id, iter->second);
     }
-    else
+}
+
+void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
+{
+    if(registerValues[fl][index] != nullptr)
     {
-        throw InternalError("cannot store unused register");
+        storeValue(output, registerValues[fl][index]);
     }
 }
 
@@ -187,6 +260,13 @@ void RegisterMapper::storeRegisters(std::string& output)
     }
 }
 
+void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
+{
+    const auto fl = isFloat(id);
+    pointerDescriptors[fl].emplace(id, stackSize);
+    //    stackSize += type.size
+}
+
 uint RegisterMapper::getSize() const noexcept
 {
     return stackSize;
@@ -195,11 +275,6 @@ uint RegisterMapper::getSize() const noexcept
 void Instruction::print(std::ostream& os)
 {
     os << output;
-}
-
-void Instruction::setBlock(Block* b)
-{
-    block = b;
 }
 
 RegisterMapper* Instruction::mapper()
@@ -257,8 +332,8 @@ Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
     {
         const auto index2 = mapper()->loadValue(output, t2);
 
-        output += operation("lw", reg(mapper()->getTemp()), reg(index2));
-        output += operation("mtc1", reg(mapper()->getTemp()), reg(index1));
+        output += operation("lw", reg(mapper()->getTempRegister(false)), reg(index2));
+        output += operation("mtc1", reg(mapper()->getTempRegister(true) + 32), reg(index1));
     }
     else
     {
@@ -283,7 +358,8 @@ Load::Load(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : Inst
     }
 }
 
-Arithmetic::Arithmetic(Block* block, std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) : Instruction(block)
+Arithmetic::Arithmetic(Block* block, std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+: Instruction(block)
 {
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
@@ -302,7 +378,8 @@ Modulo::Modulo(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) 
     output += operation("mfhi", reg(index1));
 }
 
-NotEquals::NotEquals(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3) : Instruction(block)
+NotEquals::NotEquals(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
+: Instruction(block)
 {
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
@@ -312,7 +389,8 @@ NotEquals::NotEquals(Block* block, llvm::Value* t1, llvm::Value* t2, llvm::Value
     output += operation("cmp", reg(index1), reg(index1), reg(0));
 }
 
-Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZero) : Instruction(block)
+Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZero)
+: Instruction(block)
 {
     const auto index1 = mapper()->loadValue(output, t1);
 
@@ -322,12 +400,23 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
 Call::Call(Block* block, llvm::Function* function) : Instruction(block)
 {
     mapper()->storeRegisters(output);
+
+    auto iter = 0;
+    for(auto& arg : function->args())
+    {
+        mapper()->loadRegister(output, iter++, &arg);
+    }
     output += operation("jal", label(function));
 }
 
 Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
 {
     output += operation("j", label(target));
+}
+
+Allocate::Allocate(Block* block, llvm::Value* t1, llvm::Type* type) : Instruction(block)
+{
+    mapper()->allocateValue(output, t1, type);
 }
 
 Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
@@ -349,13 +438,11 @@ Store::Store(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : In
 
 void Block::append(Instruction* instruction)
 {
-    instruction->setBlock(this);
     instructions.emplace_back(instruction);
 }
 
 void Block::appendBeforeLast(Instruction* instruction)
 {
-    instruction->setBlock(this);
     instructions.emplace(instructions.end() - 2, instruction);
 }
 
@@ -373,15 +460,8 @@ llvm::BasicBlock* Block::getBlock()
     return block;
 }
 
-void Block::setFunction(Function* func)
-{
-    function = func;
-}
-
-
 void Function::append(Block* block)
 {
-    block->setFunction(this);
     blocks.emplace_back(block);
 }
 
@@ -396,10 +476,6 @@ void Function::print(std::ostream& os) const
     os << operation("addi", "$sp", "$sp", std::to_string(mapper.getSize()));
 }
 
-void Function::setModule(Module* mod)
-{
-    module = mod;
-}
 
 RegisterMapper* Function::getMapper()
 {
@@ -432,6 +508,7 @@ void Module::print(std::ostream& os) const
     }
     for(auto variable : globals)
     {
+        os << label(variable) << ": ";
         // TODO:
     }
 

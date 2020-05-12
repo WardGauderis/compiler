@@ -27,36 +27,50 @@ class RegisterMapper
 {
     public:
     explicit RegisterMapper(Module* module)
-    : emptyRegisters(), module(module), registerSize{ 25, 31 }, nextSpill{ 0, 0 }
+    : module(module)
     {
-        emptyRegisters[0].resize(26);
-        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), 4);
+        emptyRegisters[0].resize(end[0] - start[0]);
+        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), start[0]);
 
-        emptyRegisters[1].resize(32);
-        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), 1);
+        emptyRegisters[1].resize(end[1] - start[1]);
+        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), start[1]);
+
+        registerValues[0] = std::vector<llvm::Value*>(32, nullptr);
+        registerValues[1] = std::vector<llvm::Value*>(32, nullptr);
     }
 
     uint loadValue(std::string& output, llvm::Value* id);
+    void loadRegister(std::string& output, uint index, llvm::Value* id);
 
-    uint getTemp();
+    bool placeConstant(std::string& output, uint index, llvm::Value* id);
+    bool placeValue(std::string& output, uint index, llvm::Value* id);
+
+    uint getTempRegister(bool fl);
+    uint getNextSpill(bool fl);
 
     void storeValue(std::string& output, llvm::Value* id);
-
+    void storeRegister(std::string& output, uint index, bool fl);
     void storeRegisters(std::string& output);
+
+    void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 
     [[nodiscard]] uint getSize() const noexcept;
 
     private:
-    std::array<std::vector<uint>, 2> emptyRegisters;
     Module* module;
+
+    std::array<std::vector<uint>, 2> emptyRegisters;
+    std::array<std::vector<llvm::Value*>, 2> registerValues;
 
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
+    std::array<std::map<llvm::Value*, uint>, 2> pointerDescriptors;
 
-    std::array<uint, 2> registerSize;
-    std::array<uint, 2> nextSpill;
+    std::array<uint, 2> start = {4, 2};
+    std::array<uint, 2> end = {26, 32};
+    std::array<uint, 2> nextSpill = {start[0], start[1]};
+    std::array<uint, 2> temp = {0, 0};
 
-    int tempReg = 0;
     uint stackSize = 0;
 };
 
@@ -68,8 +82,6 @@ class Instruction
     }
 
     void print(std::ostream& os);
-
-    void setBlock(Block* b);
 
     RegisterMapper* mapper();
     Module* module();
@@ -131,6 +143,11 @@ struct Jump : public Instruction
     explicit Jump(Block* block, llvm::BasicBlock* target);
 };
 
+struct Allocate : public Instruction
+{
+    Allocate(Block* block, llvm::Value* t1, llvm::Type* type);
+};
+
 // sw, sb
 struct Store : public Instruction
 {
@@ -155,8 +172,6 @@ class Block
 
     llvm::BasicBlock* getBlock();
 
-    void setFunction(Function* func);
-
     private:
     llvm::BasicBlock* block;
     std::vector<std::unique_ptr<Instruction>> instructions;
@@ -175,8 +190,6 @@ class Function
     void append(Block* block);
 
     void print(std::ostream& os) const;
-
-    void setModule(Module* mod);
 
     RegisterMapper* getMapper();
 
