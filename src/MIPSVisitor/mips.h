@@ -200,7 +200,7 @@ class Function
 class Module
 {
     public:
-    explicit Module(llvm::DataLayout* layout) : layout(layout)
+    explicit Module(const llvm::DataLayout& layout) : layout(layout)
     {
     }
 
@@ -216,7 +216,7 @@ class Module
     std::vector<std::unique_ptr<Function>> functions;
     std::set<llvm::GlobalVariable*> globals;
     std::set<llvm::ConstantFP*> floats;
-    llvm::DataLayout* layout;
+    llvm::DataLayout layout;
 };
 
 

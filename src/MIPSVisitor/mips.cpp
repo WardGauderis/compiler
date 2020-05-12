@@ -141,7 +141,9 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             index = emptyRegisters[fl].back();
             emptyRegisters[fl].pop_back();
-            savedRegisters[fl][index];
+            savedRegisters[fl][index] = stackSize;
+            stackSize += 4;
+
         }
 
         // spill if nescessary
