@@ -8,7 +8,9 @@
 
 #include <iostream>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Value.h>
+
 #include <map>
 #include <numeric>
 #include <queue>
@@ -26,21 +28,9 @@ class Module;
 class RegisterMapper
 {
     public:
-    explicit RegisterMapper(Module* module)
-    : module(module)
-    {
-        emptyRegisters[0].resize(end[0] - start[0]);
-        std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), start[0]);
-
-        emptyRegisters[1].resize(end[1] - start[1]);
-        std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), start[1]);
-
-        registerValues[0] = std::vector<llvm::Value*>(32, nullptr);
-        registerValues[1] = std::vector<llvm::Value*>(32, nullptr);
-    }
+    explicit RegisterMapper(Module* module, llvm::Function* function);
 
     uint loadValue(std::string& output, llvm::Value* id);
-    void loadRegister(std::string& output, uint index, llvm::Value* id);
 
     bool placeConstant(std::string& output, uint index, llvm::Value* id);
     bool placeValue(std::string& output, uint index, llvm::Value* id);
@@ -51,6 +41,7 @@ class RegisterMapper
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
     void storeRegisters(std::string& output);
+    void storeParameter(std::string& output,llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 
@@ -58,9 +49,10 @@ class RegisterMapper
 
     private:
     Module* module;
+    llvm::Function* function;
 
     std::array<std::vector<uint>, 2> emptyRegisters;
-    std::array<std::vector<llvm::Value*>, 2> registerValues;
+    std::array<std::vector<uint>, 2> savedRegisters;
 
     std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
     std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
@@ -134,7 +126,7 @@ struct Branch : public Instruction
 // jal
 struct Call : public Instruction
 {
-    explicit Call(Block* block, llvm::Function* function);
+    explicit Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments);
 };
 
 // j
@@ -183,7 +175,7 @@ class Function
     friend class Block;
 
     public:
-    explicit Function(Module* module, llvm::Function* function) : function(function), mapper(module), module(module)
+    explicit Function(Module* module, llvm::Function* function) : function(function), mapper(module, function), module(module)
     {
     }
 
@@ -208,6 +200,10 @@ class Function
 class Module
 {
     public:
+    explicit Module(llvm::DataLayout* layout) : layout(layout)
+    {
+    }
+
     void append(Function* function);
 
     void print(std::ostream& os) const;
@@ -220,6 +216,7 @@ class Module
     std::vector<std::unique_ptr<Function>> functions;
     std::set<llvm::GlobalVariable*> globals;
     std::set<llvm::ConstantFP*> floats;
+    llvm::DataLayout* layout;
 };
 
 

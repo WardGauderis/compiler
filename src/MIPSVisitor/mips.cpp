@@ -101,6 +101,19 @@ void assertFloat(llvm::Value* value)
 namespace mips
 {
 
+RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
+: module(module), function(function)
+{
+    emptyRegisters[0].resize(end[0] - start[0]);
+    std::iota(emptyRegisters[0].begin(), emptyRegisters[0].end(), start[0]);
+
+    emptyRegisters[1].resize(end[1] - start[1]);
+    std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), start[1]);
+
+    savedRegisters[0] = std::vector<uint>(32, std::numeric_limits<uint>::max());
+    savedRegisters[1] = std::vector<uint>(32, std::numeric_limits<uint>::max());
+}
+
 uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
@@ -128,6 +141,7 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             index = emptyRegisters[fl].back();
             emptyRegisters[fl].pop_back();
+            savedRegisters[fl][index];
         }
 
         // spill if nescessary
@@ -141,21 +155,6 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     else
     {
         return result(regIter->second);
-    }
-}
-
-void RegisterMapper::loadRegister(std::string& output, uint index, llvm::Value* id)
-{
-    const auto fl = isFloat(id);
-    storeRegister(output, index, fl);
-
-    auto result = true;
-    result &= placeConstant(output, index, id);
-    result &= placeValue(output, index, id);
-
-    if(not result)
-    {
-        throw InternalError("could not find the nescessary value for loading the register");
     }
 }
 
@@ -258,6 +257,12 @@ void RegisterMapper::storeRegisters(std::string& output)
     {
         storeValue(output, id);
     }
+}
+
+void RegisterMapper::storeParameter(std::string& output, llvm::Value* id)
+{
+    loadValue(output, id);
+//    output += operation("");
 }
 
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
@@ -397,14 +402,12 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
     output += operation(eqZero ? "beqz" : "bnez", reg(index1), label(target));
 }
 
-Call::Call(Block* block, llvm::Function* function) : Instruction(block)
+Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments) : Instruction(block)
 {
     mapper()->storeRegisters(output);
-
-    auto iter = 0;
-    for(auto& arg : function->args())
+    for(auto value : arguments)
     {
-        mapper()->loadRegister(output, iter++, &arg);
+        mapper()->storeParameter(output, value);
     }
     output += operation("jal", label(function));
 }
@@ -509,7 +512,9 @@ void Module::print(std::ostream& os) const
     for(auto variable : globals)
     {
         os << label(variable) << ": ";
-        // TODO:
+        os << ".space ";
+        os << layout->getTypeAllocSize(variable->getValueType());
+        os << "\n";
     }
 
     os << ".text\n";
