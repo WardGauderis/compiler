@@ -515,7 +515,7 @@ void Module::print(std::ostream& os) const
     {
         os << label(variable) << ": ";
         os << ".space ";
-        os << layout->getTypeAllocSize(variable->getValueType());
+        os << layout.getTypeAllocSize(variable->getValueType());
         os << "\n";
     }
 
