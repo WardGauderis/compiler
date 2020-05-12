@@ -223,7 +223,7 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	currentBlock->append(new mips::Return(currentBlock));      //TODO
+	currentBlock->append(new mips::Return(currentBlock));
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
