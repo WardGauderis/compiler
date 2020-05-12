@@ -212,11 +212,12 @@ class Module
 
     void addFloat(llvm::ConstantFP* variable);
 
+    llvm::DataLayout layout;
+
     private:
     std::vector<std::unique_ptr<Function>> functions;
     std::set<llvm::GlobalVariable*> globals;
     std::set<llvm::ConstantFP*> floats;
-    llvm::DataLayout layout;
 };
 
 
