@@ -38,13 +38,13 @@ void MIPSVisitor::visitModule(llvm::Module& M)
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
 {
-	currentFunction = new mips::Function(&F);
+	currentFunction = new mips::Function(&module, &F);
 	module.append(currentFunction);
 }
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 {
-	currentBlock = new mips::Block(&BB);
+	currentBlock = new mips::Block(currentFunction, &BB);
 	currentFunction->append(currentBlock);
 }
 
@@ -57,57 +57,57 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 	switch (I.getPredicate()) {
 	case CmpInst::FCMP_OEQ:
 	case CmpInst::FCMP_UEQ:
-		instruction = new mips::Arithmetic("c.eq.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "c.eq.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OGT:
 	case CmpInst::FCMP_UGT:
-		instruction = new mips::Arithmetic("c.lt.s", a, c, b);
+		instruction = new mips::Arithmetic(currentBlock, "c.lt.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OGE:
 	case CmpInst::FCMP_UGE:
-		instruction = new mips::Arithmetic("c.le.s", a, c, b);
+		instruction = new mips::Arithmetic(currentBlock, "c.le.s", a, c, b);
 		break;
 	case CmpInst::FCMP_OLT:
 	case CmpInst::FCMP_ULT:
-		instruction = new mips::Arithmetic("c.lt.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "c.lt.s", a, b, c);
 		break;
 	case CmpInst::FCMP_OLE:
 	case CmpInst::FCMP_ULE:
-		instruction = new mips::Arithmetic("c.le.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "c.le.s", a, b, c);
 		break;
 	case CmpInst::FCMP_ONE:
 	case CmpInst::FCMP_UNE:
-		instruction = new mips::NotEquals(a, b, c);
+		instruction = new mips::NotEquals(currentBlock, a, b, c);
 		break;
 	case CmpInst::ICMP_EQ:
-		instruction = new mips::Arithmetic("seq", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "seq", a, b, c);
 		break;
 	case CmpInst::ICMP_NE:
-		instruction = new mips::Arithmetic("sne", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sne", a, b, c);
 		break;
 	case CmpInst::ICMP_UGT:
-		instruction = new mips::Arithmetic("sgtu", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sgtu", a, b, c);
 		break;
 	case CmpInst::ICMP_UGE:
-		instruction = new mips::Arithmetic("sgeu", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sgeu", a, b, c);
 		break;
 	case CmpInst::ICMP_ULT:
-		instruction = new mips::Arithmetic("slte", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "slte", a, b, c);
 		break;
 	case CmpInst::ICMP_ULE:
-		instruction = new mips::Arithmetic("slue", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "slue", a, b, c);
 		break;
 	case CmpInst::ICMP_SGT:
-		instruction = new mips::Arithmetic("sgt", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sgt", a, b, c);
 		break;
 	case CmpInst::ICMP_SGE:
-		instruction = new mips::Arithmetic("sge", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sge", a, b, c);
 		break;
 	case CmpInst::ICMP_SLT:
-		instruction = new mips::Arithmetic("slt", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "slt", a, b, c);
 		break;
 	case CmpInst::ICMP_SLE:
-		instruction = new mips::Arithmetic("sle", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sle", a, b, c);
 		break;
 	default:
 		instruction = nullptr;
@@ -120,7 +120,7 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
 	//TODO label, register, stack
-	currentBlock->append(new mips::Load(&I, I.getPointerOperand()));
+	currentBlock->append(new mips::Load(currentBlock, &I, I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
@@ -132,7 +132,7 @@ void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
 	//TODO label, regitster, stack
-	currentBlock->append(new mips::Store(&I, I.getPointerOperand()));
+	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
 	InstVisitor::visitStoreInst(I);
 }
 
@@ -150,10 +150,10 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 		mips::Instruction* instruction;
 		const auto& constant = dyn_cast<ConstantFP>(value);
 		if (const auto& constant = dyn_cast<ConstantInt>(value)) {
-			instruction = new mips::Load(&I, constant);
+			instruction = new mips::Load(currentBlock, &I, constant);
 		}
 		else {
-			instruction = new mips::Move(&I, value);
+			instruction = new mips::Move(currentBlock, &I, value);
 		}
 		mipsBlock->appendBeforeLast(instruction);
 	}
@@ -177,25 +177,25 @@ void MIPSVisitor::visitSExtInst(SExtInst& I)
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPToSIInst(FPToSIInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitUIToFPInst(UIToFPInst& I)
 {
 	//cvt.s.w
-	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(&I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
@@ -230,16 +230,17 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 	if (I.isConditional()) {
 		bool first = currentBlock->getBlock()->getNextNode()==I.getOperand(0);
 		bool second = currentBlock->getBlock()->getNextNode()==I.getOperand(1);
-		if (first && !second) currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(0)));  //TODO bneqz
-		else if (!first && second) currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(1)));
-			//TODO beqz
+		if (first && !second)
+			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(0), false));   // bneqz
+		else if (!first && second)
+			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(1), true));    //beqz
 		else if (!first && !second) {
-			currentBlock->append(new mips::Branch(I.getCondition(), I.getSuccessor(0)));    //TODO bneqz
-			currentBlock->append(new mips::Jump(I.getSuccessor(1)));
+			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(0), false));   // bneqz
+			currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(1)));
 		}
 	}
 	else {
-		currentBlock->append(new mips::Jump(I.getSuccessor(0)));
+		currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(0)));
 	}
 }
 
@@ -252,43 +253,43 @@ void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 
 	switch (I.getOpcode()) {
 	case llvm::Instruction::FAdd:
-		instruction = new mips::Arithmetic("add.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "add.s", a, b, c);
 		break;
 	case llvm::Instruction::Sub:
-		instruction = new mips::Arithmetic("sub", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sub", a, b, c);
 		break;
 	case llvm::Instruction::FSub:
-		instruction = new mips::Arithmetic("sub.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sub.s", a, b, c);
 		break;
 	case llvm::Instruction::Mul:
-		instruction = new mips::Arithmetic("mul", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "mul", a, b, c);
 		break;
 	case llvm::Instruction::FMul:
-		instruction = new mips::Arithmetic("mul.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "mul.s", a, b, c);
 		break;
 	case llvm::Instruction::UDiv:
-		instruction = new mips::Arithmetic("divu", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "divu", a, b, c);
 		break;
 	case llvm::Instruction::SDiv:
-		instruction = new mips::Arithmetic("div", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "div", a, b, c);
 		break;
 	case llvm::Instruction::FDiv:
-		instruction = new mips::Arithmetic("div.s", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "div.s", a, b, c);
 		break;
 	case llvm::Instruction::URem:
-		instruction = new Modulo(a, b, c);
+		instruction = new Modulo(currentBlock, a, b, c);
 		break;
 	case llvm::Instruction::SRem:
-		instruction = new Modulo(a, b, c);
+		instruction = new Modulo(currentBlock, a, b, c);
 		break;
 	case llvm::Instruction::And:
-		instruction = new mips::Arithmetic("and", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "and", a, b, c);
 		break;
 	case llvm::Instruction::Or:
-		instruction = new mips::Arithmetic("or", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "or", a, b, c);
 		break;
 	case llvm::Instruction::Xor:
-		instruction = new mips::Arithmetic("xor", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "xor", a, b, c);
 		break;
 	default:
 		InstVisitor::visitBinaryOperator(I);
