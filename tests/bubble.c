@@ -41,11 +41,10 @@
 //}
 //
 
-int a[5];
+int a[5][6];
 
 int main()
 {
-	int b = a+5;
-	b = a+b;
+	int b = a[1][2];
 	return b;
 }

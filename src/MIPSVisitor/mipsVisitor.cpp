@@ -34,7 +34,9 @@ void MIPSVisitor::print(const std::filesystem::path& output)
 
 void MIPSVisitor::visitModule(llvm::Module& M)
 {
-
+	for (auto& global: M.globals()) {
+		module.addGlobal(&global);
+	}
 }
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
@@ -45,9 +47,6 @@ void MIPSVisitor::visitFunction(llvm::Function& F)
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 {
-	for (auto& I: BB) {
-		outs() << I << '\n';
-	}
 	currentBlock = new mips::Block(currentFunction, &BB);
 	currentFunction->append(currentBlock);
 }
@@ -123,27 +122,22 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
-	//TODO label, register, stack
 	currentBlock->append(new mips::Load(currentBlock, &I, I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 {
-	//TODO stack function
-	InstVisitor::visitAllocaInst(I);
+	currentBlock->append(new mips::Allocate(currentBlock, &I, I.getAllocatedType()));
 }
 
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
-	//TODO label, regitster, stack
-//	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
-//	InstVisitor::visitStoreInst(I);
+	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-	std::cout << "GetElementPtrInst" << std::endl;
-	unsigned int size = module.layout.getTypeAllocSize(I.getSourceElementType());
+	InstVisitor::visitGetElementPtrInst(I); //TODO
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
@@ -219,14 +213,17 @@ void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 
 void MIPSVisitor::visitCallInst(CallInst& I)
 {
-	//TODO arg
 	InstVisitor::visitCallInst(I);
+	std::vector<Value*> args;
+	for (const auto& arg: I.args()) {
+		args.emplace_back(arg);
+	}
+	currentBlock->append(new mips::Call(currentBlock, I.getFunction(), args));
 }
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	//TODO move
-	InstVisitor::visitReturnInst(I);
+	currentBlock->append(new mips::Return(currentBlock));      //TODO
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
