@@ -130,16 +130,13 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     const auto result = [&](auto r) { return r + 32 * fl; };
 
     // try to place constant value into temp register and be done with it
-    const auto res = getTempRegister(fl);
-    if(placeConstant(output, res, id))
+    if(const auto res = getTempRegister(fl); placeConstant(output, res, id))
     {
         return res;
     }
 
     // we try to find if it is stored in a register already
-    const auto regIter = registerDescriptors[fl].find(id);
-
-    if(regIter == registerDescriptors[fl].end())
+    if(const auto iter = registerDescriptors[fl].find(id); iter == registerDescriptors[fl].end())
     {
         // we find a suitable register, either by finding an empty one or spilling another one
         auto index = -1;
@@ -162,13 +159,20 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         storeRegister(output, index, fl);
 
         // place it in the desired register
-        placeValue(output, index, id);
+        const auto found = placeValue(output, index, id);
+
+        // look in the alloca table
+        if(not fl and not found)
+        {
+            const auto address = pointerDescriptors[fl].find(id);
+            output += operation("la", reg(index), std::to_string(address->second) + "($sp)");
+        }
 
         return result(index);
     }
     else
     {
-        return result(regIter->second);
+        return result(iter->second);
     }
 }
 
