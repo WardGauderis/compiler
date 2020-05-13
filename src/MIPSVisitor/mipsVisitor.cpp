@@ -128,7 +128,7 @@ void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
-	currentBlock->append(new mips::Store(currentBlock, &I, I.getPointerOperand()));
+	currentBlock->append(new mips::Store(currentBlock, I.getValueOperand(), I.getPointerOperand()));
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
