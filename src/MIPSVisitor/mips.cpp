@@ -15,7 +15,7 @@ namespace
 {
 std::string reg(uint num)
 {
-    return (num >= 32 ? "$f" : "$") + std::to_string(num);
+    return (num >= 32 ? "$f" : "$") + std::to_string(num % 32);
 }
 
 template <typename Ptr>
@@ -41,7 +41,7 @@ std::string operation(std::string&& operation, std::string&& t1 = "", std::strin
 
 bool isFloat(llvm::Value* value)
 {
-    return value->getType()->isPointerTy();
+    return value->getType()->isFloatTy();
 }
 
 
