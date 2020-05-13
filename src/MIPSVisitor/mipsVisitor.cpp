@@ -209,7 +209,6 @@ void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 
 void MIPSVisitor::visitCallInst(CallInst& I)
 {
-	InstVisitor::visitCallInst(I);
 	std::vector<Value*> args;
 	for (const auto& arg: I.args()) {
 		args.emplace_back(arg);
