@@ -208,6 +208,19 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
         output += operation("l.s", reg(index + 32), label(id));
         return true;
     }
+    else if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
+    {
+        if(constant->getValueType()->isFloatTy())
+        {
+            output += operation("l.s", index, label(id));
+        }
+        else
+        {
+            const auto isWord = constant->getValueType()->getIntegerBitWidth() == 32;
+            output += operation(isWord ? "lw" : "lb", index, label(id));
+        }
+
+    }
     return false;
 }
 
@@ -377,20 +390,6 @@ Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
     }
 }
 
-Load::Load(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : Instruction(block)
-{
-    const auto index1 = mapper()->loadValue(output, t1);
-    if(isFloat(t1))
-    {
-        output += operation("l.s", reg(index1), label(variable));
-    }
-    else
-    {
-        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
-        output += operation(isWord ? "lw" : "lb", reg(index1), label(variable));
-    }
-}
-
 Arithmetic::Arithmetic(Block* block, std::string type, llvm::Value* t1, llvm::Value* t2, llvm::Value* t3)
 : Instruction(block)
 {
@@ -465,14 +464,6 @@ Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block
     const auto index2 = mapper()->loadValue(output, t2);
 
     output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
-}
-
-Store::Store(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable) : Instruction(block)
-{
-    const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
-    const auto index1 = mapper()->loadValue(output, t1);
-
-    output += operation(isWord ? "sw" : "sb", reg(index1), label(variable));
 }
 
 void Block::append(Instruction* instruction)

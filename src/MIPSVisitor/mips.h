@@ -99,7 +99,6 @@ struct Convert : public Instruction
 struct Load : public Instruction
 {
     Load(Block* block, llvm::Value* t1, llvm::Value* t2);
-    Load(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
 // add, sub, mul
@@ -150,7 +149,6 @@ struct Allocate : public Instruction
 struct Store : public Instruction
 {
     explicit Store(Block* block, llvm::Value* t1, llvm::Value* t2);
-    explicit Store(Block* block, llvm::Value* t1, llvm::GlobalVariable* variable);
 };
 
 class Block
