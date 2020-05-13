@@ -29,20 +29,14 @@ std::string label(llvm::Function* ptr)
     return ptr->getName();
 }
 
-template <typename... Args>
-std::string operation(std::string&& operation, Args&&... args)
+std::string operation(std::string&& operation, std::string&& t1, std::string&& t2 = "", std::string&& t3 = "")
 {
-    if constexpr(not std::conjunction_v<std::is_same<Args, std::string>...>)
-    {
-        throw InternalError("types must all be string");
-    }
-    else
-    {
-        std::string res = (operation + ' ');
-        res += ((args + ','), ...);
-        res.back() = '\n';
-        return res;
-    }
+    std::string res = (operation + ' ');
+    res += t1 + ",";
+    if(not t2.empty()) res += t2 + ",";
+    if(not t3.empty()) res += t3 + ",";
+    res.back() = '\n';
+    return res;
 }
 
 bool isFloat(llvm::Value* value)
@@ -130,9 +124,10 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     const auto result = [&](auto r) { return r + 32 * fl; };
 
     // try to place constant value into temp register and be done with it
-    if(const auto res = getTempRegister(fl); placeConstant(output, res, id))
+    const auto tmp = getTempRegister(fl);
+    if(placeConstant(output, tmp, id))
     {
-        return res;
+        return tmp;
     }
 
     // we try to find if it is stored in a register already
@@ -212,12 +207,12 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
     {
         if(constant->getValueType()->isFloatTy())
         {
-            output += operation("l.s", index, label(id));
+            output += operation("l.s", reg(index+32), label(id));
         }
         else
         {
             const auto isWord = constant->getValueType()->getIntegerBitWidth() == 32;
-            output += operation(isWord ? "lw" : "lb", index, label(id));
+            output += operation(isWord ? "lw" : "lb", reg(index), label(id));
         }
     }
     return false;
@@ -234,8 +229,8 @@ bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id
         if(fl)
         {
             const auto tempReg = getTempRegister(false);
-            output += operation("lw", tempReg, std::to_string(addrIter->second) + "($sp)");
-            output += operation("mtc1", tempReg, reg(index + 32));
+            output += operation("lw", reg(tempReg), std::to_string(addrIter->second) + "($sp)");
+            output += operation("mtc1", reg(tempReg), reg(index + 32));
         }
         else
         {
@@ -255,7 +250,9 @@ uint RegisterMapper::getTempRegister(bool fl)
     {
         throw InternalError("integer temp register has wrong value for some reason");
     }
-    return (!fl * 2) + (temp[fl]) ? temp[fl]-- : temp[fl]++;
+    const auto tmp = temp[fl];
+    temp[fl] = !temp[fl];
+    return (!fl * 2) + tmp;
 }
 
 uint RegisterMapper::getNextSpill(bool fl)
@@ -303,7 +300,7 @@ void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm
     }
 }
 
-uint RegisterMapper::storeReturnValue(std::string& output, llvm::Value* value)
+void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* value)
 {
     const auto fl = isFloat(value);
     const auto index1 = loadValue(output, value);
@@ -432,9 +429,15 @@ Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value
 : Instruction(block)
 {
     mapper()->storeParameters(output, arguments);
-    output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
+    if(mapper()->getSize() > 0)
+    {
+        output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
+    }
     output += operation("jal", label(function));
-    output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
+    if(mapper()->getSize() > 0)
+    {
+        output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
+    }
 
     if(ret != nullptr)
     {
@@ -503,12 +506,10 @@ void Function::append(Block* block)
 void Function::print(std::ostream& os) const
 {
     os << label(function) << ":\n";
-    os << operation("addi", "$sp", "$sp", std::to_string(-mapper.getSize()));
     for(const auto& block : blocks)
     {
         block->print(os);
     }
-    os << operation("addi", "$sp", "$sp", std::to_string(mapper.getSize()));
 }
 
 
@@ -572,7 +573,7 @@ void Module::print(std::ostream& os) const
     }
 
     os << ".text\n";
-    os << "j main";
+    os << "j main\n";
     for(const auto& function : functions)
     {
         function->print(os);

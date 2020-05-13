@@ -42,7 +42,7 @@ class RegisterMapper
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
     void storeParameters(std::string& output, const std::vector<llvm::Value*>& ids);
-    uint storeReturnValue(std::string& output, llvm::Value* value);
+    void storeReturnValue(std::string& output, llvm::Value* value);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 

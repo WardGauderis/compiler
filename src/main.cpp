@@ -33,8 +33,8 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 void compileFile(const std::filesystem::path& input, std::filesystem::path output, bool printCst, bool printAst,
 		bool optimised)
 {
-	try
-	{
+//	try
+//	{
 		const auto llPath = output.replace_extension("ll");
 		const auto asmPath = output.replace_extension("asm");
 		const auto cstPath = output.replace_extension("cst.png");
@@ -92,19 +92,19 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 		mVisitor.print(asmPath);
 
 		std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
-	}
-	catch (const SyntaxError& ex)
-	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors");
-	}
-	catch (const InternalError& ex)
-	{
-		std::cout << ex << CompilationError("could not complete compilation due to above errors");
-	}
-	catch (const std::exception& ex)
-	{
-		std::cout << ex.what();
-	}
+//	}
+//	catch (const SyntaxError& ex)
+//	{
+//		std::cout << ex << CompilationError("could not complete compilation due to above errors");
+//	}
+//	catch (const InternalError& ex)
+//	{
+//		std::cout << ex << CompilationError("could not complete compilation due to above errors");
+//	}
+//	catch (const std::exception& ex)
+//	{
+//		std::cout << ex.what();
+//	}
 
 }
 
