@@ -213,7 +213,7 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 	for (const auto& arg: I.args()) {
 		args.emplace_back(arg);
 	}
-	currentBlock->append(new mips::Call(currentBlock, I.getCalledFunction(), args, &I));
+	currentBlock->append(new mips::Call(currentBlock, I.getCalledFunction(), std::move(args), &I));
 }
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
