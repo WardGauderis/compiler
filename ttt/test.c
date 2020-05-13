@@ -1,5 +1,9 @@
+int g()
+{
+    return 5;
+}
+
 int main()
 {
-    int a = 6;
-    return 5 * a;
+    return g() + g();
 }

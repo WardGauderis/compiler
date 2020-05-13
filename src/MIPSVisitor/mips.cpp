@@ -228,6 +228,8 @@ bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id
         registerDescriptors[fl].emplace(id, index);
         return true;
     }
+
+    registerDescriptors[fl].emplace(id, index);
     return false;
 }
 
