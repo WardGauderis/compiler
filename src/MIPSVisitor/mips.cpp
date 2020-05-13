@@ -21,7 +21,7 @@ std::string reg(uint num)
 template <typename Ptr>
 std::string label(Ptr* ptr)
 {
-    return std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
+    return "$" + std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
 }
 
 std::string label(llvm::Function* ptr)
@@ -29,10 +29,10 @@ std::string label(llvm::Function* ptr)
     return ptr->getName();
 }
 
-std::string operation(std::string&& operation, std::string&& t1, std::string&& t2 = "", std::string&& t3 = "")
+std::string operation(std::string&& operation, std::string&& t1 = "", std::string&& t2 = "", std::string&& t3 = "")
 {
     std::string res = (operation + ' ');
-    res += t1 + ",";
+    if(not t1.empty()) res += t1 + ",";
     if(not t2.empty()) res += t2 + ",";
     if(not t3.empty()) res += t3 + ",";
     res.back() = '\n';
@@ -447,12 +447,23 @@ Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value
 
 Return::Return(Block* block, llvm::Value* value) : Instruction(block)
 {
-    if(value != nullptr)
+    if(block->function->getFunction()->getName() == "main")
     {
-        mapper()->storeReturnValue(output, value);
-        mapper()->loadSaved(output);
+        const auto index = mapper()->loadValue(output, value);
+        output += operation("move", reg(4), reg(index));
+        output += operation("li", reg(2), std::to_string(17));
+        output += operation("syscall");
     }
-    output += operation("jr", "$ra");
+    else
+    {
+        if(value != nullptr)
+        {
+            mapper()->storeReturnValue(output, value);
+            mapper()->loadSaved(output);
+        }
+
+        output += operation("jr", "$ra");
+    }
 }
 
 Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
@@ -518,9 +529,9 @@ RegisterMapper* Function::getMapper()
     return &mapper;
 }
 
-Module* Function::getModule()
+llvm::Function * Function::getFunction()
 {
-    return module;
+    return function;
 }
 
 Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)

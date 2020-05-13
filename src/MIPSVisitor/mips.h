@@ -168,10 +168,10 @@ class Block
 
     llvm::BasicBlock* getBlock();
 
+    Function* function;
     private:
     llvm::BasicBlock* block;
     std::vector<std::unique_ptr<Instruction>> instructions;
-    Function* function;
 };
 
 class Function
@@ -189,16 +189,16 @@ class Function
 
     RegisterMapper* getMapper();
 
-    Module* getModule();
+    llvm::Function* getFunction();
 
     Block* getBlockByBasicBlock(llvm::BasicBlock* block);
 
+    Module* module;
     private:
     llvm::Function* function;
     std::vector<std::unique_ptr<Block>> blocks;
 
     RegisterMapper mapper;
-    Module* module;
 };
 
 class Module
