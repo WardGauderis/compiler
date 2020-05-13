@@ -436,13 +436,19 @@ Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value
     output += operation("jal", label(function));
     output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
 
-    mapper()->storeReturnValue(output, ret);
+    if(ret != nullptr)
+    {
+        mapper()->storeReturnValue(output, ret);
+    }
 }
 
 Return::Return(Block* block, llvm::Value* value) : Instruction(block)
 {
-    mapper()->storeReturnValue(output, value);
-    mapper()->loadSaved(output);
+    if(value != nullptr)
+    {
+        mapper()->storeReturnValue(output, value);
+        mapper()->loadSaved(output);
+    }
     output += operation("jr", "$ra");
 }
 
