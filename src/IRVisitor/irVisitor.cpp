@@ -60,7 +60,9 @@ void IRVisitor::print(const std::filesystem::path& output)
 {
 	std::error_code ec;
 	raw_fd_ostream out(output.string(), ec);
+	module.setDataLayout("");
 	module.print(out, nullptr, false, true);
+	module.setDataLayout("p:32:32");
 }
 
 void IRVisitor::visitLiteral(const Ast::Literal& literal)

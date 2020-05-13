@@ -7,6 +7,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Target/TargetLoweringObjectFile.h>
 #include "../errors.h"
 
 using namespace llvm;
@@ -137,7 +138,7 @@ void MIPSVisitor::visitStoreInst(StoreInst& I)
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-	InstVisitor::visitGetElementPtrInst(I); //TODO
+
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
@@ -218,12 +219,14 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 	for (const auto& arg: I.args()) {
 		args.emplace_back(arg);
 	}
-	currentBlock->append(new mips::Call(currentBlock, I.getFunction(), args));
+	currentBlock->append(new mips::Call(currentBlock, I.getFunction(), args, &I));
 }
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	currentBlock->append(new mips::Return(currentBlock));
+	currentBlock->append(new mips::Return(currentBlock,
+			(I.getReturnValue()->getType()->isVoidTy() || isa<UndefValue>(I.getReturnValue()))
+			? nullptr : I.getReturnValue()));
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)

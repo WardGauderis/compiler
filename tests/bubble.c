@@ -41,10 +41,15 @@
 //}
 //
 
-int a[5][6];
+char a[5];
+char * b;
+
 
 int main()
 {
-	int b = a[1][2];
-	return b;
+	b = "hallo";
+	for (int i = 0; i<5; ++i) {
+		a[i] = b[i];
+	}
+	return a[1];
 }
