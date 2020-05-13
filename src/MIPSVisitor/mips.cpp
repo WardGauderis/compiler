@@ -572,6 +572,7 @@ void Module::print(std::ostream& os) const
     }
 
     os << ".text\n";
+    os << "j main";
     for(const auto& function : functions)
     {
         function->print(os);
