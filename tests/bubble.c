@@ -43,5 +43,6 @@
 
 int main()
 {
-	return 5;
+	int a = 6;
+	return 5 * a;
 }

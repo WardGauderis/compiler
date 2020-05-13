@@ -23,10 +23,9 @@ void MIPSVisitor::convertIR(llvm::Module& module)
 
 void MIPSVisitor::print(const std::filesystem::path& output)
 {
-//	std::ofstream stream(output);
-	module.print(std::cout);
-//	module.print(stream);
-//	stream.close();
+	std::ofstream stream(output);
+	module.print(stream);
+	stream.close();
 }
 
 void MIPSVisitor::visitModule(llvm::Module& M)
