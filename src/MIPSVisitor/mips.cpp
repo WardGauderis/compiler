@@ -286,10 +286,10 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 
 void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
 {
-        if(registerValues[fl][index] != nullptr)
-        {
-            storeValue(output, registerValues[fl][index]);
-        }
+    if(registerValues[fl][index] != nullptr)
+    {
+        storeValue(output, registerValues[fl][index]);
+    }
 }
 
 void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm::Value*>& ids)
@@ -546,21 +546,22 @@ void Module::print(std::ostream& os) const
         if(variable->getValueType()->isIntegerTy() or variable->getValueType()->isPointerTy())
         {
             os << label(variable) << ": .word ";
-            if (const auto *tmp = llvm::dyn_cast<llvm::ConstantInt>(variable->getInitializer()))
+            if(const auto* tmp = llvm::dyn_cast<llvm::ConstantInt>(variable->getInitializer()))
             {
                 os << tmp->getSExtValue() << '\n';
             }
         }
-        else if(variable->getValueType()->isArrayTy() and
-                variable->getValueType()->getContainedType(0)->isIntegerTy(8) and
-                variable->hasInitializer())
+        else if(variable->getValueType()->isArrayTy()
+                and variable->getValueType()->getContainedType(0)->isIntegerTy(8)
+                and variable->hasInitializer())
         {
             os << label(variable) << ": .asciiz ";
-            if (const auto *tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
+            if(const auto* tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
             {
                 os << tmp->getRawDataValues().data() << '\n';
             }
-            else throw InternalError("problem with llvm strings");
+            else
+                throw InternalError("problem with llvm strings");
         }
         else
         {
