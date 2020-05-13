@@ -141,14 +141,7 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         storeRegister(output, index, fl);
 
         // place it in the desired register
-        const auto found = placeValue(output, index, id);
-
-        // look in the alloca table
-        if(not fl and not found)
-        {
-            const auto address = pointerDescriptors[fl].find(id);
-            output += operation("la", reg(index), std::to_string(address->second) + "($sp)");
-        }
+        placeValue(output, index, id);
 
         return result(index);
     }
@@ -178,9 +171,8 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
     if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
     {
         const auto immediate = int(constant->getSExtValue());
+        output += operation("li", reg(index), std::to_string(immediate));
 
-        output += operation("lui", reg(index), std::to_string(immediate & 0xffff0000u));
-        output += operation("ori", reg(index), std::to_string(immediate & 0x0000ffffu));
         return true;
     }
     else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
@@ -194,13 +186,22 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
     {
         if(constant->getValueType()->isFloatTy())
         {
-            output += operation("l.s", reg(index+32), label(id));
+            output += operation("l.s", reg(index + 32), label(id));
         }
         else
         {
             output += operation("lw", reg(index), label(id));
         }
     }
+
+    const auto fl = isFloat(id);
+    const auto address = pointerDescriptors[fl].find(id);
+    if(address != pointerDescriptors[fl].end())
+    {
+        output += operation("la", reg(index), std::to_string(address->second) + "($sp)");
+        return true;
+    }
+
     return false;
 }
 
@@ -297,7 +298,7 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
 {
     const auto fl = isFloat(id);
     pointerDescriptors[fl].emplace(id, stackSize);
-    stackSize += module->layout.getTypeAllocSize(type);
+    stackSize += module->layout.getTypeStoreSize(type);
 }
 
 uint RegisterMapper::getSize() const noexcept
@@ -315,7 +316,7 @@ RegisterMapper* Instruction::mapper()
     return block->function->getMapper();
 }
 
-Module * Instruction::module()
+Module* Instruction::module()
 {
     return block->function->module;
 }
@@ -372,8 +373,8 @@ Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
     {
         const auto index2 = mapper()->loadValue(output, t2);
 
-        const bool isWord = module()->layout.getTypeAllocSize(t1->getType()) == 32;
-        output += operation(isWord ? "lw" : "lb", reg(index1), reg(index2));
+        const bool isWord = module()->layout.getTypeStoreSize(t1->getType()) == 4;
+        output += operation(isWord ? "lw" : "lb", reg(index1), "(" + reg(index2) + ")");
     }
 }
 
@@ -416,19 +417,17 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
     output += operation(eqZero ? "beqz" : "bnez", reg(index1), label(target));
 }
 
-Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments, llvm::Value* ret)
-: Instruction(block)
+Call::Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& arguments, llvm::Value* ret)
+: Instruction(block), function(function), arguments(std::move(arguments)), ret(ret)
+{
+}
+
+void Call::print(std::ostream& os)
 {
     mapper()->storeParameters(output, arguments);
-    if(mapper()->getSize() > 0)
-    {
-        output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
-    }
+    output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
     output += operation("jal", label(function));
-    if(mapper()->getSize() > 0)
-    {
-        output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
-    }
+    output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
 
     if(ret != nullptr)
     {
@@ -438,23 +437,13 @@ Call::Call(Block* block, llvm::Function* function, const std::vector<llvm::Value
 
 Return::Return(Block* block, llvm::Value* value) : Instruction(block)
 {
-    if(block->function->getFunction()->getName() == "main")
+    if(value != nullptr)
     {
-        const auto index = mapper()->loadValue(output, value);
-        output += operation("move", reg(4), reg(index));
-        output += operation("li", reg(2), std::to_string(17));
-        output += operation("syscall");
+        mapper()->storeReturnValue(output, value);
+        mapper()->loadSaved(output);
     }
-    else
-    {
-        if(value != nullptr)
-        {
-            mapper()->storeReturnValue(output, value);
-            mapper()->loadSaved(output);
-        }
 
-        output += operation("jr", "$ra");
-    }
+    output += operation("jr", "$ra");
 }
 
 Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
@@ -478,8 +467,8 @@ Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block
     }
     else
     {
-        const auto isWord = module()->layout.getTypeAllocSize(t1->getType()) == 32;
-        output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
+        const auto isWord = module()->layout.getTypeStoreSize(t1->getType()) == 4;
+        output += operation(isWord ? "sw" : "sb", reg(index1), "(" + reg(index2) + ")");
     }
 }
 
@@ -527,7 +516,7 @@ RegisterMapper* Function::getMapper()
     return &mapper;
 }
 
-llvm::Function * Function::getFunction()
+llvm::Function* Function::getFunction()
 {
     return function;
 }
@@ -541,6 +530,7 @@ Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
 
 void Module::append(Function* function)
 {
+    hasMain |= (function->getFunction()->getName() == "main");
     functions.emplace_back(function);
 }
 
@@ -576,13 +566,18 @@ void Module::print(std::ostream& os) const
         else
         {
             os << label(variable) << ": .space ";
-            os << layout.getTypeAllocSize(variable->getValueType());
+            os << layout.getTypeStoreSize(variable->getValueType());
             os << "\n";
         }
     }
 
     os << ".text\n";
-    os << "j main\n";
+    os << "$begin:\n";
+    os << "jal main\n";
+    os << "move $4, $2\n";
+    os << "li $2, 17\n";
+    os << "syscall\n";
+
     for(const auto& function : functions)
     {
         function->print(os);

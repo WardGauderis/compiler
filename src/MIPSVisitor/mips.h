@@ -75,7 +75,7 @@ class Instruction
     {
     }
 
-    void print(std::ostream& os);
+    virtual void print(std::ostream& os);
 
     RegisterMapper* mapper();
     Module* module();
@@ -127,7 +127,14 @@ struct Branch : public Instruction
 // jal
 struct Call : public Instruction
 {
-    explicit Call(Block* block, llvm::Function* function, const std::vector<llvm::Value*>& arguments, llvm::Value* ret);
+    explicit Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& arguments, llvm::Value* ret);
+
+    void print(std::ostream& os) override;
+
+    private:
+    llvm::Function* function;
+    std::vector<llvm::Value*> arguments;
+    llvm::Value* ret;
 };
 
 struct Return : public Instruction
@@ -218,6 +225,7 @@ class Module
     void addFloat(llvm::ConstantFP* variable);
 
     llvm::DataLayout layout;
+    bool hasMain = false;
 
     private:
     std::vector<std::unique_ptr<Function>> functions;
