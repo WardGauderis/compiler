@@ -18,11 +18,7 @@ MIPSVisitor::MIPSVisitor(const llvm::Module& module)
 
 void MIPSVisitor::convertIR(llvm::Module& module)
 {
-	SMDiagnostic Err;
-	llvm::LLVMContext context;
-	auto m = parseIRFile("bubble.ll", Err, context);
-	visit(*m);
-//	visit(module);
+	visit(module);
 }
 
 void MIPSVisitor::print(const std::filesystem::path& output)

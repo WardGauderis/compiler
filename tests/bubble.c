@@ -41,15 +41,7 @@
 //}
 //
 
-char a[5];
-char * b;
-
-
 int main()
 {
-	b = "hallo";
-	for (int i = 0; i<5; ++i) {
-		a[i] = b[i];
-	}
-	return a[1];
+	return 5;
 }
