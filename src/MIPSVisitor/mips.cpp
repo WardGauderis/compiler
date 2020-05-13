@@ -41,20 +41,7 @@ std::string operation(std::string&& operation, std::string&& t1 = "", std::strin
 
 bool isFloat(llvm::Value* value)
 {
-    const auto type = value->getType();
-
-    if(type->isFloatTy())
-    {
-        return true;
-    }
-    else if(type->isIntegerTy() or type->isPointerTy())
-    {
-        return false;
-    }
-    else
-    {
-        throw InternalError("unsupported type for mips");
-    }
+    return value->getType()->isPointerTy();
 }
 
 
@@ -211,8 +198,7 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
         }
         else
         {
-            const auto isWord = constant->getValueType()->getIntegerBitWidth() == 32;
-            output += operation(isWord ? "lw" : "lb", reg(index), label(id));
+            output += operation("lw", reg(index), label(id));
         }
     }
     return false;
@@ -329,6 +315,11 @@ RegisterMapper* Instruction::mapper()
     return block->function->getMapper();
 }
 
+Module * Instruction::module()
+{
+    return block->function->module;
+}
+
 Move::Move(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     assertSame(t1, t2);
@@ -380,8 +371,8 @@ Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
     else
     {
         const auto index2 = mapper()->loadValue(output, t2);
-        const bool isWord = t1->getType()->getIntegerBitWidth() == 32;
 
+        const bool isWord = module()->layout.getTypeAllocSize(t1->getType()) == 32;
         output += operation(isWord ? "lw" : "lb", reg(index1), reg(index2));
     }
 }
@@ -478,11 +469,18 @@ Allocate::Allocate(Block* block, llvm::Value* t1, llvm::Type* type) : Instructio
 
 Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
-    const auto isWord = t1->getType()->getIntegerBitWidth() == 32;
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
 
-    output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
+    if(isFloat(t1))
+    {
+        output += operation("s.s", reg(index1), reg(index2));
+    }
+    else
+    {
+        const auto isWord = module()->layout.getTypeAllocSize(t1->getType()) == 32;
+        output += operation(isWord ? "sw" : "sb", reg(index1), reg(index2));
+    }
 }
 
 void Block::append(Instruction* instruction)

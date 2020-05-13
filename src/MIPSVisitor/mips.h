@@ -78,6 +78,7 @@ class Instruction
     void print(std::ostream& os);
 
     RegisterMapper* mapper();
+    Module* module();
 
     protected:
     Block* block;
