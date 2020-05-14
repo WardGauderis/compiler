@@ -44,10 +44,13 @@
 
 #include <stdio.h>
 
+int a;
+
+int * g(){
+	return &a;
+}
+
 int main()
 {
-	int a[10][5];
-	int b;
-	int c;
-	return a[b][c];
+	return &a;
 }

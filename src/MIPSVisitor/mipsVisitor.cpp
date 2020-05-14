@@ -172,7 +172,7 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
 		mips::Instruction* instruction;
 		const auto& constant = dyn_cast<ConstantFP>(value);
-		if (const auto& constant = dyn_cast<ConstantInt>(value)) {
+		if (const auto& constant = dyn_cast<Constant>(value)) {
 			instruction = new mips::Load(currentBlock, &I, constant);
 		}
 		else {
@@ -184,17 +184,17 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 
 void MIPSVisitor::visitTruncInst(TruncInst& I)
 {
-
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitZExtInst(ZExtInst& I)
 {
-
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitSExtInst(SExtInst& I)
 {
-
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
@@ -223,17 +223,17 @@ void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
 {
-	std::cout << "PtrToInt" << std::endl;
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitIntToPtrInst(IntToPtrInst& I)
 {
-	std::cout << "IntToPtr" << std::endl;
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 {
-
+	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
 }
 
 void MIPSVisitor::visitCallInst(CallInst& I)
