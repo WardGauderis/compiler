@@ -39,6 +39,7 @@ void MIPSVisitor::visitModule(llvm::Module& M)
 
 void MIPSVisitor::visitFunction(llvm::Function& F)
 {
+	if (F.isDeclaration()) return;
 	currentFunction = new mips::Function(&module, &F);
 	module.append(currentFunction);
 }
