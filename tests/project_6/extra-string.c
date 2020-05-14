@@ -1,8 +1,8 @@
 #include "stdio.h"
 int main()
 {
-    const char* s = "aaa";
-	printf("hallo\n");
+    const char* s = "aaa\n";
+	printf(s);
 	printf("dit is een tweede lijn\n");
 	return 0;
 }

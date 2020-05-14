@@ -21,7 +21,7 @@ std::string reg(uint num)
 template <typename Ptr>
 std::string label(Ptr* ptr)
 {
-    return "$" + std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
+    return "g" + std::to_string(reinterpret_cast<size_t>(ptr)); // nobody can see this line
 }
 
 std::string label(llvm::Function* ptr)
@@ -37,6 +37,12 @@ std::string operation(std::string&& operation, std::string&& t1 = "", std::strin
     if(not t3.empty()) res += t3 + ",";
     res.back() = '\n';
     return res;
+}
+
+std::string move(uint to, uint from, bool fl)
+{
+    if(to == from) return "";
+    return operation(fl ? "mov.s" : "move", reg(to), reg(from));
 }
 
 bool isFloat(llvm::Value* value)
@@ -132,7 +138,7 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
             emptyRegisters[fl].pop_back();
 
             savedRegisters[fl][index] = stackSize;
-            output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(stackSize) + "($sp)");
+            stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(stackSize) + "($sp)");
 
             stackSize += 4;
         }
@@ -166,32 +172,26 @@ void RegisterMapper::loadSaved(std::string& output)
     }
 }
 
+void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
+{
+    const auto fl = isFloat(id);
+    const auto index1 = loadValue(output, id);
+    output += move(index1, fl ? 32 : 2, fl);
+}
+
 bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value* id)
 {
     if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
     {
         const auto immediate = int(constant->getSExtValue());
         output += operation("li", reg(index), std::to_string(immediate));
-
         return true;
     }
     else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
     {
         module->addFloat(constant);
-
         output += operation("l.s", reg(index + 32), label(id));
         return true;
-    }
-    else if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
-    {
-        if(constant->getValueType()->isFloatTy())
-        {
-            output += operation("l.s", reg(index + 32), label(id));
-        }
-        else
-        {
-            output += operation("lw", reg(index), label(id));
-        }
     }
 
     const auto fl = isFloat(id);
@@ -241,7 +241,7 @@ uint RegisterMapper::getTempRegister(bool fl)
     }
     const auto tmp = temp[fl];
     temp[fl] = !temp[fl];
-    return (!fl * 2) + tmp;
+    return (fl ? 32 : 2) + tmp;
 }
 
 uint RegisterMapper::getNextSpill(bool fl)
@@ -289,11 +289,11 @@ void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm
     }
 }
 
-void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* value)
+void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 {
-    const auto fl = isFloat(value);
-    const auto index1 = loadValue(output, value);
-    output += operation(fl ? "mov.s" : "move", reg(fl ? 32 : 2), reg(index1));
+    const auto fl = isFloat(id);
+    const auto index1 = loadValue(output, id);
+    output += move(fl ? 32 : 2, index1, fl);
 }
 
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
@@ -306,6 +306,11 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
 uint RegisterMapper::getSize() const noexcept
 {
     return stackSize;
+}
+
+void RegisterMapper::print(std::ostream& os) const
+{
+    os << stores;
 }
 
 void Instruction::print(std::ostream& os)
@@ -344,7 +349,7 @@ Convert::Convert(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(b
         // float to int
         assertInt(t1);
 
-        output += operation("cvt.s.w", reg(index2), reg(index2));
+        output += operation("cvt.w.s", reg(index2), reg(index2));
         output += operation("mfc1", reg(index1), reg(index2));
     }
     else
@@ -353,28 +358,26 @@ Convert::Convert(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(b
         assertFloat(t1);
 
         output += operation("mtc1", reg(index2), reg(index1));
-        output += operation("cvt.w.s", reg(index1), reg(index1));
+        output += operation("cvt.s.w", reg(index1), reg(index1));
     }
 }
 
 Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     const auto index1 = mapper()->loadValue(output, t1);
+    const auto index2 = mapper()->loadValue(output, t2);
 
-    if(llvm::isa<llvm::Constant>(t2))
+    if(const auto& var = llvm::dyn_cast<llvm::GlobalVariable>(t2))
     {
+        output += operation("la", reg(index2), label(t2));
     }
-    else if(isFloat(t1))
-    {
-        const auto index2 = mapper()->loadValue(output, t2);
 
-        output += operation("lw", reg(mapper()->getTempRegister(false)), reg(index2));
-        output += operation("mtc1", reg(mapper()->getTempRegister(true) + 32), reg(index1));
+    if(isFloat(t1))
+    {
+        output += operation("lwc1", reg(index1), '(' + reg(index2) + ')');
     }
     else
     {
-        const auto index2 = mapper()->loadValue(output, t2);
-
         const bool isWord = module()->layout.getTypeStoreSize(t1->getType()) == 4;
         output += operation(isWord ? "lw" : "lb", reg(index1), "(" + reg(index2) + ")");
     }
@@ -426,15 +429,19 @@ Call::Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& a
 
 void Call::print(std::ostream& os)
 {
+    const auto size = static_cast<int>(mapper()->getSize() + 4);
     mapper()->storeParameters(output, arguments);
-    output += operation("addi", "$sp", "$sp", std::to_string(-mapper()->getSize()));
+    output += operation("sw", "$ra","-4($sp)");
+    output += operation("addi", "$sp", "$sp", std::to_string(-size));
     output += operation("jal", label(function));
-    output += operation("addi", "$sp", "$sp", std::to_string(mapper()->getSize()));
+    output += operation("addi", "$sp", "$sp", std::to_string(size));
+    output += operation("lw", "$ra","-4($sp)");
 
     if(ret != nullptr)
     {
-        mapper()->storeReturnValue(output, ret);
+        mapper()->loadReturnValue(output, ret);
     }
+    os << output;
 }
 
 Return::Return(Block* block, llvm::Value* value) : Instruction(block)
@@ -506,10 +513,16 @@ void Function::append(Block* block)
 void Function::print(std::ostream& os) const
 {
     os << label(function) << ":\n";
+    mapper.print(os);
     for(const auto& block : blocks)
     {
         block->print(os);
     }
+}
+
+bool Function::isMain() const
+{
+    return function->getName() == "main";
 }
 
 
@@ -532,7 +545,10 @@ Block* Function::getBlockByBasicBlock(llvm::BasicBlock* block)
 
 void Module::append(Function* function)
 {
-    hasMain |= (function->getFunction()->getName() == "main");
+    if(function->isMain())
+    {
+        main = function;
+    }
     functions.emplace_back(function);
 }
 
@@ -553,6 +569,14 @@ void Module::print(std::ostream& os) const
                 os << tmp->getSExtValue() << '\n';
             }
         }
+        else if(variable->getValueType()->isFloatTy())
+        {
+            os << label(variable) << ": .float ";
+            if(const auto* tmp = llvm::dyn_cast<llvm::ConstantFP>(variable->getInitializer()))
+            {
+                os << tmp->getValueAPF().convertToFloat() << '\n';
+            }
+        }
         else if(variable->getValueType()->isArrayTy()
                 and variable->getValueType()->getContainedType(0)->isIntegerTy(8)
                 and variable->hasInitializer())
@@ -563,7 +587,9 @@ void Module::print(std::ostream& os) const
                 os << tmp->getRawDataValues().data() << '\n';
             }
             else
+            {
                 throw InternalError("problem with llvm strings");
+            }
         }
         else
         {
@@ -575,8 +601,17 @@ void Module::print(std::ostream& os) const
 
     os << ".text\n";
     os << "$begin:\n";
-    os << "jal main\n";
-    os << "move $4, $2\n";
+    if(main)
+    {
+        const auto size = -static_cast<int>(main->getMapper()->getSize());
+        os << "addi $sp, $sp, " << size << '\n';
+        os << "jal main\n";
+        os << "move $4, $2\n";
+    }
+    else
+    {
+        os << "li $4, 0";
+    }
     os << "li $2, 17\n";
     os << "syscall\n";
 

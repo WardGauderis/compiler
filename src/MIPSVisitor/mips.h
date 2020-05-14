@@ -32,6 +32,7 @@ class RegisterMapper
 
     uint loadValue(std::string& output, llvm::Value* id);
     void loadSaved(std::string& output);
+    void loadReturnValue(std::string& output, llvm::Value* id);
 
     bool placeConstant(std::string& output, uint index, llvm::Value* id);
     bool placeValue(std::string& output, uint index, llvm::Value* id);
@@ -42,13 +43,16 @@ class RegisterMapper
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
     void storeParameters(std::string& output, const std::vector<llvm::Value*>& ids);
-    void storeReturnValue(std::string& output, llvm::Value* value);
+    void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
 
     [[nodiscard]] uint getSize() const noexcept;
 
+    void print(std::ostream& os) const;
+
     private:
+    std::string stores;
     Module* module;
     llvm::Function* function;
 
@@ -195,6 +199,8 @@ class Function
 
     void print(std::ostream& os) const;
 
+    bool isMain() const;
+
     RegisterMapper* getMapper();
 
     llvm::Function* getFunction();
@@ -225,7 +231,7 @@ class Module
     void addFloat(llvm::ConstantFP* variable);
 
     llvm::DataLayout layout;
-    bool hasMain = false;
+    Function* main = nullptr;
 
     private:
     std::vector<std::unique_ptr<Function>> functions;
