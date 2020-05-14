@@ -45,6 +45,7 @@ class RegisterMapper
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
+    void createDuplicate(llvm::Value* target, llvm::Value* clone);
 
     [[nodiscard]] int getSaveSize() const noexcept;
     [[nodiscard]] int getArgsSize() const noexcept;
@@ -156,6 +157,11 @@ struct Jump : public Instruction
 struct Allocate : public Instruction
 {
     Allocate(Block* block, llvm::Value* t1, llvm::Type* type);
+};
+
+struct Empty : public Instruction
+{
+    Empty(Block* block, llvm::Value* t1, llvm::Value* t2);
 };
 
 // sw, sb

@@ -266,7 +266,6 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
     if(iter != registerDescriptors[fl].end())
     {
         // spills the value
-        registerDescriptors[fl].erase(iter);
         output += operation("sw", reg(iter->second), std::to_string(argsSize + saveSize) + "($sp)");
         saveSize += 4;
 
@@ -296,6 +295,17 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
     const auto fl = isFloat(id);
     pointerDescriptors[fl].emplace(id, argsSize + saveSize);
     saveSize += module->layout.getTypeStoreSize(type);
+}
+
+void RegisterMapper::createDuplicate(llvm::Value* target, llvm::Value* clone)
+{
+    const auto fl = isFloat(target);
+    const auto iter = registerDescriptors[fl].find(target);
+    if(iter == registerDescriptors[fl].end())
+    {
+        throw InternalError("creating clone to value which is not in register");
+    }
+    registerDescriptors[fl].emplace(clone, iter->second);
 }
 
 int RegisterMapper::getSaveSize() const noexcept
@@ -366,11 +376,6 @@ Load::Load(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
-
-    if(const auto& var = llvm::dyn_cast<llvm::GlobalVariable>(t2))
-    {
-        output += operation("la", reg(index2), label(t2));
-    }
 
     if(isFloat(t1))
     {
@@ -472,6 +477,12 @@ Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
 Allocate::Allocate(Block* block, llvm::Value* t1, llvm::Type* type) : Instruction(block)
 {
     mapper()->allocateValue(output, t1, type);
+}
+
+Empty::Empty(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
+{
+    mapper()->loadValue(output, t1);
+    mapper()->createDuplicate(t1, t2);
 }
 
 Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)

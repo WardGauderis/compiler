@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-int main()
+int * g()
 {
     printf("5");
 }
