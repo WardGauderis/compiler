@@ -230,8 +230,11 @@ class Module
 
     void addFloat(llvm::ConstantFP* variable);
 
+    void includePrintf();
+
     llvm::DataLayout layout;
     Function* main = nullptr;
+    bool printfIncluded = false;
 
     private:
     std::vector<std::unique_ptr<Function>> functions;

@@ -615,6 +615,11 @@ void Module::print(std::ostream& os) const
     os << "li $2, 17\n";
     os << "syscall\n";
 
+    if(printfIncluded)
+    {
+
+    }
+
     for(const auto& function : functions)
     {
         function->print(os);
@@ -629,6 +634,11 @@ void Module::addGlobal(llvm::GlobalVariable* variable)
 void Module::addFloat(llvm::ConstantFP* variable)
 {
     floats.emplace(variable);
+}
+
+void Module::includePrintf()
+{
+    printfIncluded = true;
 }
 
 

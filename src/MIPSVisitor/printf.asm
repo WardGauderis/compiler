@@ -1,32 +1,3 @@
-.data
-string: .asciiz "hallo %%%i%c %s %f %p"
-str: .asciiz "test"
-f: .float 0.25
-.text
-
-la $t0, string
-sw $t0, -20($sp)
-
-li $t0, 5
-sw $t0, -24($sp)
-
-li $t0, 65
-sw $t0, -28($sp)
-
-la $t0, str
-sw $t0, -32($sp)
-
-lw $t0, f
-sw $t0, -36($sp)
-
-li $t0, 0x50
-sw $t0, -40($sp)
-
-jal printf
-
-li $v0, 10
-syscall
-
 printf:
 	addu $sp, $sp, -16	#buffer for char (4) and \0 (8)
 	sw $t0, 0($sp)
