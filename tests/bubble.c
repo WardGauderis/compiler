@@ -46,5 +46,8 @@
 
 int main()
 {
-	printf("5");
+	int a[10][5];
+	int b;
+	int c;
+	return a[b][c];
 }

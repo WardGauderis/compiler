@@ -138,12 +138,30 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
 	const auto& base = I.getPointerOperand();
 	APInt a(32, 0);
-	if (I.accumulateConstantOffset(module.layout, a)) {
+	if (I.hasAllZeroIndices()) {
+		return;
+	}
+	else if (I.accumulateConstantOffset(module.layout, a)) {
 		currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
 				Constant::getIntegerValue(IntegerType::getInt32Ty(I.getContext()), a)));
 	}
 	else {
-		InstVisitor::visitGetElementPtrInst(I);
+		llvm::Type* currentType = PointerType::getUnqual(I.getPointerOperandType());
+		for (const auto& index: I.indices()) {
+			currentType = currentType->getContainedType(0);
+			const auto size = module.layout.getTypeAllocSize(currentType);
+			if (const auto& constant = dyn_cast<ConstantInt>(index)) {
+				if (not constant->getZExtValue()) continue;
+				currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
+						ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), size*constant->getZExtValue())));
+				continue;
+			}
+			const auto& mul = BinaryOperator::Create(llvm::Instruction::Mul, index,
+					ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), size));
+			currentBlock->append(
+					new mips::Arithmetic(currentBlock, "mulu", mul, mul->getOperand(0), mul->getOperand(1)));
+			currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base, mul));
+		}
 	}
 }
 
