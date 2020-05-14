@@ -41,10 +41,13 @@
 //}
 //
 
+
 #include <stdio.h>
 
 int main()
 {
-	int a = 6;
-	return 5 * a;
+	int a[10][5];
+	int b;
+	int c;
+	return a[b][c];
 }
