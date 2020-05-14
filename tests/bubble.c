@@ -42,14 +42,9 @@
 //
 
 
+#include <stdio.h>
+
 int main()
 {
-	int* a;
-	int** b;
-	int c[5];
-	int d[7][3];
-	int e[2][6][13];
-	++a;
-	++b;
-	a = c+1;
+	printf("5");
 }

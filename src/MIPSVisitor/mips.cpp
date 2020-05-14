@@ -621,10 +621,10 @@ void Module::print(std::ostream& os) const
 
     if(printfIncluded)
     {
-        std::ifstream file("asm/printf.asm");
+        std::ifstream file("asm/stdio.asm");
         if(not file.good())
         {
-            throw std::runtime_error("could not read file printf.asm");
+            throw std::runtime_error("could not read file stdio.asm");
         }
         std::string contents;
 
