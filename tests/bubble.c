@@ -41,10 +41,15 @@
 //}
 //
 
-#include <stdio.h>
 
 int main()
 {
-	int a = 6;
-	return 5 * a;
+	int* a;
+	int** b;
+	int c[5];
+	int d[7][3];
+	int e[2][6][13];
+	++a;
+	++b;
+	a = c+1;
 }

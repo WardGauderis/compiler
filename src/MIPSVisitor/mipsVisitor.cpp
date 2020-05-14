@@ -136,7 +136,15 @@ void MIPSVisitor::visitStoreInst(StoreInst& I)
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-
+	const auto& base = I.getPointerOperand();
+	APInt a(32, 0);
+	if (I.accumulateConstantOffset(module.layout, a)) {
+		currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
+				Constant::getIntegerValue(IntegerType::getInt32Ty(I.getContext()), a)));
+	}
+	else {
+		InstVisitor::visitGetElementPtrInst(I);
+	}
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
@@ -307,6 +315,6 @@ void MIPSVisitor::visitInstruction(llvm::Instruction& I)
 	std::string str;
 	llvm::raw_string_ostream rso(str);
 	I.print(rso);
-	std::cout << InternalError("Forgot to implement IR instruction '"+str+"' in MIPS");
+	throw InternalError("IR instruction '"+str+"' is not implemented in MIPS (try turning optimizations off)");
 }
 
