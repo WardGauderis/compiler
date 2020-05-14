@@ -431,11 +431,11 @@ void Call::print(std::ostream& os)
 {
     const auto size = static_cast<int>(mapper()->getSize() + 4);
     mapper()->storeParameters(output, arguments);
-    output += operation("sw", "$ra","-4($sp)");
+    output += operation("sw", "$ra", "-4($sp)");
     output += operation("addi", "$sp", "$sp", std::to_string(-size));
     output += operation("jal", label(function));
     output += operation("addi", "$sp", "$sp", std::to_string(size));
-    output += operation("lw", "$ra","-4($sp)");
+    output += operation("lw", "$ra", "-4($sp)");
 
     if(ret != nullptr)
     {
@@ -617,7 +617,20 @@ void Module::print(std::ostream& os) const
 
     if(printfIncluded)
     {
+        std::ifstream file("asm/printf.asm");
+        if(not file.good())
+        {
+            throw std::runtime_error("could not read file printf.asm");
+        }
+        std::string contents;
 
+        file.seekg(0, std::ios::end);
+        contents.reserve(file.tellg());
+        file.seekg(0, std::ios::beg);
+
+        contents.assign((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+        os << contents;
     }
 
     for(const auto& function : functions)
