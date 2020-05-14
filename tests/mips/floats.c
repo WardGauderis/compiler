@@ -9,6 +9,5 @@ float g()
 
 int main()
 {
-    printf("5");
     return a * 5.8 * g();
 }

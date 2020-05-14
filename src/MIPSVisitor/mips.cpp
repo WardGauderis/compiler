@@ -106,8 +106,8 @@ RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
     for(auto& arg : function->args())
     {
         const auto fl = isFloat(&arg);
-        addressDescriptors[fl].emplace(&arg, function->arg_size() * 4 - argsSize);
         argsSize += 4;
+        addressDescriptors[fl].emplace(&arg, function->arg_size() * 4 - argsSize);
     }
 }
 
@@ -139,7 +139,6 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 
             savedRegisters[fl][index] = argsSize + saveSize;
             stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(argsSize + saveSize) + "($sp)");
-
             saveSize += 4;
         }
 
@@ -181,7 +180,12 @@ void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
 
 bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value* id)
 {
-    if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
+    if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
+    {
+        output += operation("la", reg(index), label(id));
+        return true;
+    }
+    else if(const auto& constant = llvm::dyn_cast<llvm::ConstantInt>(id))
     {
         const auto immediate = int(constant->getSExtValue());
         output += operation("li", reg(index), std::to_string(immediate));
@@ -261,12 +265,14 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 
     if(iter != registerDescriptors[fl].end())
     {
+        // spills the value
         registerDescriptors[fl].erase(iter);
         output += operation("sw", reg(iter->second), std::to_string(argsSize + saveSize) + "($sp)");
         saveSize += 4;
 
         emptyRegisters[fl].push_back(iter->second);
-        registerDescriptors[fl].emplace(id, iter->second);
+        registerDescriptors[fl].erase(iter);
+        addressDescriptors[fl].emplace(id, iter->second);
     }
 }
 
@@ -288,7 +294,7 @@ void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
 {
     const auto fl = isFloat(id);
-    pointerDescriptors[fl].emplace(id, saveSize);
+    pointerDescriptors[fl].emplace(id, argsSize + saveSize);
     saveSize += module->layout.getTypeStoreSize(type);
 }
 
@@ -430,8 +436,8 @@ void Call::print(std::ostream& os)
     for(auto arg : arguments)
     {
         const auto index = mapper()->loadValue(output, arg);
-        output += operation("sw", reg(index), std::to_string(-other - iter) + "($sp)");
         iter += 4;
+        output += operation("sw", reg(index), std::to_string(-other - iter) + "($sp)");
     }
 
     output += operation("sw", "$ra", "-4($sp)");
@@ -588,7 +594,7 @@ void Module::print(std::ostream& os) const
             os << label(variable) << ": .asciiz ";
             if(const auto* tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
             {
-                os << tmp->getRawDataValues().data() << '\n';
+                os << '"' << tmp->getRawDataValues().data() << "\"\n";
             }
             else
             {
