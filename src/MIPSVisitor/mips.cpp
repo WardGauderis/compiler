@@ -564,7 +564,7 @@ void Module::print(std::ostream& os) const
     }
     for(auto variable : globals)
     {
-        os << ".align 2 ";
+        os << ".align 2\n";
         if(variable->getValueType()->isIntegerTy() or variable->getValueType()->isPointerTy())
         {
             os << label(variable) << ": .word ";
@@ -621,7 +621,7 @@ void Module::print(std::ostream& os) const
 
     if(printfIncluded)
     {
-        std::ifstream file("asm/printf.asm");
+        std::ifstream file("asm/stdio.asm");
         if(not file.good())
         {
             throw std::runtime_error("could not read file printf.asm");
