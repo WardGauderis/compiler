@@ -106,8 +106,8 @@ RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
     for(auto& arg : function->args())
     {
         const auto fl = isFloat(&arg);
-        addressDescriptors[fl].emplace(&arg, stackSize);
-        stackSize += 4;
+        addressDescriptors[fl].emplace(&arg, function->arg_size() * 4 - argsSize);
+        argsSize += 4;
     }
 }
 
@@ -137,10 +137,10 @@ uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
             index = emptyRegisters[fl].back();
             emptyRegisters[fl].pop_back();
 
-            savedRegisters[fl][index] = stackSize;
-            stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(stackSize) + "($sp)");
+            savedRegisters[fl][index] = argsSize + saveSize;
+            stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(argsSize + saveSize) + "($sp)");
 
-            stackSize += 4;
+            saveSize += 4;
         }
 
         // spill if nescessary
@@ -262,8 +262,8 @@ void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
     if(iter != registerDescriptors[fl].end())
     {
         registerDescriptors[fl].erase(iter);
-        output += operation("sw", reg(iter->second), std::to_string(stackSize) + "($sp)");
-        stackSize += 4;
+        output += operation("sw", reg(iter->second), std::to_string(argsSize + saveSize) + "($sp)");
+        saveSize += 4;
 
         emptyRegisters[fl].push_back(iter->second);
         registerDescriptors[fl].emplace(id, iter->second);
@@ -278,17 +278,6 @@ void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
     }
 }
 
-void RegisterMapper::storeParameters(std::string& output, const std::vector<llvm::Value*>& ids)
-{
-    auto offset = 0;
-    for(auto id : ids)
-    {
-        const auto index = loadValue(output, id);
-        output += operation("sw", reg(index), std::to_string(stackSize + offset) + "($sp)");
-        offset += 4;
-    }
-}
-
 void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
@@ -299,13 +288,18 @@ void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
 {
     const auto fl = isFloat(id);
-    pointerDescriptors[fl].emplace(id, stackSize);
-    stackSize += module->layout.getTypeStoreSize(type);
+    pointerDescriptors[fl].emplace(id, saveSize);
+    saveSize += module->layout.getTypeStoreSize(type);
 }
 
-uint RegisterMapper::getSize() const noexcept
+int RegisterMapper::getSaveSize() const noexcept
 {
-    return stackSize;
+    return saveSize;
+}
+
+int RegisterMapper::getArgsSize() const noexcept
+{
+    return argsSize;
 }
 
 void RegisterMapper::print(std::ostream& os) const
@@ -429,12 +423,21 @@ Call::Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& a
 
 void Call::print(std::ostream& os)
 {
-    const auto size = static_cast<int>(mapper()->getSize() + 4);
-    mapper()->storeParameters(output, arguments);
+    const int other = module()->getFunctionSize(function);
+    auto iter = 4;
+
+    //store parameters
+    for(auto arg : arguments)
+    {
+        const auto index = mapper()->loadValue(output, arg);
+        output += operation("sw", reg(index), std::to_string(-other - iter) + "($sp)");
+        iter += 4;
+    }
+
     output += operation("sw", "$ra", "-4($sp)");
-    output += operation("addi", "$sp", "$sp", std::to_string(-size));
+    output += operation("addi", "$sp", "$sp", std::to_string(-other-iter));
     output += operation("jal", label(function));
-    output += operation("addi", "$sp", "$sp", std::to_string(size));
+    output += operation("addi", "$sp", "$sp", std::to_string(other+iter));
     output += operation("lw", "$ra", "-4($sp)");
 
     if(ret != nullptr)
@@ -561,6 +564,7 @@ void Module::print(std::ostream& os) const
     }
     for(auto variable : globals)
     {
+        os << ".align 2 ";
         if(variable->getValueType()->isIntegerTy() or variable->getValueType()->isPointerTy())
         {
             os << label(variable) << ": .word ";
@@ -603,7 +607,7 @@ void Module::print(std::ostream& os) const
     os << "$begin:\n";
     if(main)
     {
-        const auto size = -static_cast<int>(main->getMapper()->getSize());
+        const auto size = -static_cast<int>(main->getMapper()->getSaveSize());
         os << "addi $sp, $sp, " << size << '\n';
         os << "jal main\n";
         os << "move $4, $2\n";
@@ -649,9 +653,34 @@ void Module::addFloat(llvm::ConstantFP* variable)
     floats.emplace(variable);
 }
 
-void Module::includePrintf()
+int Module::getFunctionSize(llvm::Function *function)
+{
+    if(function == printf)
+    {
+        return 20;
+    }
+    else if(function == scanf)
+    {
+        return 24;
+    }
+
+    const auto pred = [&](const auto& ptr)
+    {
+        return ptr->getFunction() == function;
+    };
+    const auto iter = std::find_if(functions.begin(), functions.end(), pred);
+    if(iter == functions.end())
+    {
+        throw std::logic_error("could not find given function");
+    }
+    return (*iter)->getMapper()->getSaveSize();
+}
+
+void Module::includeStdio(llvm::Function* printf, llvm::Function* scanf)
 {
     printfIncluded = true;
+    this->printf = printf;
+    this->scanf = scanf;
 }
 
 

@@ -42,12 +42,13 @@ class RegisterMapper
 
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
-    void storeParameters(std::string& output, const std::vector<llvm::Value*>& ids);
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
+    void allocateArguments();
 
-    [[nodiscard]] uint getSize() const noexcept;
+    [[nodiscard]] int getSaveSize() const noexcept;
+    [[nodiscard]] int getArgsSize() const noexcept;
 
     void print(std::ostream& os) const;
 
@@ -69,7 +70,8 @@ class RegisterMapper
     std::array<uint, 2> spill = {start[0], start[1]};
     std::array<uint, 2> temp = {0, 0};
 
-    uint stackSize = 0;
+    int saveSize = 0;
+    int argsSize = 0;
 };
 
 class Instruction
@@ -230,11 +232,16 @@ class Module
 
     void addFloat(llvm::ConstantFP* variable);
 
-    void includePrintf();
+    int getFunctionSize(llvm::Function* function);
+
+    void includeStdio(llvm::Function* printf, llvm::Function* scanf);
 
     llvm::DataLayout layout;
     Function* main = nullptr;
+
     bool printfIncluded = false;
+    llvm::Function* printf;
+    llvm::Function* scanf;
 
     private:
     std::vector<std::unique_ptr<Function>> functions;
