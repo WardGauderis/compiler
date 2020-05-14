@@ -95,7 +95,7 @@ public:
 private:
 	llvm::LLVMContext context;
 	llvm::Module module;
-	llvm::IRBuilder<> builder;
+	llvm::IRBuilder<llvm::NoFolder> builder;
 	RemoveUnusedCodeInBlockPass removeUnusedCode;
 
 	llvm::Value* ret{};
