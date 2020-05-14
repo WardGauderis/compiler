@@ -30,6 +30,8 @@ void MIPSVisitor::print(const std::filesystem::path& output)
 
 void MIPSVisitor::visitModule(llvm::Module& M)
 {
+	if (M.getFunction("printf") && M.getFunction("scanf"))
+		module.includePrintf();
 	for (auto& global: M.globals()) {
 		module.addGlobal(&global);
 	}
