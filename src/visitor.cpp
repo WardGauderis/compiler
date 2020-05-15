@@ -77,7 +77,7 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
         return new Ast::Literal(str[1], table, line, column);
     case CParser::STRING:
         str.erase(std::remove(str.begin(), str.end(), '"'), str.end());
-        // replaces "\n" by 'newline'
+        // replaces "\n" by 'newline' and such
         for(size_t i = 0; i < str.size(); i++)
         {
             if(str[i] == '\\' and str[i + 1] == 'n')

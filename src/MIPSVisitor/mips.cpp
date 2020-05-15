@@ -6,10 +6,12 @@
 
 #include "mips.h"
 #include "../errors.h"
+#include <llvm/ADT/StringExtras.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Type.h>
+#include <llvm/Support/raw_ostream.h>
 
 namespace
 {
@@ -593,10 +595,13 @@ void Module::print(std::ostream& os) const
                 and variable->getValueType()->getContainedType(0)->isIntegerTy(8)
                 and variable->hasInitializer())
         {
-            os << label(variable) << ": .asciiz ";
+            os << label(variable) << ": .ascii ";
             if(const auto* tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
             {
-                os << '"' << tmp->getAsString().data() << "\"\n";
+                std::string str;
+                llvm::raw_string_ostream rso(str);
+                llvm::printEscapedString(tmp->getAsString(), rso);
+                os << '"' << rso.str() << "\"\n";
             }
             else
             {
