@@ -31,7 +31,7 @@ class RegisterMapper
     explicit RegisterMapper(Module* module, llvm::Function* function);
 
     int loadValue(std::string& output, llvm::Value* id);
-    void loadSaved(std::string& output);
+    void loadSaved(std::string& output) const;
 
     bool placeConstant(std::string& output, int index, llvm::Value* id);
 

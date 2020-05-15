@@ -126,8 +126,6 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         return tmp;
     }
 
-    std::cout << id << '\n';
-
     // we try to find if it is stored in a register already, if so just return it
     if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
     {
@@ -181,7 +179,7 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
     return result(index);
 }
 
-void RegisterMapper::loadSaved(std::string& output)
+void RegisterMapper::loadSaved(std::string& output) const
 {
     for(size_t i = 0; i < savedRegisters[0].size(); i++)
     {
@@ -238,7 +236,7 @@ void RegisterMapper::storeArgumentValue(std::string& output, llvm::Value* id, in
 {
     const auto fl = isFloat(id);
 
-    if(not placeConstant(output, 2, id))
+    if(placeConstant(output, 2, id))
     {
     }
     else if(registerDescriptors[fl].find(id) == registerDescriptors[fl].end())
@@ -268,7 +266,6 @@ int RegisterMapper::getNextSpill(bool fl)
     {
         spill[fl] = start[fl];
     }
-    std::cout << spill[fl] << '\n';
     return spill[fl];
 }
 void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
@@ -441,10 +438,8 @@ Return::Return(Block* block, llvm::Value* value) : Instruction(block)
     if(value != nullptr)
     {
         mapper()->storeReturnValue(output, value);
-        mapper()->loadSaved(output);
     }
-
-    output += operation("jr", "$ra");
+    output += operation("j", label(block->function)+"end");
 }
 
 Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
@@ -516,6 +511,12 @@ void Function::print(std::ostream& os) const
     {
         block->print(os);
     }
+
+    std::string output;
+    output += label(this)+"end:\n";
+    mapper.loadSaved(output);
+    output += operation("jr", "$ra");
+    os << output;
 }
 
 bool Function::isMain() const
