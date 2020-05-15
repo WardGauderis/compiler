@@ -36,6 +36,7 @@ void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 void IRVisitor::LLVMOptimize()
 {
 //	PassBuilder passBuilder;
+	createConstantMergePass()->runOnModule(module);
 	legacy::FunctionPassManager m(&module);
 	m.add(createPromoteMemoryToRegisterPass());
 	m.add(createSROAPass());

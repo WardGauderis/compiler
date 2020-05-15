@@ -46,6 +46,9 @@
 
 int main()
 {
-	printf("hallo\ttest\n");
+	printf("hallo");
+	printf("hallo");
+	printf("hallo");
+	printf("hallo");
 	return 0;
 }
