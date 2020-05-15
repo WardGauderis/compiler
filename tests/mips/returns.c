@@ -4,9 +4,12 @@
 // @copyright   : BA2 Informatica - Thomas Dooms - University of Antwerp
 //============================================================================
 
-#include <stdio.h>
+int f(int a){
+    if (a > 3) return 1;
+    return 5;
+}
 
 int main()
 {
-    printf("5%i", 6);
+    f(2);
 }

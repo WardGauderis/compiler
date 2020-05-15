@@ -297,17 +297,6 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
     saveSize += module->layout.getTypeStoreSize(type);
 }
 
-void RegisterMapper::createDuplicate(llvm::Value* target, llvm::Value* clone)
-{
-    const auto fl = isFloat(target);
-    const auto iter = registerDescriptors[fl].find(target);
-    if(iter == registerDescriptors[fl].end())
-    {
-        throw InternalError("creating clone to value which is not in register");
-    }
-    registerDescriptors[fl].emplace(clone, iter->second);
-}
-
 int RegisterMapper::getSaveSize() const noexcept
 {
     return saveSize;
@@ -445,10 +434,12 @@ void Call::print(std::ostream& os)
         output += operation("sw", reg(index), std::to_string(-other - iter) + "($sp)");
     }
 
+    const auto incr = module()->isStdio(function) ? 4 : other + iter;
+
     output += operation("sw", "$ra", "-4($sp)");
-    output += operation("addi", "$sp", "$sp", std::to_string(-other-iter));
+    output += operation("addi", "$sp", "$sp", std::to_string(-incr));
     output += operation("jal", label(function));
-    output += operation("addi", "$sp", "$sp", std::to_string(other+iter));
+    output += operation("addi", "$sp", "$sp", std::to_string(incr));
     output += operation("lw", "$ra", "-4($sp)");
 
     if(ret != nullptr)
@@ -481,8 +472,8 @@ Allocate::Allocate(Block* block, llvm::Value* t1, llvm::Type* type) : Instructio
 
 Empty::Empty(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
-    mapper()->loadValue(output, t1);
-    mapper()->createDuplicate(t1, t2);
+    const auto index1 = mapper()->loadValue(output, t1);
+    mapper()->placeConstant(output, index1, t2);
 }
 
 Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
@@ -605,7 +596,7 @@ void Module::print(std::ostream& os) const
             os << label(variable) << ": .asciiz ";
             if(const auto* tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
             {
-                os << '"' << tmp->getRawDataValues().data() << "\"\n";
+                os << '"' << tmp->getAsString().data() << "\"\n";
             }
             else
             {
@@ -631,7 +622,7 @@ void Module::print(std::ostream& os) const
     }
     else
     {
-        os << "li $4, 0";
+        os << "li $4, 0\n";
     }
     os << "li $2, 17\n";
     os << "syscall\n";
@@ -672,13 +663,9 @@ void Module::addFloat(llvm::ConstantFP* variable)
 
 int Module::getFunctionSize(llvm::Function *function)
 {
-    if(function == printf)
+    if(function == printf or function == scanf)
     {
-        return 20;
-    }
-    else if(function == scanf)
-    {
-        return 24;
+        return 0;
     }
 
     const auto pred = [&](const auto& ptr)
@@ -691,6 +678,11 @@ int Module::getFunctionSize(llvm::Function *function)
         throw std::logic_error("could not find given function");
     }
     return (*iter)->getMapper()->getSaveSize();
+}
+
+bool Module::isStdio(llvm::Function* function) const
+{
+    return function == printf or function == scanf;
 }
 
 void Module::includeStdio(llvm::Function* printf, llvm::Function* scanf)

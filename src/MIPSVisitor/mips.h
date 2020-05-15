@@ -45,7 +45,6 @@ class RegisterMapper
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
-    void createDuplicate(llvm::Value* target, llvm::Value* clone);
 
     [[nodiscard]] int getSaveSize() const noexcept;
     [[nodiscard]] int getArgsSize() const noexcept;
@@ -206,7 +205,7 @@ class Function
 
     void print(std::ostream& os) const;
 
-    bool isMain() const;
+    [[nodiscard]] bool isMain() const;
 
     RegisterMapper* getMapper();
 
@@ -238,6 +237,8 @@ class Module
     void addFloat(llvm::ConstantFP* variable);
 
     int getFunctionSize(llvm::Function* function);
+
+    bool isStdio(llvm::Function* function) const;
 
     void includeStdio(llvm::Function* printf, llvm::Function* scanf);
 

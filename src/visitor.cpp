@@ -57,7 +57,16 @@ Ast::Expr* visitLiteral(antlr4::tree::ParseTree* context, std::shared_ptr<Symbol
     case CParser::INT:
         try
         {
-            return new Ast::Literal(std::stoi(str), table, line, column);
+            int result = 0;
+            if(str.substr(0, 2) == "0b")
+            {
+                result = std::stoi(str.substr(2), nullptr, 2);
+            }
+            else
+            {
+                result = std::stoi(str, nullptr, 0);
+            }
+            return new Ast::Literal(result, table, line, column);
         }
         catch(const std::out_of_range& ex)
         {
