@@ -46,9 +46,7 @@
 
 int main()
 {
-	printf("hallo");
-	printf("hallo");
-	printf("hallo");
-	printf("hallo");
+	float a = 2.5;
+	printf("%f", a);
 	return 0;
 }
