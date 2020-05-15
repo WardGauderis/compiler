@@ -43,6 +43,21 @@ void IRVisitor::LLVMOptimize()
 	for (auto& function: module.functions()) {
 		m.run(function);
 	}
+
+//	for (const auto& f: module) {
+//		for (const auto& b: f) {
+//			for (const auto& i: b) {
+//				if (i.getNumOperands()<2) continue;
+//				auto I = i.getOperand(1);
+//				outs() << *I << ": ";
+//				for (const auto& user: I->users()) {
+//					if (*user==I.us) continue;
+//					outs() << *user << " ";
+//				}
+//				outs() << '\n';
+//			}
+//		}
+//	}
 //	LoopAnalysisManager loopAnalysisManager(false);
 //	FunctionAnalysisManager functionAnalysisManager(false);
 //	CGSCCAnalysisManager cGSCCAnalysisManager(false);
@@ -450,6 +465,7 @@ void IRVisitor::visitFunctionDefinition(
 		builder.CreateRet(functionDefinition.identifier=="main"
 		                  ? Constant::getNullValue(returnType)
 		                  : UndefValue::get(returnType));
+	RemoveUnusedCodeInBlockPass removeUnusedCode;
 	removeUnusedCode.runOnFunction(*function);
 }
 

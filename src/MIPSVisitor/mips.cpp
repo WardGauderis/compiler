@@ -241,6 +241,8 @@ void RegisterMapper::storeArgumentValue(std::string& output, llvm::Value* id, in
     }
     else if(registerDescriptors[fl].find(id) == registerDescriptors[fl].end())
     {
+	    llvm::outs() << *id << '\n';
+	    llvm::outs().flush();
         const auto address = addressDescriptors[fl].at(id);
         output += operation("lw", "2", std::to_string(address) + "($sp)");
     }
