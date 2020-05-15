@@ -35,26 +35,26 @@ void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 
 void IRVisitor::LLVMOptimize()
 {
-//	PassBuilder passBuilder;
-	createConstantMergePass()->runOnModule(module);
-	legacy::FunctionPassManager m(&module);
-	m.add(createPromoteMemoryToRegisterPass());
-	m.add(createSROAPass());
-	for (auto& function: module.functions()) {
-		m.run(function);
-	}
-//	LoopAnalysisManager loopAnalysisManager(false);
-//	FunctionAnalysisManager functionAnalysisManager(false);
-//	CGSCCAnalysisManager cGSCCAnalysisManager(false);
-//	ModuleAnalysisManager moduleAnalysisManager(false);
-//	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
-//	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
-//	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
-//	passBuilder.registerLoopAnalyses(loopAnalysisManager);
-//	passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
-//			moduleAnalysisManager);
-//	ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(PassBuilder::OptimizationLevel::O3);
-//	modulePassManager.run(module, moduleAnalysisManager);
+	PassBuilder passBuilder;
+//	createConstantMergePass()->runOnModule(module);
+//	legacy::FunctionPassManager m(&module);
+//	m.add(createPromoteMemoryToRegisterPass());
+//	m.add(createSROAPass());
+//	for (auto& function: module.functions()) {
+//		m.run(function);
+//	}
+	LoopAnalysisManager loopAnalysisManager(false);
+	FunctionAnalysisManager functionAnalysisManager(false);
+	CGSCCAnalysisManager cGSCCAnalysisManager(false);
+	ModuleAnalysisManager moduleAnalysisManager(false);
+	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+	passBuilder.registerLoopAnalyses(loopAnalysisManager);
+	passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
+			moduleAnalysisManager);
+	ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(PassBuilder::OptimizationLevel::O3);
+	modulePassManager.run(module, moduleAnalysisManager);
 }
 
 void IRVisitor::print(const std::filesystem::path& output)
