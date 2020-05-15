@@ -30,19 +30,15 @@ class RegisterMapper
     public:
     explicit RegisterMapper(Module* module, llvm::Function* function);
 
-    uint loadValue(std::string& output, llvm::Value* id);
+    int loadValue(std::string& output, llvm::Value* id);
     void loadSaved(std::string& output);
     void loadReturnValue(std::string& output, llvm::Value* id);
 
-    bool placeConstant(std::string& output, uint index, llvm::Value* id);
-    bool placeValue(std::string& output, uint index, llvm::Value* id);
+    bool placeConstant(std::string& output, int index, llvm::Value* id);
 
-    uint getTempRegister(bool fl);
-    uint getNextSpill(bool fl);
+    int getTempRegister(bool fl);
+    int getNextSpill(bool fl);
 
-    void storeSpilled(std::string& output, uint index, llvm::Value* id);
-    void storeValue(std::string& output, llvm::Value* id);
-    void storeRegister(std::string& output, uint index, bool fl);
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
@@ -57,18 +53,18 @@ class RegisterMapper
     Module* module;
     llvm::Function* function;
 
-    std::array<std::vector<uint>, 2> emptyRegisters;
-    std::array<std::vector<uint>, 2> savedRegisters;
+    std::array<std::vector<int>, 2> emptyRegisters;
+    std::array<std::vector<int>, 2> savedRegisters;
     std::array<std::vector<llvm::Value*>, 2> registerValues;
 
-    std::array<std::map<llvm::Value*, uint>, 2> registerDescriptors;
-    std::array<std::map<llvm::Value*, uint>, 2> addressDescriptors;
-    std::array<std::map<llvm::Value*, uint>, 2> pointerDescriptors;
+    std::array<std::map<llvm::Value*, int>, 2> registerDescriptors;
+    std::array<std::map<llvm::Value*, int>, 2> addressDescriptors;
+    std::array<std::map<llvm::Value*, int>, 2> pointerDescriptors;
 
-    std::array<uint, 2> start = {4, 2};
-    std::array<uint, 2> end = {26, 32};
-    std::array<uint, 2> spill = {start[0], start[1]};
-    std::array<uint, 2> temp = {0, 0};
+    std::array<int, 2> start = {4, 2};
+    std::array<int, 2> end = {26, 32};
+    std::array<int, 2> spill = {start[0], start[1]};
+    std::array<int, 2> temp = {0, 0};
 
     int saveSize = 0;
     int argsSize = 0;

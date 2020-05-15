@@ -99,8 +99,8 @@ RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
     emptyRegisters[1].resize(end[1] - start[1]);
     std::iota(emptyRegisters[1].begin(), emptyRegisters[1].end(), start[1]);
 
-    savedRegisters[0] = std::vector<uint>(32, std::numeric_limits<uint>::max());
-    savedRegisters[1] = std::vector<uint>(32, std::numeric_limits<uint>::max());
+    savedRegisters[0] = std::vector<int>(32, -1);
+    savedRegisters[1] = std::vector<int>(32, -1);
 
     registerValues[0] = std::vector<llvm::Value*>(32, nullptr);
     registerValues[1] = std::vector<llvm::Value*>(32, nullptr);
@@ -113,49 +113,68 @@ RegisterMapper::RegisterMapper(Module* module, llvm::Function* function)
     }
 }
 
-uint RegisterMapper::loadValue(std::string& output, llvm::Value* id)
+int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
     const auto result = [&](auto r) { return r + 32 * fl; };
 
     // try to place constant value into temp register and be done with it
-    const auto tmp = getTempRegister(fl);
+    // this short circuits everything, so we don't need t handle any descriptors
+    const auto tmp = getTempRegister(isFloat(id));
     if(placeConstant(output, tmp, id))
     {
         return tmp;
     }
 
-    // we try to find if it is stored in a register already
-    if(const auto iter = registerDescriptors[fl].find(id); iter == registerDescriptors[fl].end())
-    {
-        // we find a suitable register, either by finding an empty one or spilling another one
-        auto index = -1;
-        if(emptyRegisters[fl].empty())
-        {
-            index = getNextSpill(fl);
-        }
-        else
-        {
-            index = emptyRegisters[fl].back();
-            emptyRegisters[fl].pop_back();
-
-            savedRegisters[fl][index] = argsSize + saveSize;
-            stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(argsSize + saveSize) + "($sp)");
-            saveSize += 4;
-        }
-
-        // spill if nescessary
-        storeRegister(output, index, fl);
-
-        // place it in the desired register
-        placeValue(output, index, id);
-
-        return result(index);
-    }
-    else
+    // we try to find if it is stored in a register already, if so just return it
+    if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
     {
         return result(iter->second);
     }
+
+    // we try to find a suitable register, either by finding an empty one or spilling another one
+    auto index = -1;
+    if(emptyRegisters[fl].empty())
+    {
+        // if there are no registers left, we spill a value
+        index = getNextSpill(fl);
+        const auto spilled = registerValues[fl][index];
+
+        // we find the location to spill to
+        const auto iter = addressDescriptors[fl].try_emplace(spilled, argsSize + saveSize);
+        registerDescriptors[fl].erase(spilled);
+
+        // we add the spilled value to the data structures
+        output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(iter.first->second) + "($sp)");
+        saveSize += 4;
+    }
+    else
+    {
+        // if there are left, we use that one and say it is used
+        index = emptyRegisters[fl].back();
+        emptyRegisters[fl].pop_back();
+    }
+
+    // if it was never used before we need to save it
+    if(registerValues[fl][index] == nullptr)
+    {
+        savedRegisters[fl][index] = argsSize + saveSize;
+        stores += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(argsSize + saveSize) + "($sp)");
+        saveSize += 4;
+    }
+
+    // the register will from now on contain this id
+    registerValues[fl][index] = id;
+    registerDescriptors[fl].emplace(id, index);
+
+    // if the value is on the stack, we can load it in
+    if(const auto address = addressDescriptors[fl].find(id); address != addressDescriptors[fl].end())
+    {
+        output += operation(fl ? "lwc1" : "lw", reg(result(index)), std::to_string(address->second) + "($sp)");
+    }
+
+    // if the address was not on the stack, we return the register as is, and it is the problem of the user
+    return result(index);
 }
 
 void RegisterMapper::loadSaved(std::string& output)
@@ -180,7 +199,7 @@ void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
     output += move(index1, fl ? 32 : 2, fl);
 }
 
-bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value* id)
+bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* id)
 {
     if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
     {
@@ -211,35 +230,7 @@ bool RegisterMapper::placeConstant(std::string& output, uint index, llvm::Value*
     return false;
 }
 
-bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id)
-{
-    const auto fl = isFloat(id);
-    const auto addrIter = addressDescriptors[fl].find(id);
-
-    // if it is already stored on the stack, we put that value in the register
-    if(addrIter != addressDescriptors[fl].end())
-    {
-        if(fl)
-        {
-            operation("lwc1", reg(index + 32), std::to_string(addrIter->second) + "($sp)");
-        }
-        else
-        {
-            output += operation("lw", reg(index), std::to_string(addrIter->second) + "($sp)");
-        }
-
-        addressDescriptors[fl].erase(addrIter);
-        registerDescriptors[fl].emplace(id, index);
-        registerValues[fl][index] = id;
-        return true;
-    }
-
-    registerValues[fl][index] = id;
-    registerDescriptors[fl].emplace(id, index);
-    return false;
-}
-
-uint RegisterMapper::getTempRegister(bool fl)
+int RegisterMapper::getTempRegister(bool fl)
 {
     if(not(temp[fl] == 0 or temp[fl] == 1))
     {
@@ -250,7 +241,7 @@ uint RegisterMapper::getTempRegister(bool fl)
     return (fl ? 32 : 2) + tmp;
 }
 
-uint RegisterMapper::getNextSpill(bool fl)
+int RegisterMapper::getNextSpill(bool fl)
 {
     spill[fl]++;
     if(spill[fl] > end[fl])
@@ -260,37 +251,6 @@ uint RegisterMapper::getNextSpill(bool fl)
     std::cout << spill[fl] << '\n';
     return spill[fl];
 }
-
-//void RegisterMapper::storeSpilled(std::string& output, uint index, llvm::Value *id)
-//{
-//
-//}
-
-void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
-{
-    const auto fl = isFloat(id);
-    const auto iter = registerDescriptors[fl].find(id);
-
-    if(iter != registerDescriptors[fl].end())
-    {
-        // spills the value
-        output += operation("sw", reg(iter->second), std::to_string(argsSize + saveSize) + "($sp)");
-        saveSize += 4;
-
-        emptyRegisters[fl].push_back(iter->second);
-        registerDescriptors[fl].erase(iter);
-        addressDescriptors[fl].emplace(id, iter->second);
-    }
-}
-
-void RegisterMapper::storeRegister(std::string& output, uint index, bool fl)
-{
-    if(registerValues[fl][index] != nullptr)
-    {
-        storeValue(output, registerValues[fl][index]);
-    }
-}
-
 void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
