@@ -141,7 +141,7 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 	const auto& base = processOperand(I.getPointerOperand());
 	APInt a(32, 0);
 	if (I.hasAllZeroIndices()) {
-		currentBlock->append(new mips::Empty(currentBlock, &I, processOperand(I.getPointerOperand())));
+		currentBlock->append(new mips::Empty(currentBlock, &I, base));
 	}
 	else if (I.accumulateConstantOffset(module.layout, a)) {
 		currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
@@ -368,8 +368,6 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 	}
 
 	llvm::Instruction* instruction = c->getAsInstruction();
-//	llvm::outs() << *instruction->getOperand(0) << '\n';
-//	llvm::outs().flush();
 	visit(instruction);
 	return instruction;
 }
