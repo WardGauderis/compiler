@@ -44,9 +44,14 @@
 
 #include <stdio.h>
 
-int main()
-{
-	float a = 2.5;
-	printf("%f", a);
-	return 0;
+void f(int a){
+	printf("%i", a);
+	printf("%i", a);
 }
+//int main()
+//{
+//	int a = 2;
+//	printf("%i", a);
+//	printf("%i", a);
+//	return 0;
+//}
