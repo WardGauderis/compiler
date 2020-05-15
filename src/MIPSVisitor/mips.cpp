@@ -208,12 +208,6 @@ void RegisterMapper::loadSaved(std::string& output) const
     }
 }
 
-void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
-{
-    const auto fl = isFloat(id);
-    placeInTempRegister(output, id, fl ? 32 : 2);
-}
-
 bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* id)
 {
     if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
@@ -287,6 +281,25 @@ int RegisterMapper::getNextSpill(bool fl)
     }
     return spill[fl];
 }
+
+void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
+{
+    const auto fl = isFloat(id);
+
+    if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
+    {
+        output += move(iter->second, fl ? 32 : 2);
+    }
+    else if(const auto iter = addressDescriptors[fl].find(id); iter != addressDescriptors[fl].end())
+    {
+        output += operation(fl ? "lwc1" : "lw", reg(fl ? 32 : 2), std::to_string(iter->second) + "($sp)");
+    }
+    else
+    {
+        throw InternalError("unknown llvm value: " + std::to_string(reinterpret_cast<size_t>(id)));
+    }
+}
+
 void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
@@ -434,7 +447,7 @@ void Call::print(std::ostream& os)
     {
         iter += 4;
         mapper()->placeInTempRegister(output, arg, 2);
-        output += operation("sw", "2", std::to_string(-other-iter) + "($sp)");
+        output += operation("sw", "$2", std::to_string(-other-iter) + "($sp)");
     }
 
     const auto incr = module()->isStdio(function) ? 4 : other + iter;
