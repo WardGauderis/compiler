@@ -40,6 +40,7 @@ class RegisterMapper
     uint getTempRegister(bool fl);
     uint getNextSpill(bool fl);
 
+    void storeSpilled(std::string& output, uint index, llvm::Value* id);
     void storeValue(std::string& output, llvm::Value* id);
     void storeRegister(std::string& output, uint index, bool fl);
     void storeReturnValue(std::string& output, llvm::Value* id);

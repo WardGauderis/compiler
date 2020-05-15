@@ -221,9 +221,7 @@ bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id
     {
         if(fl)
         {
-            const auto tempReg = getTempRegister(false);
-            output += operation("lw", reg(tempReg), std::to_string(addrIter->second) + "($sp)");
-            output += operation("mtc1", reg(tempReg), reg(index + 32));
+            operation("lwc1", reg(index + 32), std::to_string(addrIter->second) + "($sp)");
         }
         else
         {
@@ -232,9 +230,11 @@ bool RegisterMapper::placeValue(std::string& output, uint index, llvm::Value* id
 
         addressDescriptors[fl].erase(addrIter);
         registerDescriptors[fl].emplace(id, index);
+        registerValues[fl][index] = id;
         return true;
     }
 
+    registerValues[fl][index] = id;
     registerDescriptors[fl].emplace(id, index);
     return false;
 }
@@ -257,8 +257,14 @@ uint RegisterMapper::getNextSpill(bool fl)
     {
         spill[fl] = start[fl];
     }
+    std::cout << spill[fl] << '\n';
     return spill[fl];
 }
+
+//void RegisterMapper::storeSpilled(std::string& output, uint index, llvm::Value *id)
+//{
+//
+//}
 
 void RegisterMapper::storeValue(std::string& output, llvm::Value* id)
 {
@@ -680,7 +686,7 @@ int Module::getFunctionSize(llvm::Function *function)
     const auto iter = std::find_if(functions.begin(), functions.end(), pred);
     if(iter == functions.end())
     {
-        throw std::logic_error("could not find given function");
+        throw std::logic_error("could not find given function: " + function->getName().str());
     }
     return (*iter)->getMapper()->getSaveSize();
 }
