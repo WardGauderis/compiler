@@ -32,13 +32,15 @@ class RegisterMapper
 
     int loadValue(std::string& output, llvm::Value* id);
     void loadSaved(std::string& output);
-    void loadReturnValue(std::string& output, llvm::Value* id);
 
     bool placeConstant(std::string& output, int index, llvm::Value* id);
+
+    void storeArgumentValue(std::string& output, llvm::Value* id, int offset);
 
     int getTempRegister(bool fl);
     int getNextSpill(bool fl);
 
+    void loadReturnValue(std::string& output, llvm::Value* id);
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);

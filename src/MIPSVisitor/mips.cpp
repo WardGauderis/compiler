@@ -126,6 +126,8 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         return tmp;
     }
 
+    std::cout << id << '\n';
+
     // we try to find if it is stored in a register already, if so just return it
     if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
     {
@@ -140,13 +142,15 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         index = getNextSpill(fl);
         const auto spilled = registerValues[fl][index];
 
-        // we find the location to spill to
+        // we find the location to spill to, and increase saveSize if we did
         const auto iter = addressDescriptors[fl].try_emplace(spilled, argsSize + saveSize);
+        if(iter.second) saveSize += 4;
+
+        // remove the spilled value from the registers
         registerDescriptors[fl].erase(spilled);
 
         // we add the spilled value to the data structures
         output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(iter.first->second) + "($sp)");
-        saveSize += 4;
     }
     else
     {
@@ -228,6 +232,22 @@ bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* 
     }
 
     return false;
+}
+
+void RegisterMapper::storeArgumentValue(std::string& output, llvm::Value* id, int offset)
+{
+    const auto fl = isFloat(id);
+
+    if(not placeConstant(output, 2, id))
+    {
+    }
+    else if(registerDescriptors[fl].find(id) == registerDescriptors[fl].end())
+    {
+        const auto address = addressDescriptors[fl].at(id);
+        output += operation("lw", "2", std::to_string(address) + "($sp)");
+    }
+
+    output += operation("sw", "2", std::to_string(offset) + "($sp)");
 }
 
 int RegisterMapper::getTempRegister(bool fl)
@@ -394,12 +414,11 @@ void Call::print(std::ostream& os)
     const int other = module()->getFunctionSize(function);
     auto iter = 4;
 
-    //store parameters
+    // store parameters
     for(auto arg : arguments)
     {
-        const auto index = mapper()->loadValue(output, arg);
         iter += 4;
-        output += operation("sw", reg(index), std::to_string(-other - iter) + "($sp)");
+        mapper()->storeArgumentValue(output, arg, -other - iter);
     }
 
     const auto incr = module()->isStdio(function) ? 4 : other + iter;
@@ -586,8 +605,7 @@ void Module::print(std::ostream& os) const
     os << "$begin:\n";
     if(main)
     {
-        const auto size = -static_cast<int>(main->getMapper()->getSaveSize());
-        os << "addi $sp, $sp, " << size << '\n';
+        os << "addi $sp, $sp, " << -main->getMapper()->getSaveSize() << '\n';
         os << "jal main\n";
         os << "move $4, $2\n";
     }
@@ -632,17 +650,14 @@ void Module::addFloat(llvm::ConstantFP* variable)
     floats.emplace(variable);
 }
 
-int Module::getFunctionSize(llvm::Function *function)
+int Module::getFunctionSize(llvm::Function* function)
 {
     if(function == printf or function == scanf)
     {
         return 0;
     }
 
-    const auto pred = [&](const auto& ptr)
-    {
-        return ptr->getFunction() == function;
-    };
+    const auto pred = [&](const auto& ptr) { return ptr->getFunction() == function; };
     const auto iter = std::find_if(functions.begin(), functions.end(), pred);
     if(iter == functions.end())
     {
