@@ -69,6 +69,8 @@ private:
 	mips::Module module;
 	mips::Function* currentFunction;
 	mips::Block* currentBlock;
+
+	llvm::Value* processOperand(llvm::Value* value);
 };
 
 #endif //COMPILER_MIPSVISITOR_H

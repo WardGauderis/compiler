@@ -8,6 +8,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Target/TargetLoweringObjectFile.h>
+#include <llvm/IR/Constant.h>
 #include "../errors.h"
 
 using namespace llvm;
@@ -53,8 +54,8 @@ void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
 void MIPSVisitor::visitCmpInst(CmpInst& I)
 {
 	const auto& a = &I;
-	const auto& b = I.getOperand(0);
-	const auto& c = I.getOperand(1);
+	const auto& b = processOperand(I.getOperand(0));
+	const auto& c = processOperand(I.getOperand(1));
 	mips::Instruction* instruction;
 	switch (I.getPredicate()) {
 	case CmpInst::FCMP_OEQ:
@@ -121,7 +122,7 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 
 void MIPSVisitor::visitLoadInst(LoadInst& I)
 {
-	currentBlock->append(new mips::Load(currentBlock, &I, I.getPointerOperand()));
+	currentBlock->append(new mips::Load(currentBlock, &I, processOperand(I.getPointerOperand())));
 }
 
 void MIPSVisitor::visitAllocaInst(AllocaInst& I)
@@ -131,12 +132,13 @@ void MIPSVisitor::visitAllocaInst(AllocaInst& I)
 
 void MIPSVisitor::visitStoreInst(StoreInst& I)
 {
-	currentBlock->append(new mips::Store(currentBlock, I.getValueOperand(), I.getPointerOperand()));
+	currentBlock->append(
+			new mips::Store(currentBlock, processOperand(I.getValueOperand()), processOperand(I.getPointerOperand())));
 }
 
 void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 {
-	const auto& base = I.getPointerOperand();
+	const auto& base = processOperand(I.getPointerOperand());
 	APInt a(32, 0);
 	if (I.hasAllZeroIndices()) {
 		return;
@@ -148,18 +150,20 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 	else {
 		llvm::Type* currentType = PointerType::getUnqual(I.getPointerOperandType());
 		for (const auto& index: I.indices()) {
+			const auto i = processOperand(index);
 			currentType = currentType->getContainedType(0);
 			const auto size = module.layout.getTypeAllocSize(currentType);
-			if (const auto& constant = dyn_cast<ConstantInt>(index)) {
+			if (const auto& constant = dyn_cast<ConstantInt>(i)) {
 				if (not constant->getZExtValue()) continue;
 				currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
 						ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), size*constant->getZExtValue())));
 				continue;
 			}
-			const auto& mul = BinaryOperator::Create(llvm::Instruction::Mul, index,
+			const auto& mul = BinaryOperator::Create(llvm::Instruction::Mul, i,
 					ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), size));
 			currentBlock->append(
-					new mips::Arithmetic(currentBlock, "mulu", mul, mul->getOperand(0), mul->getOperand(1)));
+					new mips::Arithmetic(currentBlock, "mulu", mul, processOperand(mul->getOperand(0)),
+							processOperand(mul->getOperand(1))));
 			currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base, mul));
 		}
 	}
@@ -167,9 +171,12 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 
 void MIPSVisitor::visitPHINode(PHINode& I)
 {
+
+	const auto backup = currentBlock;
 	for (const auto& block: I.blocks()) {
-		const auto& value = I.getIncomingValueForBlock(block);
 		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
+		currentBlock = mipsBlock;
+		const auto& value = processOperand(I.getIncomingValueForBlock(block));
 		mips::Instruction* instruction;
 		const auto& constant = dyn_cast<ConstantFP>(value);
 		if (const auto& constant = dyn_cast<Constant>(value)) {
@@ -180,67 +187,68 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 		}
 		mipsBlock->appendBeforeLast(instruction);
 	}
+	currentBlock = backup;
 }
 
 void MIPSVisitor::visitTruncInst(TruncInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitZExtInst(ZExtInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitSExtInst(SExtInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitFPToSIInst(FPToSIInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitUIToFPInst(UIToFPInst& I)
 {
 	//cvt.s.w
-	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 {
 	//cvt.w.s
-	currentBlock->append(new mips::Convert(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new mips::Convert(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitIntToPtrInst(IntToPtrInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, I.getOperand(0)));
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
 void MIPSVisitor::visitCallInst(CallInst& I)
 {
 	std::vector<Value*> args;
 	for (const auto& arg: I.args()) {
-		args.emplace_back(arg);
+		args.emplace_back(processOperand(arg));
 	}
 	currentBlock->append(new mips::Call(currentBlock, I.getCalledFunction(), std::move(args), &I));
 }
@@ -248,20 +256,24 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
 	currentBlock->append(
-			new mips::Return(currentBlock,(isa_and_nonnull<UndefValue>(I.getReturnValue())) ? nullptr : I.getReturnValue()));
+			new mips::Return(currentBlock,
+					(isa_and_nonnull<UndefValue>(I.getReturnValue())) ? nullptr : processOperand(I.getReturnValue())));
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)
 {
 	if (I.isConditional()) {
-		bool first = currentBlock->getBlock()->getNextNode()==I.getOperand(0);
-		bool second = currentBlock->getBlock()->getNextNode()==I.getOperand(1);
+		bool first = currentBlock->getBlock()->getNextNode()==I.getSuccessor(0);
+		bool second = currentBlock->getBlock()->getNextNode()==I.getSuccessor(1);
 		if (first && !second)
-			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(0), false));   // bneqz
+			currentBlock->append(
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0), false));   // bneqz
 		else if (!first && second)
-			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(1), true));    //beqz
+			currentBlock->append(
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1), true));    //beqz
 		else if (!first && !second) {
-			currentBlock->append(new mips::Branch(currentBlock, I.getCondition(), I.getSuccessor(0), false));   // bneqz
+			currentBlock->append(
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0), false));   // bneqz
 			currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(1)));
 		}
 	}
@@ -273,8 +285,8 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 void MIPSVisitor::visitBinaryOperator(BinaryOperator& I)
 {
 	const auto& a = &I;
-	const auto& b = I.getOperand(0);
-	const auto& c = I.getOperand(1);
+	const auto& b = processOperand(I.getOperand(0));
+	const auto& c = processOperand(I.getOperand(1));
 	mips::Instruction* instruction;
 
 	switch (I.getOpcode()) {
@@ -333,5 +345,16 @@ void MIPSVisitor::visitInstruction(llvm::Instruction& I)
 	llvm::raw_string_ostream rso(str);
 	I.print(rso);
 	throw InternalError("IR instruction '"+str+"' is not implemented in MIPS (try turning optimizations off)");
+}
+
+llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
+{
+	ConstantExpr* c;
+	if (!(c = dyn_cast_or_null<ConstantExpr>(value))) {
+		return value;
+	}
+	llvm::Instruction* instruction = c->getAsInstruction();
+	visit(instruction);
+	return instruction;
 }
 
