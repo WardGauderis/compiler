@@ -247,9 +247,8 @@ void MIPSVisitor::visitCallInst(CallInst& I)
 
 void MIPSVisitor::visitReturnInst(ReturnInst& I)
 {
-	currentBlock->append(new mips::Return(currentBlock,
-			(I.getReturnValue()->getType()->isVoidTy() || isa<UndefValue>(I.getReturnValue()))
-			? nullptr : I.getReturnValue()));
+	currentBlock->append(
+			new mips::Return(currentBlock,(isa_and_nonnull<UndefValue>(I.getReturnValue())) ? nullptr : I.getReturnValue()));
 }
 
 void MIPSVisitor::visitBranchInst(BranchInst& I)

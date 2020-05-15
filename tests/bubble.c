@@ -44,13 +44,8 @@
 
 #include <stdio.h>
 
-int a;
-
-int * g(){
-	return &a;
-}
-
 int main()
 {
-	return &a;
+	printf("hallo\ttest\n");
+	return 0;
 }
