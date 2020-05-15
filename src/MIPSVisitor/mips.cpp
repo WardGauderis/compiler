@@ -138,7 +138,7 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         return tmp;
     }
 
-    std::cout << id << '\n';
+//    std::cout << id << '\n';
 
     // we try to find if it is stored in a register already, if so just return it
     if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
@@ -256,8 +256,16 @@ void RegisterMapper::placeInTempRegister(std::string& output, llvm::Value* id, i
     }
     else
     {
-        const auto address = addressDescriptors[fl].at(id);
-        output += operation(index >= 32 ? "lwc1" : "lw", reg(index), std::to_string(address) + "($sp)");
+    	try {
+		    const auto address = addressDescriptors[fl].at(id);
+		    output += operation(index >= 32 ? "lwc1" : "lw", reg(index), std::to_string(address) + "($sp)");
+	    }
+	    catch (...) {
+		    std::string str;
+		    llvm::raw_string_ostream rso(str);
+		    id->print(rso);
+		    throw InternalError("Partial constexpr IR instruction '"+str+"' was not properly converted");
+	    }
     }
 }
 
