@@ -41,10 +41,22 @@ std::string operation(std::string&& operation, std::string&& t1 = "", std::strin
     return res;
 }
 
-std::string move(uint to, uint from, bool fl)
+std::string move(uint to, uint from)
 {
     if(to == from) return "";
-    return operation(fl ? "mov.s" : "move", reg(to), reg(from));
+
+    const auto tofl = to >= 32;
+    const auto frfl = from >= 32;
+
+    if(frfl)
+    {
+        return operation(tofl ? "mov.s" : "move", reg(to), reg(from));
+    }
+    else
+    {
+        return operation(tofl ? "mtc1" : "move", reg(to), reg(from));
+    }
+
 }
 
 bool isFloat(llvm::Value* value)
@@ -197,8 +209,7 @@ void RegisterMapper::loadSaved(std::string& output) const
 void RegisterMapper::loadReturnValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
-    const auto index1 = loadValue(output, id);
-    output += move(index1, fl ? 32 : 2, fl);
+    placeInTempRegister(output, id, fl ? 32 : 2);
 }
 
 bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* id)
@@ -232,22 +243,26 @@ bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* 
     return false;
 }
 
-void RegisterMapper::storeArgumentValue(std::string& output, llvm::Value* id, int offset)
+void RegisterMapper::placeInTempRegister(std::string& output, llvm::Value* id, int index)
 {
     const auto fl = isFloat(id);
 
-    if(placeConstant(output, 2, id))
+    if(placeConstant(output, index, id))
     {
     }
-    else if(registerDescriptors[fl].find(id) == registerDescriptors[fl].end())
+    else if(const auto iter = registerDescriptors[0].find(id); iter != registerDescriptors[0].end())
     {
-	    llvm::outs() << *id << '\n';
-	    llvm::outs().flush();
+        output += move(index, iter->second);
+    }
+    else if(const auto iter = registerDescriptors[1].find(id); iter != registerDescriptors[1].end())
+    {
+        output += move(index, iter->second);
+    }
+    else
+    {
         const auto address = addressDescriptors[fl].at(id);
-        output += operation("lw", "2", std::to_string(address) + "($sp)");
+        output += operation(index >= 32 ? "lwc1" : "lw", reg(index), std::to_string(address) + "($sp)");
     }
-
-    output += operation("sw", "2", std::to_string(offset) + "($sp)");
 }
 
 int RegisterMapper::getTempRegister(bool fl)
@@ -273,8 +288,7 @@ int RegisterMapper::getNextSpill(bool fl)
 void RegisterMapper::storeReturnValue(std::string& output, llvm::Value* id)
 {
     const auto fl = isFloat(id);
-    const auto index1 = loadValue(output, id);
-    output += move(fl ? 32 : 2, index1, fl);
+    placeInTempRegister(output, id, fl ? 32 : 2);
 }
 
 void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::Type* type)
@@ -417,7 +431,8 @@ void Call::print(std::ostream& os)
     for(auto arg : arguments)
     {
         iter += 4;
-        mapper()->storeArgumentValue(output, arg, -other - iter);
+        mapper()->placeInTempRegister(output, arg, 2);
+        output += operation("sw", "2", std::to_string(-other-iter) + "($sp)");
     }
 
     const auto incr = module()->isStdio(function) ? 4 : other + iter;

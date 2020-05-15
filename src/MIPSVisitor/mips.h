@@ -34,8 +34,7 @@ class RegisterMapper
     void loadSaved(std::string& output) const;
 
     bool placeConstant(std::string& output, int index, llvm::Value* id);
-
-    void storeArgumentValue(std::string& output, llvm::Value* id, int offset);
+    void placeInTempRegister(std::string& output, llvm::Value* id, int index);
 
     int getTempRegister(bool fl);
     int getNextSpill(bool fl);
