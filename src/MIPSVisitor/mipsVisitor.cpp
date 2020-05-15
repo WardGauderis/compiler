@@ -277,17 +277,17 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 		bool second = currentBlock->getBlock()->getNextNode()==I.getSuccessor(1);
 		if (first && !second)
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0),
-							false));   // bneqz
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1),
+							true));   // bneqz
 		else if (!first && second)
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1),
-							true));    //beqz
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0),
+							false));    //beqz
 		else if (!first && !second) {
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0),
-							false));   // bneqz
-			currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(1)));
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1),
+							true));   // bneqz
+			currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(0)));
 		}
 	}
 	else {
@@ -368,8 +368,8 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 	}
 
 	llvm::Instruction* instruction = c->getAsInstruction();
-	llvm::outs() << *instruction->getOperand(0) << '\n';
-	llvm::outs().flush();
+//	llvm::outs() << *instruction->getOperand(0) << '\n';
+//	llvm::outs().flush();
 	visit(instruction);
 	return instruction;
 }
