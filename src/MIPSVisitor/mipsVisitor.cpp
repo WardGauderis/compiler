@@ -205,6 +205,16 @@ void MIPSVisitor::visitSExtInst(SExtInst& I)
 	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
 }
 
+void MIPSVisitor::visitFPTruncInst(FPTruncInst& I)
+{
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+}
+
+void MIPSVisitor::visitFPExtInst(FPExtInst& I)
+{
+	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+}
+
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
 {
 	//cvt.w.s
@@ -267,13 +277,16 @@ void MIPSVisitor::visitBranchInst(BranchInst& I)
 		bool second = currentBlock->getBlock()->getNextNode()==I.getSuccessor(1);
 		if (first && !second)
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0), false));   // bneqz
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0),
+							false));   // bneqz
 		else if (!first && second)
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1), true));    //beqz
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(1),
+							true));    //beqz
 		else if (!first && !second) {
 			currentBlock->append(
-					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0), false));   // bneqz
+					new mips::Branch(currentBlock, processOperand(I.getCondition()), I.getSuccessor(0),
+							false));   // bneqz
 			currentBlock->append(new mips::Jump(currentBlock, I.getSuccessor(1)));
 		}
 	}
@@ -357,4 +370,3 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 	visit(instruction);
 	return instruction;
 }
-

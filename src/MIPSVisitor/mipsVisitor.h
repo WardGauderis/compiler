@@ -41,6 +41,10 @@ public:
 
 	[[maybe_unused]] void visitSExtInst(llvm::SExtInst& I);
 
+	[[maybe_unused]] void visitFPTruncInst(llvm::FPTruncInst& I);
+
+	[[maybe_unused]] void visitFPExtInst(llvm::FPExtInst& I);
+
 	[[maybe_unused]] void visitFPToUIInst(llvm::FPToUIInst& I);
 
 	[[maybe_unused]] void visitFPToSIInst(llvm::FPToSIInst& I);
