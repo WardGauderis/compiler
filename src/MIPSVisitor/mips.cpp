@@ -50,7 +50,7 @@ std::string move(uint to, uint from)
 
     if(frfl)
     {
-        return operation(tofl ? "mov.s" : "move", reg(to), reg(from));
+        return operation(tofl ? "mov.s" : "mfc1", reg(to), reg(from));
     }
     else
     {
@@ -61,39 +61,6 @@ std::string move(uint to, uint from)
 bool isFloat(llvm::Value* value)
 {
     return value->getType()->isFloatTy();
-}
-
-
-void assertSame(llvm::Value* val1, llvm::Value* val2)
-{
-    if(isFloat(val1) != isFloat(val2))
-    {
-        throw InternalError("types do not have same type class");
-    }
-}
-
-void assertSame(llvm::Value* val1, llvm::Value* val2, llvm::Value* t3)
-{
-    if(isFloat(val1) != isFloat(val2) or isFloat(val1) != isFloat(t3))
-    {
-        throw InternalError("types do not have same type class");
-    }
-}
-
-void assertInt(llvm::Value* value)
-{
-    if(isFloat(value))
-    {
-        throw InternalError("type must be integer");
-    }
-}
-
-void assertFloat(llvm::Value* value)
-{
-    if(not isFloat(value))
-    {
-        throw InternalError("type must be float");
-    }
 }
 
 } // namespace
@@ -257,7 +224,7 @@ void RegisterMapper::placeInTempRegister(std::string& output, llvm::Value* id, i
     }
     else if(const auto iter = registerDescriptors[1].find(id); iter != registerDescriptors[1].end())
     {
-        output += move(index, iter->second);
+        output += move(index, iter->second + 32);
     }
     else
     {
@@ -325,7 +292,11 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
 {
     const auto fl = isFloat(id);
     pointerDescriptors[fl].emplace(id, argsSize + saveSize);
-    saveSize += module->layout.getTypeStoreSize(type);
+
+    const auto size = module->layout.getTypeStoreSize(type);
+    const auto realsize = static_cast<int>(size + (4u - (size % 4u)));
+    if(realsize % 4 != 0) throw;
+    saveSize += realsize;
 }
 
 int RegisterMapper::getSaveSize() const noexcept
@@ -360,8 +331,6 @@ Module* Instruction::module()
 
 Move::Move(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
 {
-    assertSame(t1, t2);
-
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
 
@@ -376,17 +345,11 @@ Convert::Convert(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(b
 
     if(isFloat(t2))
     {
-        // float to int
-        assertInt(t1);
-
         output += operation("cvt.w.s", reg(index2), reg(index2));
         output += operation("mfc1", reg(index1), reg(index2));
     }
     else
     {
-        // int to float
-        assertFloat(t1);
-
         output += operation("mtc1", reg(index2), reg(index1));
         output += operation("cvt.s.w", reg(index1), reg(index1));
     }
@@ -514,7 +477,7 @@ Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block
 
     if(isFloat(t1))
     {
-        output += operation("s.s", reg(index1), reg(index2));
+        output += operation("s.s", reg(index1), '(' + reg(index2) + ')');
     }
     else
     {
