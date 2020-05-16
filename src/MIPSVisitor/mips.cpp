@@ -217,7 +217,6 @@ bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* 
 {
     if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
     {
-        std::cout << index << " " << id << '\n';
         output += operation("la", reg(index), label(id));
         return true;
     }
@@ -634,10 +633,27 @@ void Module::print(std::ostream& os) const
             os << label(variable) << ": .ascii ";
             if(const auto* tmp = llvm::dyn_cast<llvm::ConstantDataArray>(variable->getInitializer()))
             {
-                std::string str;
-                llvm::raw_string_ostream rso(str);
-                llvm::printEscapedString(tmp->getAsString(), rso);
-                os << '"' << rso.str() << "\"\n";
+                std::string str = tmp->getAsString();
+                for(size_t i = 0; i < str.size(); i++)
+                {
+                    if(str[i] == '\n')
+                    {
+                        str[i++] = '\\';
+                        str.insert(str.begin() + i, 'n');
+                    }
+                    else if(str[i] == '\t')
+                    {
+                        str[i++] = '\\';
+                        str.insert(str.begin() + i, 't');
+                    }
+                    else if(str[i] == '\\')
+                    {
+                        str[i++] = '\\';
+                        str.insert(str.begin() + i, '\\');
+                    }
+                }
+
+                os << '"' << str << "\"\n";
             }
             else
             {
