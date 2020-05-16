@@ -74,11 +74,7 @@ private:
 	mips::Function* currentFunction;
 	mips::Block* currentBlock;
 
-	std::unordered_map<llvm::Value*, llvm::Value*> valueMap;
-
 	llvm::Value* processOperand(llvm::Value* value);
-
-	void mapValue(llvm::Value* from, llvm::Value* to);
 };
 
 #endif //COMPILER_MIPSVISITOR_H
