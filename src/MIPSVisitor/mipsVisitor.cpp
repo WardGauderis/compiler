@@ -367,6 +367,7 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 	if (mapped!=valueMap.end()) {
 		return processOperand(mapped->second);
 	}
+
 	ConstantExpr* c;
 	if (!(c = dyn_cast_or_null<ConstantExpr>(value))) {
 		return value;
@@ -374,7 +375,7 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 
 	llvm::Instruction* instruction = c->getAsInstruction();
 	visit(instruction);
-	return instruction;
+	return processOperand(instruction);
 }
 
 void MIPSVisitor::mapValue(llvm::Value* from, llvm::Value* to)

@@ -44,14 +44,13 @@
 
 #include <stdio.h>
 
-void f(int a){
-	printf("%i", a);
-	printf("%i", a);
-}
-//int main()
-//{
-//	int a = 2;
+//void f(int a){
 //	printf("%i", a);
-//	printf("%i", a);
-//	return 0;
 //}
+int main()
+{
+	int a = 2;
+	printf("%i", a);
+	printf("%i", a);
+	return 0;
+}
