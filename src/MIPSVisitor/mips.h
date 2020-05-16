@@ -139,6 +139,8 @@ struct Call : public Instruction
     llvm::Function* function;
     std::vector<llvm::Value*> arguments;
     llvm::Value* ret;
+
+    std::vector<std::string> loads;
 };
 
 struct Return : public Instruction

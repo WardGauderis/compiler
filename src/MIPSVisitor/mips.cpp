@@ -151,15 +151,23 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         index = getNextSpill(fl);
         const auto spilled = registerValues[fl][index];
 
-        // we find the location to spill to, and increase saveSize if we did
-        const auto iter = addressDescriptors[fl].try_emplace(spilled, argsSize + saveSize);
-        if(iter.second) saveSize += 4;
+        if(const auto addr = pointerDescriptors[fl].find(spilled); addr != pointerDescriptors[fl].end())
+        {
+            // we store the value we needed to spill into the allocated memory
+            output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(addr->second) + "($sp)");
+        }
+        else
+        {
+            // we find the location to spill to, and increase saveSize if we did
+            const auto iter = addressDescriptors[fl].try_emplace(spilled, argsSize + saveSize);
+            if(iter.second) saveSize += 4;
 
+            // we add the spilled value to the data structures
+            output += operation(fl ? "swc1" : "sw", reg(result(index)),
+                                std::to_string(iter.first->second) + "($sp)");
+        }
         // remove the spilled value from the registers
         registerDescriptors[fl].erase(spilled);
-
-        // we add the spilled value to the data structures
-        output += operation(fl ? "swc1" : "sw", reg(result(index)), std::to_string(iter.first->second) + "($sp)");
     }
     else
     {
@@ -443,6 +451,13 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
 Call::Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& arguments, llvm::Value* ret)
 : Instruction(block), function(function), arguments(std::move(arguments)), ret(ret)
 {
+    for(auto arg : this->arguments)
+    {
+        std::string temp;
+        mapper()->placeInTempRegister(temp, arg, 2);
+        loads.emplace_back(temp);
+    }
+
     mapper()->loadValue(output, ret);
 }
 
@@ -452,10 +467,10 @@ void Call::print(std::ostream& os)
     auto iter = 4;
 
     // store parameters
-    for(auto arg : arguments)
+    for(const auto& str : loads)
     {
         iter += 4;
-        mapper()->placeInTempRegister(output, arg, 2);
+        output += str;
         output += operation("sw", "$2", std::to_string(-other - iter) + "($sp)");
     }
 
