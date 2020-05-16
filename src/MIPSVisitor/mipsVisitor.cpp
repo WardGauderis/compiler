@@ -365,7 +365,7 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 {
 	const auto& mapped = valueMap.find(value);
 	if (mapped!=valueMap.end()) {
-		return processOperand(mapped->second);
+		return mapped->second;
 	}
 
 	ConstantExpr* c;
