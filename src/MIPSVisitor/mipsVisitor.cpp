@@ -43,6 +43,7 @@ void MIPSVisitor::visitFunction(llvm::Function& F)
 	if (F.isDeclaration()) return;
 	currentFunction = new mips::Function(&module, &F);
 	module.append(currentFunction);
+	valueMap.clear();
 }
 
 void MIPSVisitor::visitBasicBlock(BasicBlock& BB)
@@ -141,7 +142,7 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 	const auto& base = processOperand(I.getPointerOperand());
 	APInt a(32, 0);
 	if (I.hasAllZeroIndices()) {
-		currentBlock->append(new mips::Empty(currentBlock, &I, base));
+		mapValue(&I, base);
 	}
 	else if (I.accumulateConstantOffset(module.layout, a)) {
 		currentBlock->append(new mips::Arithmetic(currentBlock, "addu", &I, base,
@@ -192,27 +193,27 @@ void MIPSVisitor::visitPHINode(PHINode& I)
 
 void MIPSVisitor::visitTruncInst(TruncInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitZExtInst(ZExtInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitSExtInst(SExtInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPTruncInst(FPTruncInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPExtInst(FPExtInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitFPToUIInst(FPToUIInst& I)
@@ -241,17 +242,17 @@ void MIPSVisitor::visitSIToFPInst(SIToFPInst& I)
 
 void MIPSVisitor::visitPtrToIntInst(PtrToIntInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitIntToPtrInst(IntToPtrInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitBitCastInst(BitCastInst& I)
 {
-	currentBlock->append(new Empty(currentBlock, &I, processOperand(I.getOperand(0))));
+	mapValue(&I, processOperand(I.getOperand(0)));
 }
 
 void MIPSVisitor::visitCallInst(CallInst& I)
@@ -362,6 +363,10 @@ void MIPSVisitor::visitInstruction(llvm::Instruction& I)
 
 llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 {
+	const auto& mapped = valueMap.find(value);
+	if (mapped!=valueMap.end()) {
+		return processOperand(mapped->second);
+	}
 	ConstantExpr* c;
 	if (!(c = dyn_cast_or_null<ConstantExpr>(value))) {
 		return value;
@@ -370,4 +375,9 @@ llvm::Value* MIPSVisitor::processOperand(llvm::Value* value)
 	llvm::Instruction* instruction = c->getAsInstruction();
 	visit(instruction);
 	return instruction;
+}
+
+void MIPSVisitor::mapValue(llvm::Value* from, llvm::Value* to)
+{
+	valueMap[from] = to;
 }
