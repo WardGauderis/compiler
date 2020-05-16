@@ -56,7 +56,6 @@ std::string move(uint to, uint from)
     {
         return operation(tofl ? "mtc1" : "move", reg(to), reg(from));
     }
-
 }
 
 bool isFloat(llvm::Value* value)
@@ -138,8 +137,6 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         return tmp;
     }
 
-//    std::cout << id << '\n';
-
     // we try to find if it is stored in a register already, if so just return it
     if(const auto iter = registerDescriptors[fl].find(id); iter != registerDescriptors[fl].end())
     {
@@ -212,6 +209,7 @@ bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* 
 {
     if(const auto& constant = llvm::dyn_cast<llvm::GlobalVariable>(id))
     {
+        std::cout << index << " " << id << '\n';
         output += operation("la", reg(index), label(id));
         return true;
     }
@@ -256,16 +254,18 @@ void RegisterMapper::placeInTempRegister(std::string& output, llvm::Value* id, i
     }
     else
     {
-    	try {
-		    const auto address = addressDescriptors[fl].at(id);
-		    output += operation(index >= 32 ? "lwc1" : "lw", reg(index), std::to_string(address) + "($sp)");
-	    }
-	    catch (...) {
-		    std::string str;
-		    llvm::raw_string_ostream rso(str);
-		    id->print(rso);
-		    throw InternalError("Partial constexpr IR instruction '"+str+"' was not properly converted");
-	    }
+        try
+        {
+            const auto address = addressDescriptors[fl].at(id);
+            output += operation(index >= 32 ? "lwc1" : "lw", reg(index), std::to_string(address) + "($sp)");
+        }
+        catch(...)
+        {
+            std::string str;
+            llvm::raw_string_ostream rso(str);
+            id->print(rso);
+            throw InternalError("Partial constexpr IR instruction '" + str + "' was not properly converted");
+        }
     }
 }
 
@@ -283,7 +283,7 @@ int RegisterMapper::getTempRegister(bool fl)
 int RegisterMapper::getNextSpill(bool fl)
 {
     spill[fl]++;
-    if(spill[fl] > end[fl])
+    if(spill[fl] >= end[fl])
     {
         spill[fl] = start[fl];
     }
@@ -358,7 +358,7 @@ Move::Move(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
     const auto index1 = mapper()->loadValue(output, t1);
     const auto index2 = mapper()->loadValue(output, t2);
 
-    output += operation(isFloat(t1) ? "mov.s" : "move", reg(index1), reg(index2));
+    output += move(index1, index2);
 }
 
 Convert::Convert(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
@@ -443,6 +443,7 @@ Branch::Branch(Block* block, llvm::Value* t1, llvm::BasicBlock* target, bool eqZ
 Call::Call(Block* block, llvm::Function* function, std::vector<llvm::Value*>&& arguments, llvm::Value* ret)
 : Instruction(block), function(function), arguments(std::move(arguments)), ret(ret)
 {
+    mapper()->loadValue(output, ret);
 }
 
 void Call::print(std::ostream& os)
@@ -455,7 +456,7 @@ void Call::print(std::ostream& os)
     {
         iter += 4;
         mapper()->placeInTempRegister(output, arg, 2);
-        output += operation("sw", "$2", std::to_string(-other-iter) + "($sp)");
+        output += operation("sw", "$2", std::to_string(-other - iter) + "($sp)");
     }
 
     const auto incr = module()->isStdio(function) ? 4 : other + iter;
@@ -479,7 +480,7 @@ Return::Return(Block* block, llvm::Value* value) : Instruction(block)
     {
         mapper()->storeReturnValue(output, value);
     }
-    output += operation("j", label(block->function)+"end");
+    output += operation("j", label(block->function) + "end");
 }
 
 Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
@@ -490,12 +491,6 @@ Jump::Jump(Block* block, llvm::BasicBlock* target) : Instruction(block)
 Allocate::Allocate(Block* block, llvm::Value* t1, llvm::Type* type) : Instruction(block)
 {
     mapper()->allocateValue(output, t1, type);
-}
-
-Empty::Empty(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
-{
-    const auto index1 = mapper()->loadValue(output, t1);
-    mapper()->placeConstant(output, index1, t2);
 }
 
 Store::Store(Block* block, llvm::Value* t1, llvm::Value* t2) : Instruction(block)
@@ -553,7 +548,7 @@ void Function::print(std::ostream& os) const
     }
 
     std::string output;
-    output += label(this)+"end:\n";
+    output += label(this) + "end:\n";
     mapper.loadSaved(output);
     output += operation("jr", "$ra");
     os << output;
@@ -693,9 +688,13 @@ void Module::addFloat(llvm::ConstantFP* variable)
 
 int Module::getFunctionSize(llvm::Function* function)
 {
-    if(function == printf or function == scanf)
+    if(function == printf)
     {
-        return 0;
+        return 16;
+    }
+    else if(function == scanf)
+    {
+        return 24;
     }
 
     const auto pred = [&](const auto& ptr) { return ptr->getFunction() == function; };
