@@ -15,29 +15,6 @@
 #include "ast/expressions.h"
 #include "ast/node.h"
 
-class RemoveUnusedCodeInBlockPass : public llvm::FunctionPass {
-public:
-	static char ID;
-
-	RemoveUnusedCodeInBlockPass()
-			:FunctionPass(ID) { }
-
-	bool runOnFunction(llvm::Function& function) final
-	{
-		for (auto& block: function) {
-			bool done = false;
-			for (auto instruction = block.begin(); instruction!=block.end();) {
-				if (done) instruction = instruction->eraseFromParent();
-				else {
-					done |= instruction->isTerminator();
-					++instruction;
-				}
-			}
-		}
-		return false;
-	}
-};
-
 class IRVisitor {
 public:
 	explicit IRVisitor(const std::filesystem::path& input);

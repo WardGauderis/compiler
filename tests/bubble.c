@@ -44,21 +44,14 @@
 
 #include <stdio.h>
 
-//int b[10];
-int *c = 10;
-
 int main()
 {
-	int a = 5;
-//	int a[10];
-//	for (int i = 0; i<10; ++i) {
-//		a[i] = i;
-//	}
-//	for (int j = 0; j<10; ++j) {
-//		b[j] = a[j];
-//	}
-//	for (int k = 0; k<10; ++k) {
-//		printf("%d\n", a[k]);
-//	}
-	return a+5;
+	int a[10];
+	for (int i = 0; i<10; ++i) {
+		a[i] = i;
+	}
+	for (int k = 0; k<10; ++k) {
+		printf("%d\n", a[k]);
+	}
+	return 0;
 }

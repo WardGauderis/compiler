@@ -170,16 +170,16 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 }
 
 void MIPSVisitor::visitPHINode(PHINode& I)
-{
-
-	const auto backup = currentBlock;
-	for (const auto& block: I.blocks()) {
-		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
-		currentBlock = mipsBlock;
-		const auto& value = processOperand(I.getIncomingValueForBlock(block));
-		mipsBlock->appendBeforeLast(new mips::Move(currentBlock, &I, value));
-	}
-	currentBlock = backup;
+{//
+//	const auto backup = currentBlock;
+//	for (const auto& block: I.blocks()) {
+//		const auto& mipsBlock = currentFunction->getBlockByBasicBlock(block);
+//		currentBlock = mipsBlock;
+//		const auto& value = processOperand(I.getIncomingValueForBlock(block));
+//		mipsBlock->appendBeforeLast(new mips::Move(currentBlock, &I, value));
+//	}
+//	currentBlock = backup;
+	InstVisitor::visitPHINode(I);
 }
 
 void MIPSVisitor::visitTruncInst(TruncInst& I)

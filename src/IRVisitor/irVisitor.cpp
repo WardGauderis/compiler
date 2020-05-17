@@ -13,13 +13,15 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils.h>
+#include "llvmPasses.h"
 
 using namespace llvm;
 
 char RemoveUnusedCodeInBlockPass::ID = 0;
+char RemovePhiInstructionPass::ID = 0;
 
-// static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove used
-// code");
+//static RegisterPass<RemoveUnusedCodeInBlockPass> X("UnusedCode", "remove unused code");
+//static RegisterPass<RemoveUnusedCodeInBlockPass> Y("RemovePhi", "remove phi instructions");
 
 IRVisitor::IRVisitor(const std::filesystem::path& input)
 		:module(input.string(), context), builder(context)
@@ -40,12 +42,15 @@ void IRVisitor::LLVMOptimize(const int level)
 		legacy::FunctionPassManager m(&module);
 		m.add(createPromoteMemoryToRegisterPass());
 		m.add(createSROAPass());
+
 		for (auto& function: module.functions()) {
 			m.run(function);
 		}
 	}
 	else if (level>=2) {
-		std::cout << CompilationError("Optimisation level 2 may not work in MIPS because it may introduce unsupported LLVM IR instructions", 0, 0, true);
+		std::cout << CompilationError(
+				"Optimisation level 2 may not work in MIPS because it may introduce unsupported LLVM IR instructions",
+				0, 0, true);
 		PassBuilder passBuilder;
 		LoopAnalysisManager loopAnalysisManager(false);
 		FunctionAnalysisManager functionAnalysisManager(false);
@@ -60,6 +65,10 @@ void IRVisitor::LLVMOptimize(const int level)
 		ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(
 				PassBuilder::OptimizationLevel::O3);
 		modulePassManager.run(module, moduleAnalysisManager);
+	}
+	RemovePhiInstructionPass pass;
+	for (auto& F: module) {
+		pass.runOnFunction(F);
 	}
 }
 
