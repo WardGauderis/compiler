@@ -95,7 +95,7 @@ void MIPSVisitor::visitCmpInst(CmpInst& I)
 		instruction = new mips::Arithmetic(currentBlock, "sgeu", a, b, c);
 		break;
 	case CmpInst::ICMP_ULT:
-		instruction = new mips::Arithmetic(currentBlock, "slte", a, b, c);
+		instruction = new mips::Arithmetic(currentBlock, "sleu", a, b, c);
 		break;
 	case CmpInst::ICMP_ULE:
 		instruction = new mips::Arithmetic(currentBlock, "slue", a, b, c);
