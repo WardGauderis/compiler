@@ -42,6 +42,7 @@ void IRVisitor::LLVMOptimize(const int level)
 		legacy::FunctionPassManager m(&module);
 		m.add(createPromoteMemoryToRegisterPass());
 		m.add(createSROAPass());
+		m.add(createCFGSimplificationPass());
 
 		for (auto& function: module.functions()) {
 			m.run(function);
