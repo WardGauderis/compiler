@@ -40,24 +40,10 @@
 //	return 0;
 //}
 
-#include <stdio.h>
-
-int f[10][5];
+const int a;
+int* b = &a;
 
 int main()
 {
-
-	int k = 0;
-	for (int i = 0; i<10; ++i) {
-		for (int j = 0; j<5; ++j) {
-			f[i][j] = k++;
-		}
-	}
-	for (int i = 0; i<10; ++i) {
-		for (int j = 0; j<5; ++j) {
-			printf("%i ", f[i][j]);
-		}
-		printf("\n");
-	}
-	return k;
+	return b;
 }
