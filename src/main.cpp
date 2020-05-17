@@ -31,10 +31,9 @@ void make_dot(const Type& elem, const std::filesystem::path& path)
 }
 
 void compileFile(const std::filesystem::path& input, std::filesystem::path output, bool printCst, bool printAst,
-		bool optimised)
+		int level)
 {
-	try
-	{
+	try {
 		const auto llPath = output.replace_extension("ll");
 		const auto asmPath = output.replace_extension("asm");
 		const auto cstPath = output.replace_extension("cst.png");
@@ -51,8 +50,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 		std::cerr.rdbuf(old);
 		std::string error = buffer.str();
 
-		if (not error.empty())
-		{
+		if (not error.empty()) {
 			const auto index0 = error.find(':');
 			if (index0==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
 
@@ -62,14 +60,12 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 			const auto index2 = error.find('\n', index0);
 			if (index2==std::string::npos) throw SyntaxError("the antlr generated parser had an internal error");
 
-			try
-			{
+			try {
 				const auto line = std::stoi(error.substr(5, index0-5));
 				const auto column = std::stoi(error.substr(index0+1, index1-index0-1));
 				throw SyntaxError(error.substr(index1+1, index2-index1-1), line, column);
 			}
-			catch (std::invalid_argument& ex)
-			{
+			catch (std::invalid_argument& ex) {
 				throw InternalError("unexpected outcome of stoi: "+std::string(ex.what()));
 			}
 		}
@@ -83,7 +79,7 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 		IRVisitor visitor(input);
 		visitor.convertAST(ast);
 
-		if (optimised) visitor.LLVMOptimize();
+		visitor.LLVMOptimize(level);
 
 		visitor.print(llPath);
 
@@ -93,16 +89,13 @@ void compileFile(const std::filesystem::path& input, std::filesystem::path outpu
 
 		std::cout << "\033[1m" << input.string() << ": \033[1;32mcompilation successful\033[0m\n";
 	}
-	catch (const SyntaxError& ex)
-	{
+	catch (const SyntaxError& ex) {
 		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
-	catch (const InternalError& ex)
-	{
+	catch (const InternalError& ex) {
 		std::cout << ex << CompilationError("could not complete compilation due to above errors");
 	}
-	catch (const std::exception& ex)
-	{
+	catch (const std::exception& ex) {
 		std::cout << ex.what();
 	}
 
@@ -114,15 +107,14 @@ std::filesystem::path changeTopFolder(const std::filesystem::path& path, const s
 	newPath = new_name;
 	auto i = path.begin();
 	++i;
-	while (i!=path.end())
-	{
+	while (i!=path.end()) {
 		newPath /= *i;
 		++i;
 	}
 	return newPath;
 }
 
-void runTests(const std::filesystem::path& path, bool cst, bool ast, bool optimised)
+void runTests(const std::filesystem::path& path, bool cst, bool ast, int level)
 {
 	for (const auto& entry: std::filesystem::recursive_directory_iterator(path))    //TODO file
 	{
@@ -131,7 +123,7 @@ void runTests(const std::filesystem::path& path, bool cst, bool ast, bool optimi
 //		std::cout << entry << '\n';
 		if (newPath.extension()!=".c") continue;
 		std::filesystem::create_directories(newPath.parent_path());
-		compileFile(entry.path(), newPath, cst, ast, optimised);
+		compileFile(entry.path(), newPath, cst, ast, level);
 	}
 }
 
@@ -145,7 +137,8 @@ int main(int argc, const char** argv)
 			("help,h", "Display this help message")
 			("cst,c", "Print the cst to dot")
 			("ast,a", "Print the ast to dot")
-			("optimised,o", "Run LLVM optimisation passes")
+			("optimisation,O", po::value<int>()->default_value(1),
+					"Run LLVM optimisation passes (0 = none; 1 = constant merge, SROA, mem2reg (default); 2 = all)")
 			("test,t",
 					"Compile all files in the given folder recursively and place them in the folder 'output'");
 	po::options_description hidden;
@@ -162,34 +155,27 @@ int main(int argc, const char** argv)
 	po::store(po::command_line_parser(argc, argv).options(combined).positional(pos).run(), vm);
 	po::notify(vm);
 
-	if (vm.count("help"))
-	{
+	if (vm.count("help")) {
 		std::cout << desc;
 		return 1;
 	}
-	if (vm.count("test"))
-	{
-		if (files.size()!=1 || !std::filesystem::is_directory(files[0]))
-		{
+	if (vm.count("test")) {
+		if (files.size()!=1 || !std::filesystem::is_directory(files[0])) {
 			std::cout << desc;
 			return 1;
 		}
-		runTests(files[0], vm.count("cst"), vm.count("ast"), vm.count("optimised"));
+		runTests(files[0], vm.count("cst"), vm.count("ast"), vm["optimisation"].as<int>());
 		return 0;
 	}
-	if (!files.empty())
-	{
-		for (const auto& file: files)
-		{
-			if (!std::filesystem::is_regular_file(file))
-			{
+	if (!files.empty()) {
+		for (const auto& file: files) {
+			if (!std::filesystem::is_regular_file(file)) {
 				std::cout << desc;
 				return 1;
 			}
 
-			for (const auto& file :files)
-			{
-				compileFile(file, file.filename(), vm.count("cst"), vm.count("ast"), vm.count("optimised"));
+			for (const auto& file :files) {
+				compileFile(file, file.filename(), vm.count("cst"), vm.count("ast"), vm["optimisation"].as<int>());
 			}
 			return 0;
 		}

@@ -44,7 +44,7 @@ public:
 
 	void convertAST(const std::unique_ptr<Ast::Node>& root);
 
-	void LLVMOptimize();
+	void LLVMOptimize(int level);
 
 	void print(const std::filesystem::path& output);
 

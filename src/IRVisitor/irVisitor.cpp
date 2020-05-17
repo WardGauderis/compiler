@@ -33,29 +33,34 @@ void IRVisitor::convertAST(const std::unique_ptr<Ast::Node>& root)
 	verifyModule(module, &errs());
 }
 
-void IRVisitor::LLVMOptimize()
+void IRVisitor::LLVMOptimize(const int level)
 {
-//	PassBuilder passBuilder;
-	createConstantMergePass()->runOnModule(module);
-	legacy::FunctionPassManager m(&module);
-	m.add(createPromoteMemoryToRegisterPass());
-	m.add(createSROAPass());
-	for (auto& function: module.functions()) {
-		m.run(function);
+	if (level==1) {
+		createConstantMergePass()->runOnModule(module);
+		legacy::FunctionPassManager m(&module);
+		m.add(createPromoteMemoryToRegisterPass());
+		m.add(createSROAPass());
+		for (auto& function: module.functions()) {
+			m.run(function);
+		}
 	}
-
-//	LoopAnalysisManager loopAnalysisManager(false);
-//	FunctionAnalysisManager functionAnalysisManager(false);
-//	CGSCCAnalysisManager cGSCCAnalysisManager(false);
-//	ModuleAnalysisManager moduleAnalysisManager(false);
-//	passBuilder.registerModuleAnalyses(moduleAnalysisManager);
-//	passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
-//	passBuilder.registerFunctionAnalyses(functionAnalysisManager);
-//	passBuilder.registerLoopAnalyses(loopAnalysisManager);
-//	passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
-//			moduleAnalysisManager);
-//	ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(PassBuilder::OptimizationLevel::O3);
-//	modulePassManager.run(module, moduleAnalysisManager);
+	else if (level>=2) {
+		std::cout << CompilationError("Optimisation level 2 may not work in MIPS because it may introduce unsupported LLVM IR instructions", 0, 0, true);
+		PassBuilder passBuilder;
+		LoopAnalysisManager loopAnalysisManager(false);
+		FunctionAnalysisManager functionAnalysisManager(false);
+		CGSCCAnalysisManager cGSCCAnalysisManager(false);
+		ModuleAnalysisManager moduleAnalysisManager(false);
+		passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+		passBuilder.registerCGSCCAnalyses(cGSCCAnalysisManager);
+		passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+		passBuilder.registerLoopAnalyses(loopAnalysisManager);
+		passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cGSCCAnalysisManager,
+				moduleAnalysisManager);
+		ModulePassManager modulePassManager = passBuilder.buildPerModuleDefaultPipeline(
+				PassBuilder::OptimizationLevel::O3);
+		modulePassManager.run(module, moduleAnalysisManager);
+	}
 }
 
 void IRVisitor::print(const std::filesystem::path& output)
