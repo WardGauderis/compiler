@@ -148,7 +148,7 @@ void MIPSVisitor::visitGetElementPtrInst(GetElementPtrInst& I)
 				Constant::getIntegerValue(IntegerType::getInt32Ty(I.getContext()), a)));
 	}
 	else {
-		llvm::Type* currentType = PointerType::getUnqual(I.getPointerOperandType());
+		llvm::Type* currentType = I.getPointerOperandType();
 		for (const auto& index: I.indices()) {
 			const auto i = processOperand(index);
 			currentType = currentType->getContainedType(0);

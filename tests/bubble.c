@@ -46,12 +46,12 @@
 
 int main()
 {
-	int a[10];
-	for (int i = 0; i<10; ++i) {
-		a[i] = i;
+	int a[40];
+
+	for (int i = 0; i<40; i++) {
+		a[i] = i*2;
 	}
-	for (int k = 0; k<10; ++k) {
-		printf("%d\n", a[k]);
+	for (int i = 0; i<40; i++) {
+		printf("%i\n", a[i]);
 	}
-	return 0;
 }
