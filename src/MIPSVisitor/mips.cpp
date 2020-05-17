@@ -196,7 +196,7 @@ bool RegisterMapper::placeConstant(std::string& output, int index, llvm::Value* 
     else if(const auto& constant = llvm::dyn_cast<llvm::ConstantFP>(id))
     {
         module->addFloat(constant);
-        output += operation("l.s", reg(index + 32), label(id));
+        output += operation(index >= 32 ? "l.s" : "lw", reg(index), label(id));
         return true;
     }
 
@@ -568,7 +568,7 @@ void Module::print(std::ostream& os) const
     os << ".data\n";
     for(auto variable : floats)
     {
-        os << label(variable) << ": .float " << variable->getValueAPF().convertToFloat() << '\n';
+        os << label(variable) << ": .float " << variable->getValueAPF().convertToDouble() << '\n';
     }
     for(auto variable : globals)
     {
@@ -579,14 +579,6 @@ void Module::print(std::ostream& os) const
             if(const auto* tmp = llvm::dyn_cast<llvm::ConstantInt>(variable->getInitializer()))
             {
                 os << tmp->getSExtValue() << '\n';
-            }
-        }
-        else if(variable->getValueType()->isFloatTy())
-        {
-            os << label(variable) << ": .float ";
-            if(const auto* tmp = llvm::dyn_cast<llvm::ConstantFP>(variable->getInitializer()))
-            {
-                os << tmp->getValueAPF().convertToFloat() << '\n';
             }
         }
         else if(variable->getValueType()->isArrayTy()
@@ -672,6 +664,14 @@ void Module::print(std::ostream& os) const
 
 void Module::addGlobal(llvm::GlobalVariable* variable)
 {
+    if(variable->getValueType()->isFloatTy())
+    {
+        if(auto* tmp = llvm::dyn_cast<llvm::ConstantFP>(variable->getInitializer()))
+        {
+            addFloat(tmp);
+            return;
+        }
+    }
     globals.emplace(variable);
 }
 
@@ -688,7 +688,7 @@ int Module::getFunctionSize(llvm::Function* function)
     }
     else if(function == scanf)
     {
-        return 24;
+        return 20;
     }
 
     const auto pred = [&](const auto& ptr) { return ptr->getFunction() == function; };
