@@ -568,7 +568,14 @@ void Module::print(std::ostream& os) const
     os << ".data\n";
     for(auto variable : floats)
     {
-        os << label(variable) << ": .float " << variable->getValueAPF().convertToDouble() << '\n';
+        if(variable->getType()->isDoubleTy())
+        {
+            os << label(variable) << ": .float " << variable->getValueAPF().convertToDouble() << '\n';
+        }
+        else
+        {
+            os << label(variable) << ": .float " << variable->getValueAPF().convertToFloat() << '\n';
+        }
     }
     for(auto variable : globals)
     {
