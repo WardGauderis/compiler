@@ -238,6 +238,8 @@ class Module
 
     void includeStdio(llvm::Function* printf, llvm::Function* scanf);
 
+    const char* getStdioImpl() const;
+
     llvm::DataLayout layout;
     Function* main = nullptr;
 
