@@ -34,6 +34,16 @@ void MIPSVisitor::visitModule(llvm::Module& M)
 	if (M.getFunction("printf") || M.getFunction("scanf"))
 		module.includeStdio(M.getFunction("printf"), M.getFunction("scanf"));
 	for (auto& global: M.globals()) {
+		try {
+			Constant * ini = global.getInitializer();
+			while (const auto& c = dyn_cast_or_null<ConstantExpr>(ini)) {
+				ini = c->getOperand(0);
+			}
+			global.setInitializer(ini);
+		}
+		catch (...) {
+			throw InternalError("MIPS doesn't allow complex initializers for global variables");
+		}
 		module.addGlobal(&global);
 	}
 }
