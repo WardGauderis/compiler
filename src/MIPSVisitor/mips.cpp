@@ -127,7 +127,8 @@ int RegisterMapper::loadValue(std::string& output, llvm::Value* id)
         {
             // we find the location to spill to, and increase saveSize if we did
             const auto iter = addressDescriptors[fl].try_emplace(spilled, argsSize + saveSize);
-            if(iter.second) saveSize += 4;
+            if(iter.second)
+                saveSize += 4;
 
             // we add the spilled value to the data structures
             output += operation(fl ? "swc1" : "sw", reg(result(index)),
@@ -294,7 +295,7 @@ void RegisterMapper::allocateValue(std::string& output, llvm::Value* id, llvm::T
     pointerDescriptors[fl].emplace(id, argsSize + saveSize);
 
     const auto size = module->layout.getTypeStoreSize(type);
-    const auto realsize = static_cast<int>(size + (4u - (size % 4u)));
+    const auto realsize = static_cast<int>(size + (4u - (size % 4u)) % 4u);
     if(realsize % 4 != 0) throw;
     saveSize += realsize;
 }
@@ -644,7 +645,11 @@ void Module::print(std::ostream& os) const
     }
     os << "li $2, 17\n";
     os << "syscall\n";
-    os << getStdioImpl();
+
+    if(printfIncluded)
+    {
+        os << getStdioImpl();
+    }
 
     for(const auto& function : functions)
     {
@@ -685,7 +690,7 @@ int Module::getFunctionSize(llvm::Function* function)
     const auto iter = std::find_if(functions.begin(), functions.end(), pred);
     if(iter == functions.end())
     {
-        throw std::logic_error("could not find given function: " + function->getName().str());
+        throw CompilationError("could not find given function: " + function->getName().str());
     }
     return (*iter)->getMapper()->getSaveSize();
 }

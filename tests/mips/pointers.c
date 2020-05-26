@@ -1,14 +1,23 @@
 #include <stdio.h>
 
-int main()
-{
-    int a = 5;
-    float b = 5.49;
-    char* c = "hallo";
-    char d = 'z';
-    printf("%d\n", a);
-    printf("%i\n", a);
-    printf("%f\n", b);
-    printf("%s\n", c);
-    printf("%c\n", d);
+void f();
+
+void g();
+
+void f(){
+    printf("Hello ");
+    return;
+}
+
+void g(){
+    printf("World\n");
+    f();
+    printf("World\n");
+}
+
+int main(){
+    // Should print "hello world" twice
+    f();
+    g();
+    return 1;
 }

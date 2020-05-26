@@ -1,3 +1,4 @@
+// output: segfault
 int main()
 {
 	int x[10];
