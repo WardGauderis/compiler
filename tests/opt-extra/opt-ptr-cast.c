@@ -1,4 +1,3 @@
-// this folder is for checking: 'Operations or assignments of incompatible types.'
 // this file specifically tests casting pointers
 
 int main()
