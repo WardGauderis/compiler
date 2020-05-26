@@ -43,7 +43,7 @@ class RegisterMapper
     void storeReturnValue(std::string& output, llvm::Value* id);
 
     void allocateValue(std::string& output, llvm::Value* id, llvm::Type* type);
-    void addToMap(llvm::Value* from, llvm::Value* to);
+//    void addToMap(llvm::Value* from, llvm::Value* to);
 
     [[nodiscard]] int getSaveSize() const noexcept;
     [[nodiscard]] int getArgsSize() const noexcept;
